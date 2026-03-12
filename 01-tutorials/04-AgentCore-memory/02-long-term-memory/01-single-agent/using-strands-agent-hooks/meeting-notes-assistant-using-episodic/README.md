@@ -1,104 +1,104 @@
-# AgentCore Memory: Episodic Memory Strategy
+# AgentCore 메모리: 에피소딕 메모리 전략
 
-| Information         | Details                                                      |
+| 정보                | 세부 사항                                                    |
 |:--------------------|:-------------------------------------------------------------|
-| Tutorial type       | Long term Episodic                                           |
-| Agent type          | Meeting Notes Assistant                                      |
-| Agentic Framework   | Strands Agents                                               |
-| LLM model           | Anthropic Claude Haiku 4.5                                   |
-| Tutorial components | AgentCore Episodic Memory with Reflections, Hooks            |
-| Example complexity  | Intermediate                                                 |
+| 튜토리얼 유형       | 장기 에피소딕                                                |
+| 에이전트 유형       | 회의 노트 어시스턴트                                         |
+| 에이전트 프레임워크 | Strands Agents                                               |
+| LLM 모델            | Anthropic Claude Haiku 4.5                                   |
+| 튜토리얼 구성 요소  | AgentCore 에피소딕 메모리 및 리플렉션, 훅                    |
+| 예제 복잡도         | 중급                                                         |
 
-## Overview
+## 개요
 
-Episodic memory captures meaningful slices of user and system interactions so applications can recall context in a way that feels focused and relevant. Instead of storing every raw event, it identifies important moments, summarizes them into compact records, and organizes them so the system can retrieve what matters without noise.
+에피소딕 메모리는 사용자와 시스템 상호작용의 의미 있는 부분을 캡처하여 애플리케이션이 집중적이고 관련성 있는 방식으로 맥락을 회상할 수 있게 합니다. 모든 원시 이벤트를 저장하는 대신, 중요한 순간을 식별하고, 간결한 레코드로 요약하고, 노이즈 없이 중요한 내용을 검색할 수 있도록 구성합니다.
 
-**Reflections** build on episodic records by analyzing past episodes to surface insights, patterns, and higher-level conclusions. They turn raw experience into guidance the application can use immediately.
+**리플렉션**은 과거 에피소드를 분석하여 인사이트, 패턴, 상위 수준의 결론을 도출함으로써 에피소딕 레코드를 기반으로 확장됩니다. 원시 경험을 애플리케이션이 즉시 사용할 수 있는 가이드로 전환합니다.
 
-## What is Episodic Memory?
+## 에피소딕 메모리란?
 
-Episodic memory provides:
+에피소딕 메모리는 다음을 제공합니다:
 
-- **Episode Detection**: Automatically identifies when meaningful interaction sequences complete
-- **Structured Capture**: Records situation, intent, assessment, justification, and episode-level reflection
-- **Cross-Episode Learning**: Generates reflections that identify patterns across multiple episodes
-- **Contextual Retrieval**: Enables agents to learn from past experiences and avoid repeating mistakes
+- **에피소드 감지**: 의미 있는 상호작용 시퀀스가 완료되는 시점을 자동으로 식별
+- **구조화된 캡처**: 상황, 의도, 평가, 근거, 에피소드 수준 리플렉션을 기록
+- **에피소드 간 학습**: 여러 에피소드에 걸쳐 패턴을 식별하는 리플렉션 생성
+- **맥락적 검색**: 에이전트가 과거 경험에서 학습하고 실수를 반복하지 않도록 지원
 
-## How Episodic Memory Differs from Other Strategies
+## 에피소딕 메모리가 다른 전략과 다른 점
 
-| Strategy | Focus | Best For |
-|----------|-------|----------|
-| **Semantic** | Facts and knowledge | Static information retrieval |
-| **User Preference** | User settings and preferences | Personalization |
-| **Summary** | Conversation condensation | Long conversation context |
-| **Episodic** | Interaction sequences + reflections | Learning from experience |
+| 전략 | 초점 | 최적 용도 |
+|------|------|-----------|
+| **시맨틱** | 사실과 지식 | 정적 정보 검색 |
+| **사용자 선호도** | 사용자 설정 및 선호도 | 개인화 |
+| **요약** | 대화 압축 | 긴 대화 맥락 |
+| **에피소딕** | 상호작용 시퀀스 + 리플렉션 | 경험에서 학습 |
 
-Episodic memory is unique because it:
-1. Captures the **sequence** of actions, not just facts
-2. Generates **reflections** that identify patterns across episodes
-3. Helps agents understand **why** certain approaches worked or failed
+에피소딕 메모리가 고유한 이유:
+1. 사실뿐만 아니라 행동의 **시퀀스**를 캡처
+2. 에피소드 간 패턴을 식별하는 **리플렉션**을 생성
+3. 특정 접근 방식이 **왜** 성공하거나 실패했는지 에이전트가 이해하도록 지원
 
-## When to Use Episodic Memory
+## 에피소딕 메모리 사용 시기
 
-Ideal use cases include:
+이상적인 사용 사례:
 
-- **Meeting assistants**: Track decisions, action items, and follow-ups across meetings
-- **Customer support conversations**: Learn from successful resolution patterns
-- **Agent-driven workflows**: Remember which tool combinations work best
-- **Personal productivity tools**: Adapt to user working patterns over time
-- **Project management**: Identify recurring blockers and successful strategies
+- **회의 어시스턴트**: 회의 간 결정사항, 액션 아이템, 후속 조치 추적
+- **고객 지원 대화**: 성공적인 해결 패턴에서 학습
+- **에이전트 기반 워크플로우**: 어떤 도구 조합이 가장 잘 작동하는지 기억
+- **개인 생산성 도구**: 시간이 지남에 따라 사용자 작업 패턴에 적응
+- **프로젝트 관리**: 반복되는 장애물과 성공적인 전략 식별
 
-## Strategy Steps
+## 전략 단계
 
-The episodic memory strategy includes three steps:
+에피소딕 메모리 전략은 세 단계를 포함합니다:
 
-1. **Extraction**: Analyzes in-progress episode and determines if complete
-2. **Consolidation**: Combines extractions into a single episode when complete
-3. **Reflection**: Generates insights across multiple episodes
+1. **추출(Extraction)**: 진행 중인 에피소드를 분석하고 완료 여부를 판단
+2. **통합(Consolidation)**: 완료 시 추출된 내용을 단일 에피소드로 결합
+3. **리플렉션(Reflection)**: 여러 에피소드에 걸쳐 인사이트 생성
 
-## Namespace Organization
+## 네임스페이스 구성
 
-Episodes and reflections are stored in configurable namespaces:
+에피소드와 리플렉션은 구성 가능한 네임스페이스에 저장됩니다:
 
 ```python
-# Store episodes at actor level (recommended for most use cases)
+# 액터 수준에서 에피소드 저장 (대부분의 사용 사례에 권장)
 "namespaces": ["meetings/actor/{actorId}/episodes"]
 
-# Reflections must be same as or prefix of episodic namespace
+# 리플렉션은 에피소딕 네임스페이스와 동일하거나 접두사여야 합니다
 "reflectionConfiguration": {
-    "namespaces": ["meetings/actor/{actorId}"]  # Prefix of episodes namespace
+    "namespaces": ["meetings/actor/{actorId}"]  # 에피소드 네임스페이스의 접두사
 }
 ```
 
-**Important**: The reflection namespace must be the same as or a prefix of the episodic namespace. For example, if episodes are at `meetings/actor/{actorId}/episodes`, reflections should be at `meetings/actor/{actorId}` (prefix).
+**중요**: 리플렉션 네임스페이스는 에피소딕 네임스페이스와 동일하거나 접두사여야 합니다. 예를 들어, 에피소드가 `meetings/actor/{actorId}/episodes`에 있으면 리플렉션은 `meetings/actor/{actorId}` (접두사)에 있어야 합니다.
 
-## Architecture
+## 아키텍처
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        Meeting Notes Assistant                               │
+│                        회의 노트 어시스턴트                                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌──────────────┐     ┌──────────────────────────────────────────────────┐  │
-│  │  Meeting     │     │              Strands Agent                        │  │
-│  │ Participant  │────▶│  ┌─────────────────────────────────────────────┐  │  │
-│  │              │     │  │           System Prompt                     │  │  │
-│  │  "Let's      │     │  │  "You are a meeting assistant that tracks   │  │  │
-│  │  discuss     │     │  │   decisions and action items..."            │  │  │
-│  │  Q3 goals"   │     │  └─────────────────────────────────────────────┘  │  │
+│  │  회의        │     │              Strands 에이전트                     │  │
+│  │ 참여자       │────▶│  ┌─────────────────────────────────────────────┐  │  │
+│  │              │     │  │           시스템 프롬프트                    │  │  │
+│  │  "Q3 목표를  │     │  │  "결정사항과 액션 아이템을 추적하는         │  │  │
+│  │   논의       │     │  │   회의 어시스턴트입니다..."                 │  │  │
+│  │   합시다"    │     │  └─────────────────────────────────────────────┘  │  │
 │  └──────────────┘     │                      │                            │  │
 │                       │                      ▼                            │  │
 │                       │  ┌─────────────────────────────────────────────┐  │  │
-│                       │  │         EpisodicMemoryHooks                 │  │  │
+│                       │  │       에피소딕 메모리 훅                    │  │  │
 │                       │  │  ┌───────────────┐  ┌───────────────────┐   │  │  │
 │                       │  │  │ MessageAdded  │  │ AfterInvocation   │   │  │  │
-│                       │  │  │    Hook       │  │      Hook         │   │  │  │
-│                       │  │  │ (retrieve)    │  │ (save events)     │   │  │  │
+│                       │  │  │    훅         │  │      훅           │   │  │  │
+│                       │  │  │ (검색)        │  │ (이벤트 저장)     │   │  │  │
 │                       │  │  └───────┬───────┘  └─────────┬─────────┘   │  │  │
 │                       │  └──────────┼────────────────────┼─────────────┘  │  │
 │                       │             │                    │                │  │
 │                       │  ┌──────────┴────────────────────┴─────────────┐  │  │
-│                       │  │              Tools                          │  │  │
+│                       │  │              도구                           │  │  │
 │                       │  │  capture_action | identify_decision |       │  │  │
 │                       │  │  summarize_discussion | track_followup      │  │  │
 │                       │  └─────────────────────────────────────────────┘  │  │
@@ -106,160 +106,160 @@ Episodes and reflections are stored in configurable namespaces:
 │                                          │                                   │
 │                                          ▼                                   │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                    AgentCore Memory Service                            │  │
+│  │                    AgentCore 메모리 서비스                             │  │
 │  │  ┌─────────────────────────────────────────────────────────────────┐  │  │
-│  │  │                   Episodic Strategy                              │  │  │
+│  │  │                   에피소딕 전략                                  │  │  │
 │  │  │                                                                  │  │  │
 │  │  │   ┌──────────────┐   ┌───────────────┐   ┌─────────────────┐   │  │  │
-│  │  │   │  Extraction  │──▶│ Consolidation │──▶│   Reflection    │   │  │  │
+│  │  │   │    추출      │──▶│     통합      │──▶│    리플렉션     │   │  │  │
 │  │  │   │              │   │               │   │                 │   │  │  │
-│  │  │   │ Detect when  │   │ Combine into  │   │ Generate cross- │   │  │  │
-│  │  │   │ meeting ends │   │ single record │   │ meeting insights│   │  │  │
+│  │  │   │ 회의 종료    │   │ 단일 레코드로 │   │ 회의 간 인사이트│   │  │  │
+│  │  │   │ 감지         │   │ 결합          │   │ 생성            │   │  │  │
 │  │  │   └──────────────┘   └───────────────┘   └─────────────────┘   │  │  │
 │  │  └─────────────────────────────────────────────────────────────────┘  │  │
 │  │                                                                        │  │
 │  │  ┌─────────────────────────────┐  ┌─────────────────────────────────┐ │  │
-│  │  │        Episodes             │  │         Reflections             │ │  │
+│  │  │        에피소드             │  │         리플렉션               │ │  │
 │  │  │ /meetings/actor/{id}/episodes│  │/meetings/actor/{id}/reflections │ │  │
 │  │  │                             │  │                                 │ │  │
-│  │  │  • Meeting purpose          │  │  • Effective meeting patterns   │ │  │
-│  │  │  • Key decisions made       │  │  • Action item completion rate  │ │  │
-│  │  │  • Action items assigned    │  │  • Participant preferences      │ │  │
-│  │  │  • Follow-up status         │  │  • Common blockers              │ │  │
+│  │  │  • 회의 목적                │  │  • 효과적인 회의 패턴          │ │  │
+│  │  │  • 주요 결정사항            │  │  • 액션 아이템 완료율          │ │  │
+│  │  │  • 할당된 액션 아이템       │  │  • 참여자 선호도               │ │  │
+│  │  │  • 후속 조치 상태           │  │  • 일반적인 장애물             │ │  │
 │  │  └─────────────────────────────┘  └─────────────────────────────────┘ │  │
 │  └───────────────────────────────────────────────────────────────────────┘  │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-Data Flow:
-1. Meeting participant discusses topics
-2. MessageAdded hook retrieves relevant past meeting episodes & reflections
-3. Agent processes discussion with historical context
-4. Agent uses tools (capture_action, identify_decision, summarize_discussion, track_followup)
-5. AfterInvocation hook saves interaction as event
-6. AgentCore extracts episodes when meeting completes (~1 min)
-7. Reflections generated across multiple meetings (background)
+데이터 흐름:
+1. 회의 참여자가 주제를 논의합니다
+2. MessageAdded 훅이 관련 과거 회의 에피소드 및 리플렉션을 검색합니다
+3. 에이전트가 과거 맥락과 함께 논의를 처리합니다
+4. 에이전트가 도구를 사용합니다 (capture_action, identify_decision, summarize_discussion, track_followup)
+5. AfterInvocation 훅이 상호작용을 이벤트로 저장합니다
+6. AgentCore가 회의 완료 시 에피소드를 추출합니다 (~1분)
+7. 여러 회의에 걸쳐 리플렉션이 생성됩니다 (백그라운드)
 ```
 
-## Available Sample Notebooks
+## 사용 가능한 샘플 노트북
 
-| Framework | Use Case | Description | Notebook |
-|-----------|----------|-------------|----------|
-| Strands Agent | Meeting Notes | Meeting assistant that tracks decisions, action items, and learns from past meetings | [meeting-notes-assistant.ipynb](./meeting-notes-assistant.ipynb) |
+| 프레임워크 | 사용 사례 | 설명 | 노트북 |
+|------------|-----------|------|--------|
+| Strands Agent | 회의 노트 | 결정사항, 액션 아이템을 추적하고 과거 회의에서 학습하는 회의 어시스턴트 | [meeting-notes-assistant.ipynb](./meeting-notes-assistant.ipynb) |
 
-## Getting Started
+## 시작하기
 
-1. Navigate to this folder
-2. Install requirements: `pip install -r requirements.txt`
-3. Open the Jupyter notebook and follow the step-by-step implementation
+1. 이 폴더로 이동합니다
+2. 요구사항 설치: `pip install -r requirements.txt`
+3. Jupyter 노트북을 열고 단계별 구현을 따라갑니다
 
-## Sample Prompts
+## 샘플 프롬프트
 
-Try these meeting scenarios to test episodic memory learning:
+에피소딕 메모리 학습을 테스트하기 위한 회의 시나리오를 시도해 보세요:
 
-### 1. Follow-up on Previous Decision
-**Prompt**: "Let's revisit the Q3 marketing budget we discussed last week"
+### 1. 이전 결정사항 재검토
+**프롬프트**: "Let's revisit the Q3 marketing budget we discussed last week"
 
-**Expected Behavior**: Agent recalls past episode with budget discussion, retrieves previous decisions, and references context from that meeting.
+**예상 동작**: 에이전트가 예산 논의가 포함된 과거 에피소드를 회상하고, 이전 결정사항을 검색하며, 해당 회의의 맥락을 참조합니다.
 
-### 2. Action Item Check
-**Prompt**: "Did we assign someone to handle the website redesign?"
+### 2. 액션 아이템 확인
+**프롬프트**: "Did we assign someone to handle the website redesign?"
 
-**Expected Behavior**: Agent retrieves past episodes where website redesign was discussed, identifies assigned action items and owner.
+**예상 동작**: 에이전트가 웹사이트 리디자인이 논의된 과거 에피소드를 검색하고, 할당된 액션 아이템과 담당자를 식별합니다.
 
-### 3. Recurring Meeting Pattern
-**Prompt**: "We need to plan the weekly sprint review meeting"
+### 3. 반복 회의 패턴
+**프롬프트**: "We need to plan the weekly sprint review meeting"
 
-**Expected Behavior**: Agent applies learned patterns from past sprint reviews (e.g., "Team prefers 30-min format" or "Always include demo time").
+**예상 동작**: 에이전트가 과거 스프린트 리뷰에서 학습한 패턴을 적용합니다 (예: "팀은 30분 형식을 선호함" 또는 "항상 데모 시간을 포함").
 
-### 4. New Meeting with Context
-**Prompt**: "Let's have a quick sync about the product launch timeline. We need to finalize dates."
+### 4. 맥락이 있는 새 회의
+**프롬프트**: "Let's have a quick sync about the product launch timeline. We need to finalize dates."
 
-**Expected Behavior**: Multi-step meeting facilitation using tools to capture decisions, identify action items, and track follow-ups.
+**예상 동작**: 결정사항 캡처, 액션 아이템 식별, 후속 조치 추적을 위한 도구를 사용하여 다단계 회의를 진행합니다.
 
-### 5. Participant Preference Recognition
-**Prompt**: "Sarah wants to discuss the technical architecture for the new feature"
+### 5. 참여자 선호도 인식
+**프롬프트**: "Sarah wants to discuss the technical architecture for the new feature"
 
-**Expected Behavior**: Agent recognizes Sarah's preferences from past meetings (e.g., "Sarah prefers detailed diagrams" or "Technical meetings with Sarah typically need 1 hour").
+**예상 동작**: 에이전트가 과거 회의에서 Sarah의 선호도를 인식합니다 (예: "Sarah는 상세한 다이어그램을 선호함" 또는 "Sarah와의 기술 회의는 일반적으로 1시간이 필요함").
 
-### 6. New Topic
-**Prompt**: "We need to discuss the company's sustainability initiative for the first time"
+### 6. 새로운 주제
+**프롬프트**: "We need to discuss the company's sustainability initiative for the first time"
 
-**Expected Behavior**: Agent acknowledges this is a new topic with no past episodes, provides general meeting structure, captures decisions and action items for future reference.
+**예상 동작**: 에이전트가 과거 에피소드가 없는 새로운 주제임을 인지하고, 일반적인 회의 구조를 제공하며, 향후 참조를 위해 결정사항과 액션 아이템을 캡처합니다.
 
-## Key Concepts
+## 핵심 개념
 
-### Episodes vs Reflections
+### 에피소드 vs 리플렉션
 
-**Episodes** capture individual interaction sequences:
-- A project planning meeting where decisions were made
-- A sprint retrospective with action items assigned
-- A budget review discussion with specific outcomes
+**에피소드**는 개별 상호작용 시퀀스를 캡처합니다:
+- 결정이 이루어진 프로젝트 계획 회의
+- 액션 아이템이 할당된 스프린트 회고
+- 구체적인 결과가 있는 예산 검토 논의
 
-**Reflections** analyze patterns across episodes:
-- Which meeting formats work best for different teams
-- Common blockers that repeatedly surface
-- Action item completion rates by team member
-- Participant communication preferences
+**리플렉션**은 에피소드 간 패턴을 분석합니다:
+- 다양한 팀에 가장 적합한 회의 형식
+- 반복적으로 나타나는 일반적인 장애물
+- 팀원별 액션 아이템 완료율
+- 참여자 커뮤니케이션 선호도
 
-### Retrieval Best Practices
+### 검색 모범 사례
 
-1. **Query by intent**: Episodes are indexed by "intent", reflections by "use case"
-2. **Include tool results**: When creating events, include `TOOL` results for optimal extraction
-3. **Use reflections proactively**: Query reflections at task start to avoid known pitfalls
-4. **Linearize successful episodes**: Feed successful episode turns to focus the agent
+1. **의도별 쿼리**: 에피소드는 "intent"로, 리플렉션은 "use case"로 인덱싱됩니다
+2. **도구 결과 포함**: 이벤트 생성 시 최적의 추출을 위해 `TOOL` 결과를 포함하세요
+3. **리플렉션을 사전에 활용**: 작업 시작 시 리플렉션을 쿼리하여 알려진 함정을 회피하세요
+4. **성공적인 에피소드 선형화**: 성공적인 에피소드 턴을 에이전트에 제공하여 집중시키세요
 
-## Next Steps
+## 다음 단계
 
-After mastering episodic memory:
-- Combine with semantic memory for comprehensive agent experiences
-- Implement cross-agent reflection sharing for team learning
-- Build feedback loops to improve episode detection
+에피소딕 메모리를 마스터한 후:
+- 포괄적인 에이전트 경험을 위해 시맨틱 메모리와 결합
+- 팀 학습을 위한 에이전트 간 리플렉션 공유 구현
+- 에피소드 감지 개선을 위한 피드백 루프 구축
 
-## Troubleshooting
+## 문제 해결
 
-### Episodes Not Appearing
-**Issue**: No episodes found after running tests
+### 에피소드가 나타나지 않음
+**문제**: 테스트 실행 후 에피소드를 찾을 수 없음
 
-**Solution**: Episode extraction takes approximately 1 minute after a conversation completes. Wait and retry retrieval. Episodes are extracted asynchronously in the background.
+**해결 방법**: 에피소드 추출은 대화가 완료된 후 약 1분이 소요됩니다. 기다린 후 검색을 다시 시도하세요. 에피소드는 백그라운드에서 비동기적으로 추출됩니다.
 
-### Permission Errors
-**Issue**: `AccessDeniedException` when creating memory or saving events
+### 권한 오류
+**문제**: 메모리 생성 또는 이벤트 저장 시 `AccessDeniedException` 발생
 
-**Solution**: Ensure your AWS credentials have the necessary permissions:
-- Policy: `BedrockAgentCoreFullAccess` (managed policy)
-- Or custom policy with `bedrock-agentcore:*` permissions
+**해결 방법**: AWS 자격 증명에 필요한 권한이 있는지 확인하세요:
+- 정책: `BedrockAgentCoreFullAccess` (관리형 정책)
+- 또는 `bedrock-agentcore:*` 권한이 포함된 사용자 정의 정책
 
-### Model Access Errors
-**Issue**: Cannot access Claude Haiku 4.5 model
+### 모델 접근 오류
+**문제**: Claude Haiku 4.5 모델에 접근할 수 없음
 
-**Solution**: Enable model access in the AWS Bedrock console:
-1. Navigate to AWS Console → Bedrock → Model access
-2. Request access for "Anthropic Claude Haiku 4.5"
-3. Wait for approval (usually instant for standard models)
+**해결 방법**: AWS Bedrock 콘솔에서 모델 접근을 활성화하세요:
+1. AWS 콘솔 → Bedrock → 모델 접근으로 이동
+2. "Anthropic Claude Haiku 4.5"에 대한 접근 요청
+3. 승인 대기 (표준 모델의 경우 일반적으로 즉시)
 
-### Empty Reflection Results
-**Issue**: Reflections namespace returns no results
+### 빈 리플렉션 결과
+**문제**: 리플렉션 네임스페이스에서 결과가 반환되지 않음
 
-**Solution**: Reflections are generated after multiple episodes are collected. Run additional meeting sessions with varied scenarios to accumulate episodes. Reflection generation happens in the background and may take several minutes.
+**해결 방법**: 리플렉션은 여러 에피소드가 수집된 후에 생성됩니다. 에피소드를 축적하기 위해 다양한 시나리오로 추가 회의 세션을 실행하세요. 리플렉션 생성은 백그라운드에서 이루어지며 몇 분이 소요될 수 있습니다.
 
-### Memory Creation Fails with "Already Exists"
-**Issue**: Memory resource with same name already exists
+### "Already Exists" 오류로 메모리 생성 실패
+**문제**: 동일한 이름의 메모리 리소스가 이미 존재함
 
-**Solution**: The code handles this automatically by reusing the existing memory. If you want to start fresh, delete the old memory first using `client.delete_memory_and_wait(memory_id=memory_id)`.
+**해결 방법**: 코드가 기존 메모리를 재사용하여 이를 자동으로 처리합니다. 새로 시작하려면 `client.delete_memory_and_wait(memory_id=memory_id)`를 사용하여 이전 메모리를 먼저 삭제하세요.
 
-## Clean Up
+## 정리
 
-After completing the tutorial, delete the memory resource to avoid ongoing charges:
+튜토리얼을 완료한 후 지속적인 비용을 방지하기 위해 메모리 리소스를 삭제하세요:
 
 ```python
 try:
     client.delete_memory_and_wait(memory_id=memory_id)
-    print(f"✅ Deleted memory resource: {memory_id}")
+    print(f"메모리 리소스 삭제 완료: {memory_id}")
 except Exception as e:
-    print(f"❌ Error deleting memory: {e}")
+    print(f"메모리 삭제 오류: {e}")
 ```
 
-**Note**: This permanently deletes all episodes and reflections stored for this memory resource. Make sure to export any data you want to keep before deletion.
+**참고**: 이렇게 하면 이 메모리 리소스에 저장된 모든 에피소드와 리플렉션이 영구적으로 삭제됩니다. 삭제 전에 보관하려는 데이터가 있다면 내보내기를 해두세요.
 
-**Cost Considerations**: AgentCore Memory pricing is based on storage and retrieval. Regular cleanup of development/test memory resources helps control costs.
+**비용 고려사항**: AgentCore 메모리 요금은 저장 및 검색 기준으로 부과됩니다. 개발/테스트 메모리 리소스의 정기적인 정리는 비용 관리에 도움이 됩니다.
