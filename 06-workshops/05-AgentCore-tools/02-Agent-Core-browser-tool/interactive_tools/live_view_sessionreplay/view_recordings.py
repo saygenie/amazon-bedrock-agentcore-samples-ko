@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Standalone Session Replay Viewer
+독립 실행형 Session Replay Viewer
 
-This script allows you to view Bedrock Agentcore browser recordings stored in S3
-without needing to create a new browser session.
+이 스크립트를 사용하면 새 브라우저 세션을 생성하지 않고도 S3에 저장된
+Bedrock Agentcore 브라우저 녹화를 볼 수 있다.
 
-Usage:
+사용법:
     python3 view_recordings.py --bucket BUCKET_NAME --prefix PREFIX [--session SESSION_ID] [--port PORT]
 
-Example:
+예:
     python3 view_recordings.py --bucket session-record-test-123456789012 --prefix replay-data
 
-Environment Variables:
-    AWS_REGION          - AWS region (default: us-west-2)
-    AWS_PROFILE         - AWS profile to use for credentials (optional)
+환경 변수:
+    AWS_REGION          - AWS 리전(기본값: us-west-2)
+    AWS_PROFILE         - 자격 증명에 사용할 AWS 프로필(선택 사항)
 """
 
 import sys
@@ -35,16 +35,16 @@ import boto3
 from rich.console import Console
 from rich.panel import Panel
 
-# Create console
+# 콘솔 생성
 console = Console()
 
-# Direct import from session_replay_viewer in the same folder
+# 같은 폴더의 session_replay_viewer에서 직접 가져오기
 from session_replay_viewer import SessionReplayViewer, SessionReplayHandler  # noqa: E402
 
 
-# Define CustomS3DataSource directly in this script to avoid import issues
+# 가져오기 문제를 방지하도록 이 스크립트에서 CustomS3DataSource를 직접 정의
 class CustomS3DataSource:
-    """Custom data source for S3 recordings with known structure"""
+    """구조가 알려진 S3 녹화용 사용자 지정 데이터 소스"""
 
     def __init__(self, bucket, prefix, session_id):
         self.s3_client = boto3.client("s3")
@@ -55,15 +55,15 @@ class CustomS3DataSource:
         self.temp_dir = Path(tempfile.mkdtemp(prefix="bedrock_agentcore_replay_"))
 
     def cleanup(self):
-        """Clean up temp files"""
+        """임시 파일을 정리한다."""
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 
     def list_recordings(self):
-        """List recordings directly"""
+        """녹화 목록을 직접 반환한다."""
         recordings = []
 
-        # Fetch metadata to get details about the recording
+        # 녹화 세부 정보를 얻기 위해 메타데이터 가져오기
         metadata = {}
         try:
             metadata_key = f"{self.session_prefix}/metadata.json"
@@ -74,7 +74,7 @@ class CustomS3DataSource:
         except Exception as e:
             print(f"⚠️ Could not get metadata: {e}")
 
-        # List batch files to count events
+        # 이벤트 수를 계산하기 위해 배치 파일 나열
         batch_files = []
         response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=f"{self.session_prefix}/batch-")
 
@@ -82,15 +82,15 @@ class CustomS3DataSource:
             batch_files = [obj["Key"] for obj in response["Contents"]]
             print(f"✅ Found {len(batch_files)} batch files")
 
-        # Create a recording entry
-        timestamp = int(time.time() * 1000)  # Default to now
+        # 녹화 항목 생성
+        timestamp = int(time.time() * 1000)  # 현재 시각을 기본값으로 사용
         duration = 0
         event_count = 0
 
-        # Parse the timestamp correctly
+        # 타임스탬프를 올바르게 파싱
         if "startTime" in metadata:
             try:
-                # Handle ISO format
+                # ISO 형식 처리
                 if isinstance(metadata["startTime"], str):
                     dt = datetime.fromisoformat(metadata["startTime"].replace("Z", "+00:00"))
                     timestamp = int(dt.timestamp() * 1000)
@@ -99,19 +99,19 @@ class CustomS3DataSource:
             except Exception as e:
                 print(f"⚠️ Error parsing startTime: {e}")
 
-        # Try different duration fields
+        # 여러 재생 시간 필드 시도
         if "duration" in metadata:
             duration = metadata["duration"]
         elif "durationMs" in metadata:
             duration = metadata["durationMs"]
 
-        # Try different event count fields
+        # 여러 이벤트 수 필드 시도
         if "eventCount" in metadata:
             event_count = metadata["eventCount"]
         elif "totalEvents" in metadata:
             event_count = metadata["totalEvents"]
 
-        # Use correct datetime formatting
+        # 올바른 날짜 및 시간 형식 사용
         date_string = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
         recordings.append(
@@ -128,14 +128,14 @@ class CustomS3DataSource:
         return recordings
 
     def download_recording(self, recording_id):
-        """Download recording from S3"""
+        """S3에서 녹화를 다운로드한다."""
         print(f"Downloading recording: {recording_id}")
 
         recording_dir = self.temp_dir / recording_id
         recording_dir.mkdir(exist_ok=True)
 
         try:
-            # Get metadata
+            # 메타데이터 가져오기
             metadata = {}
             try:
                 metadata_key = f"{self.session_prefix}/metadata.json"
@@ -145,14 +145,14 @@ class CustomS3DataSource:
             except Exception as e:
                 print(f"⚠️ No metadata found: {e}")
 
-            # Get batch files from metadata if possible
+            # 가능하면 메타데이터에서 배치 파일 가져오기
             batch_files = []
             if "batches" in metadata and isinstance(metadata["batches"], list):
                 for batch in metadata["batches"]:
                     if "file" in batch:
                         batch_files.append(f"{self.session_prefix}/{batch['file']}")
 
-            # If no batch files found in metadata, look for them directly
+            # 메타데이터에 배치 파일이 없으면 직접 찾기
             if not batch_files:
                 response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=f"{self.session_prefix}/batch-")
 
@@ -167,17 +167,17 @@ class CustomS3DataSource:
                     print(f"Downloading batch file: {key}")
                     response = self.s3_client.get_object(Bucket=self.bucket, Key=key)
 
-                    # Try to read as gzipped JSON lines
+                    # gzip으로 압축된 JSON Lines로 읽기 시도
                     with gzip.GzipFile(fileobj=io.BytesIO(response["Body"].read())) as gz:
                         content = gz.read().decode("utf-8")
                         print(f"Read {len(content)} bytes of content")
 
-                        # Process each line as a JSON event
+                        # 각 줄을 JSON 이벤트로 처리
                         for line in content.splitlines():
                             if line.strip():
                                 try:
                                     event = json.loads(line)
-                                    # Validate event
+                                    # 이벤트 검증
                                     if "type" in event and "timestamp" in event:
                                         all_events.append(event)
                                     else:
@@ -195,7 +195,7 @@ class CustomS3DataSource:
 
             print(f"✅ Loaded {len(all_events)} events")
 
-            # If no events were loaded, create sample events
+            # 로드된 이벤트가 없으면 샘플 이벤트 생성
             if len(all_events) < 2:
                 print("⚠️ Insufficient events, creating sample events for testing")
                 all_events = [
@@ -210,7 +210,7 @@ class CustomS3DataSource:
                     }
                     for timestamp in range(int(time.time() * 1000), int(time.time() * 1000) + 10000, 1000)
                 ]
-                # Add a minimal DOM snapshot event
+                # 최소 DOM 스냅샷 이벤트 추가
                 all_events.append(
                     {
                         "type": 4,
@@ -243,7 +243,7 @@ class CustomS3DataSource:
                     }
                 )
 
-            # Return the parsed recording
+            # 파싱된 녹화 반환
             return {"metadata": metadata, "events": all_events}
 
         except Exception as e:
@@ -254,30 +254,30 @@ class CustomS3DataSource:
             return None
 
 
-# Define CustomSessionReplayHandler directly in this script
+# 이 스크립트에서 CustomSessionReplayHandler를 직접 정의
 class CustomSessionReplayHandler(SessionReplayHandler):
-    """Custom HTTP request handler for session replay viewer"""
+    """세션 재생 뷰어용 사용자 지정 HTTP 요청 핸들러"""
 
     def serve_recordings_list(self):
-        """Return list of recordings - FIX FOR HTML RESPONSE ISSUE"""
+        """녹화 목록을 반환한다. HTML 응답 문제 수정용."""
         try:
             recordings = self.data_source.list_recordings()
             response = json.dumps(recordings)
 
-            # Debug output to see what we're returning
+            # 반환 내용을 확인하기 위한 디버그 출력
             print(f"Serving recordings list: {response[:100]}...")
 
-            # Ensure proper content type and headers
+            # 올바른 콘텐츠 유형과 헤더 설정
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(response)))
-            # Add CORS headers to prevent issues
+            # 문제 방지를 위한 CORS 헤더 추가
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "*")
             self.end_headers()
 
-            # Write the response as bytes
+            # 응답을 바이트로 작성
             self.wfile.write(response.encode("utf-8"))
 
         except Exception as e:
@@ -286,9 +286,9 @@ class CustomSessionReplayHandler(SessionReplayHandler):
 
             traceback.print_exc()
 
-            # Return a proper error response as JSON with empty recordings array
+            # 빈 녹화 배열이 포함된 올바른 JSON 오류 응답 반환
             error_response = json.dumps({"error": str(e), "recordings": []})
-            self.send_response(200)  # Use 200 so client can process the error
+            self.send_response(200)  # 클라이언트가 오류를 처리할 수 있도록 200 사용
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(error_response)))
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -296,7 +296,7 @@ class CustomSessionReplayHandler(SessionReplayHandler):
             self.wfile.write(error_response.encode("utf-8"))
 
     def download_and_serve_recording(self, recording_id):
-        """Download recording and serve it - FIX FOR HTML RESPONSE ISSUE"""
+        """녹화를 다운로드해 제공한다. HTML 응답 문제 수정용."""
         try:
             recording_data = self.data_source.download_recording(recording_id)
 
@@ -333,7 +333,7 @@ class CustomSessionReplayHandler(SessionReplayHandler):
             self.wfile.write(error_response.encode("utf-8"))
 
     def do_OPTIONS(self):
-        """Handle OPTIONS requests for CORS preflight"""
+        """CORS 프리플라이트용 OPTIONS 요청을 처리한다."""
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -341,24 +341,24 @@ class CustomSessionReplayHandler(SessionReplayHandler):
         self.end_headers()
 
 
-# Define CustomSessionReplayViewer directly in this script
+# 이 스크립트에서 CustomSessionReplayViewer를 직접 정의
 class CustomSessionReplayViewer(SessionReplayViewer):
     def start(self):
-        """Start the replay viewer server with custom handler"""
-        # Ensure viewer directory exists
+        """사용자 지정 핸들러로 재생 뷰어 서버를 시작한다."""
+        # 뷰어 디렉터리가 있는지 확인
         self.viewer_path.mkdir(parents=True, exist_ok=True)
 
-        # Find available port
+        # 사용 가능한 포트 찾기
         port = self.find_available_port()
 
-        # Create request handler
+        # 요청 핸들러 생성
         def handler_factory(*args, **kwargs):
             return CustomSessionReplayHandler(self.data_source, self.viewer_path, *args, **kwargs)
 
-        # Start server
+        # 서버 시작
         self.server = HTTPServer(("", port), handler_factory)
 
-        # Start in thread
+        # 스레드에서 시작
         server_thread = threading.Thread(target=self.server.serve_forever)
         server_thread.daemon = True
         server_thread.start()
@@ -375,10 +375,10 @@ class CustomSessionReplayViewer(SessionReplayViewer):
             )
         )
 
-        # Open browser
+        # 브라우저 열기
         webbrowser.open(url)
 
-        # Handle shutdown
+        # 종료 처리
         def signal_handler(sig, frame):
             console.print("\n[yellow]Shutting down...[/yellow]")
             self.server.shutdown()
@@ -388,7 +388,7 @@ class CustomSessionReplayViewer(SessionReplayViewer):
 
         signal.signal(signal.SIGINT, signal_handler)
 
-        # Keep running
+        # 실행 상태 유지
         try:
             while True:
                 time.sleep(1)
@@ -410,23 +410,23 @@ def main():
     parser.add_argument("--profile", help="AWS profile to use (optional)")
     args = parser.parse_args()
 
-    # Use specified AWS profile if provided
+    # 지정된 AWS 프로필이 있으면 사용
     if args.profile:
         print(f"Using AWS profile: {args.profile}")
         boto3.setup_default_session(profile_name=args.profile)
 
-    # Create S3 client to check bucket
+    # 버킷 확인용 S3 클라이언트 생성
     s3 = boto3.client("s3")
 
     try:
-        # Check if bucket exists and we have access
+        # 버킷 존재 여부와 접근 권한 확인
         s3.head_bucket(Bucket=args.bucket)
         print(f"✅ Connected to bucket: {args.bucket}")
     except Exception as e:
         print(f"❌ Error accessing bucket {args.bucket}: {e}")
         sys.exit(1)
 
-    # If no specific session provided, find the latest one
+    # 특정 세션을 지정하지 않았으면 최신 세션 찾기
     if not args.session:
         print(f"Finding sessions in s3://{args.bucket}/{args.prefix}/")
         try:
@@ -436,13 +436,13 @@ def main():
                 print("No objects found in S3 location")
                 sys.exit(1)
 
-            # Get all unique directory names that contain metadata.json
+            # metadata.json을 포함하는 고유한 디렉터리 이름 모두 가져오기
             session_dirs = set()
 
             for obj in response["Contents"]:
                 key = obj["Key"]
                 if "metadata.json" in key:
-                    # Extract the session directory from the path
+                    # 경로에서 세션 디렉터리 추출
                     session_dir = key.split("/")[-2]
                     session_dirs.add(session_dir)
                     print(f"Found session with metadata: {session_dir}")
@@ -451,7 +451,7 @@ def main():
                 print("No session directories with metadata.json found")
                 sys.exit(1)
 
-            # Sort the session directories to find the latest one
+            # 최신 세션을 찾도록 세션 디렉터리 정렬
             session_dirs = sorted(list(session_dirs))
             args.session = session_dirs[-1]
             print(f"Using latest session: {args.session}")
@@ -460,15 +460,15 @@ def main():
             print(f"❌ Error listing sessions: {e}")
             sys.exit(1)
 
-    # Create data source for the specific session
+    # 특정 세션용 데이터 소스 생성
     data_source = CustomS3DataSource(bucket=args.bucket, prefix=args.prefix, session_id=args.session)
 
-    # Start the viewer
+    # 뷰어 시작
     print(f"🎬 Starting session replay viewer for: {args.session}")
     print(f"  Bucket: {args.bucket}")
     print(f"  Prefix: {args.prefix}")
     viewer = CustomSessionReplayViewer(data_source=data_source, port=args.port)
-    viewer.start()  # This will block until Ctrl+C
+    viewer.start()  # Ctrl+C를 누를 때까지 차단됨
 
 
 if __name__ == "__main__":

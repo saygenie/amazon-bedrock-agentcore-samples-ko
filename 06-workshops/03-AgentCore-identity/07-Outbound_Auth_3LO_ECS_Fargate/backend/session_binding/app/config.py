@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-"""Configuration management for OAuth sidecar service."""
+"""OAuth 사이드카 서비스의 설정 관리."""
 
 from functools import lru_cache
 
@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables."""
+    """환경 변수에서 불러온 애플리케이션 설정."""
 
     log_level: str = "INFO"
     environment: str = "unknown"
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     @property
     def identity_region(self) -> str:
-        """Get Identity service region, fallback to AWS region."""
+        """Identity 서비스 리전을 가져오고, 없으면 AWS 리전을 사용한다."""
         return self.identity_aws_region or self.aws_region
 
     model_config = {"case_sensitive": False}
@@ -27,5 +27,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Get cached settings instance."""
+    """캐시된 설정 인스턴스를 가져온다."""
     return Settings()

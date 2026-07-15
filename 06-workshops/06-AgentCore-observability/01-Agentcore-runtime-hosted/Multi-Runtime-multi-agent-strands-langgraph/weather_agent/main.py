@@ -1,6 +1,6 @@
 """
-Weather Agent: LangGraph-based agent with weather lookup capability.
-Exposed as a standard AgentCore Runtime endpoint for direct invocation.
+Weather Agent: 날씨 조회 기능을 갖춘 LangGraph 기반 에이전트입니다.
+직접 호출할 수 있는 표준 AgentCore Runtime 엔드포인트로 노출됩니다.
 """
 
 from langgraph.graph import StateGraph, MessagesState
@@ -20,7 +20,7 @@ app = BedrockAgentCoreApp()
 MODEL_ID = os.getenv("MODEL_ID", "global.anthropic.claude-haiku-4-5-20251001-v1:0")
 
 
-# --- Tool Definition ---
+# --- 도구 정의 ---
 @tool
 def get_weather(location: str) -> str:
     """Get current weather for a location."""
@@ -34,9 +34,9 @@ def get_weather(location: str) -> str:
     return weather_data.get(location.lower(), f"Weather for {location}: 70°F, Clear")
 
 
-# --- Agent Definition ---
+# --- 에이전트 정의 ---
 def create_agent():
-    """Create LangGraph weather agent."""
+    """LangGraph 날씨 에이전트를 생성합니다."""
     llm = ChatBedrock(model_id=MODEL_ID, model_kwargs={"temperature": 0.1})
     tools = [get_weather]
     llm_with_tools = llm.bind_tools(tools)
@@ -65,7 +65,7 @@ agent = create_agent()
 
 @app.entrypoint
 def invoke(payload, context):
-    """Main entrypoint for direct invocation."""
+    """직접 호출을 위한 기본 진입점입니다."""
     prompt = payload.get("prompt", "")
 
     logger.info(f"Weather Agent received: {prompt}, session: {context.session_id}")

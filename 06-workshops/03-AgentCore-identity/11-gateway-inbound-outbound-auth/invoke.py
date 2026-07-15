@@ -1,11 +1,10 @@
 """
-Test script: Invokes the AgentCore Runtime agent (backed by a JWT-protected Gateway).
+테스트 스크립트: JWT로 보호되는 Gateway를 사용하는 AgentCore Runtime 에이전트를 호출합니다.
 
-The agent authenticates to the Gateway automatically using the managed credential
-created by the CLI (--agent-client-id / --agent-client-secret). From the caller's
-perspective, only a standard Cognito JWT is required.
+에이전트는 CLI(--agent-client-id / --agent-client-secret)에서 생성한 관리형 자격 증명을
+사용해 Gateway에 자동으로 인증합니다. 호출자 관점에서는 표준 Cognito JWT만 필요합니다.
 
-Usage:
+사용법:
     python invoke.py [prompt]
 """
 
@@ -21,7 +20,7 @@ warnings.filterwarnings("ignore", message="urllib3")
 
 
 def get_bearer_token(config: dict) -> str:
-    """Get a fresh Cognito access token for the test user."""
+    """테스트 사용자의 새 Cognito 액세스 토큰을 가져옵니다."""
     cognito = boto3.client("cognito-idp", region_name=config["region"])
     auth = cognito.initiate_auth(
         ClientId=config["user_client_id"],
@@ -44,7 +43,7 @@ def _find_project_dir() -> str:
 
 
 def _find_in_json(obj, key):
-    """Recursively search for a key in nested JSON."""
+    """중첩된 JSON에서 키를 재귀적으로 검색합니다."""
     if isinstance(obj, dict):
         if key in obj:
             return obj[key]
@@ -61,9 +60,9 @@ def _find_in_json(obj, key):
 
 
 def get_agent_arn() -> str:
-    """Read the deployed agent ARN from deployed-state.json.
+    """deployed-state.json에서 배포된 에이전트 ARN을 읽습니다.
 
-    Searches for runtimeArn recursively to work across CLI versions.
+    CLI 버전에 관계없이 동작하도록 runtimeArn을 재귀적으로 검색합니다.
     """
     project_dir = _find_project_dir()
     state_file = os.path.join(project_dir, "agentcore", ".cli", "deployed-state.json")
@@ -121,7 +120,7 @@ def main():
     agent_arn = get_agent_arn()
     print(f"  Agent ARN: {agent_arn}")
 
-    # --- Test 1: No bearer token ---
+    # --- 테스트 1: bearer token 없음 ---
     print("\n[Test 1] Invoking WITHOUT bearer token (expect AccessDeniedException)...")
     try:
         resp = client.invoke_agent_runtime(
@@ -136,7 +135,7 @@ def main():
     except Exception as exc:
         print(f"  Error: {type(exc).__name__}: {exc}")
 
-    # --- Test 2: Valid user bearer token ---
+    # --- 테스트 2: 유효한 사용자 bearer token ---
     print("\n[Test 2] Invoking WITH Cognito bearer token (expect success)...")
     bearer_token = get_bearer_token(config)
     print(f"  Token obtained (first 20 chars): {bearer_token[:20]}...")

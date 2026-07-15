@@ -11,10 +11,10 @@ logger.setLevel(logging.INFO)
 
 def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
     """
-    Custom Lambda resource handler for creating AgentCore Policy Engine and Policy
-    Handles two resource types:
-    - PolicyEngine: Creates/Updates/Deletes a policy engine
-    - Policy: Creates/Updates/Deletes a policy within an existing engine
+    AgentCore Policy Engine 및 Policy를 생성하는 사용자 지정 Lambda 리소스 핸들러입니다.
+    두 가지 리소스 유형을 처리합니다.
+    - PolicyEngine: policy engine을 생성/업데이트/삭제합니다.
+    - Policy: 기존 engine 내에서 policy를 생성/업데이트/삭제합니다.
     """
     logger.info(f"Received event: {json.dumps(event)}")
 
@@ -28,7 +28,7 @@ def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
         elif resource_type == "Policy":
             return handle_policy(event, request_type, resource_properties)
         elif resource_type == "PolicyEngineGatewayAssociation":
-            # This resource type can be implemented to associate the policy engine with a gateway if needed
+        # 필요한 경우 policy engine을 gateway와 연결하도록 이 리소스 유형을 구현할 수 있음
             return handle_policy_engine_gateway_association(event, request_type, resource_properties)
         else:
             raise ValueError(f"Unknown resource type: {resource_type}")
@@ -39,16 +39,16 @@ def lambda_handler(event: Dict[str, Any], context) -> Dict[str, Any]:
 
 
 # ============================================================================
-# POLICY ENGINE HANDLERS FOR GATEWAY ASSOCIATION
+# GATEWAY 연결을 위한 POLICY ENGINE 핸들러
 # ============================================================================
 def handle_policy_engine_gateway_association(
     event: Dict[str, Any], request_type: str, properties: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Handle association of Policy Engine with Gateway"""
+    """Policy Engine과 Gateway의 연결을 처리합니다."""
     logger.info("PolicyEngineGatewayAssociation handling request")
 
     if request_type == "Delete":
-        # For delete, we don't need to make actual API calls
+        # 삭제 시에는 실제 API를 호출할 필요가 없음
         return send_response(
             event,
             "SUCCESS",
@@ -115,12 +115,12 @@ def handle_policy_engine_gateway_association(
 
 
 # ============================================================================
-# POLICY ENGINE HANDLERS
+# POLICY ENGINE 핸들러
 # ============================================================================
 
 
 def handle_policy_engine(event: Dict[str, Any], request_type: str, properties: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle PolicyEngine resource lifecycle"""
+    """PolicyEngine 리소스 수명 주기를 처리합니다."""
     if request_type == "Create":
         return create_policy_engine(event, properties)
     elif request_type == "Update":
@@ -132,7 +132,7 @@ def handle_policy_engine(event: Dict[str, Any], request_type: str, properties: D
 
 
 def create_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a new Policy Engine"""
+    """새 Policy Engine을 생성합니다."""
     try:
         region = properties.get("Region", os.environ.get("AWS_REGION", "us-east-1"))
         client = boto3.client("bedrock-agentcore-control", region_name=region)
@@ -147,7 +147,7 @@ def create_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> D
         policy_egine_arn = create_response["policyEngineArn"]
         logger.info(f"Created policy engine with ID: {policy_engine_id}")
 
-        # Wait for policy engine to be active
+        # policy engine이 활성화될 때까지 대기
         wait_for_policy_engine_active(client, policy_engine_id)
 
         response_data = {
@@ -170,7 +170,7 @@ def create_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> D
 
 
 def update_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str, Any]:
-    """Update an existing Policy Engine"""
+    """기존 Policy Engine을 업데이트합니다."""
     try:
         region = properties.get("Region", os.environ.get("AWS_REGION", "us-east-1"))
         client = boto3.client("bedrock-agentcore-control", region_name=region)
@@ -180,7 +180,7 @@ def update_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> D
 
         logger.info(f"Update requested for policy engine {policy_engine_id}")
 
-        # Check if policy engine exists
+        # policy engine이 있는지 확인
         try:
             response = client.get_policy_engine(policyEngineId=policy_engine_id)
             status = response.get("status", "UNKNOWN")
@@ -201,7 +201,7 @@ def update_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> D
                 logger.error(f"Error updating policy engine: {str(e)}")
                 raise Exception(f"Failed to update policy engine: {str(e)}")
 
-            # Return the existing resource
+            # 기존 리소스 반환
             response_data = {
                 "PolicyEngineId": policy_engine_id,
                 "PolicyEngineArn": response.get("policyEngineArn", ""),
@@ -217,7 +217,7 @@ def update_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> D
             )
 
         except client.exceptions.ResourceNotFoundException:
-            # Policy engine doesn't exist, create it
+            # Policy engine이 없으므로 새로 생성
             logger.info(f"Policy engine {policy_engine_id} not found, creating new one")
 
             policy_engine_name = properties.get("PolicyEngineName", "default-policy-engine")
@@ -230,7 +230,7 @@ def update_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> D
             new_policy_engine_id = create_response["policyEngineId"]
             logger.info(f"Created new policy engine with ID: {new_policy_engine_id}")
 
-            # Wait for policy engine to be active
+            # policy engine이 활성화될 때까지 대기
             wait_for_policy_engine_active(client, new_policy_engine_id)
 
             response_data = {"PolicyEngineId": new_policy_engine_id, "Status": "ACTIVE"}
@@ -249,7 +249,7 @@ def update_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> D
 
 
 def delete_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str, Any]:
-    """Delete a Policy Engine"""
+    """Policy Engine을 삭제합니다."""
     try:
         region = properties.get("Region", os.environ.get("AWS_REGION", "us-east-1"))
         client = boto3.client("bedrock-agentcore-control", region_name=region)
@@ -262,7 +262,7 @@ def delete_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> D
             client.delete_policy_engine(policyEngineId=policy_engine_id)
             logger.info(f"Policy engine deletion initiated for {policy_engine_id}")
 
-            # Wait for policy engine to be deleted
+        # policy engine이 삭제될 때까지 대기
             wait_for_policy_engine_deleted(client, policy_engine_id)
             logger.info(f"Policy engine {policy_engine_id} deleted successfully")
 
@@ -275,7 +275,7 @@ def delete_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> D
 
     except Exception as e:
         logger.error(f"Error deleting policy engine: {str(e)}")
-        # Don't fail on delete to avoid blocking stack deletion
+        # 스택 삭제를 막지 않도록 삭제 오류를 발생시키지 않음
         return send_response(
             event,
             "SUCCESS",
@@ -285,12 +285,12 @@ def delete_policy_engine(event: Dict[str, Any], properties: Dict[str, Any]) -> D
 
 
 # ============================================================================
-# POLICY HANDLERS
+# POLICY 핸들러
 # ============================================================================
 
 
 def handle_policy(event: Dict[str, Any], request_type: str, properties: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle Policy resource lifecycle"""
+    """Policy 리소스 수명 주기를 처리합니다."""
     if request_type == "Create":
         return create_policy(event, properties)
     elif request_type == "Update":
@@ -302,7 +302,7 @@ def handle_policy(event: Dict[str, Any], request_type: str, properties: Dict[str
 
 
 def create_policy(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a new Policy in an existing Policy Engine"""
+    """기존 Policy Engine에 새 Policy를 생성합니다."""
     try:
         region = properties.get("Region", os.environ.get("AWS_REGION", "us-east-1"))
         client = boto3.client("bedrock-agentcore-control", region_name=region)
@@ -334,7 +334,7 @@ def create_policy(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str
         policy_id = create_response["policyId"]
         logger.info(f"Created policy with ID: {policy_id}")
 
-        # Wait for policy to be active
+        # policy가 활성화될 때까지 대기
         wait_for_policy_active(client, policy_engine_id, policy_id)
 
         response_data = {
@@ -359,7 +359,7 @@ def create_policy(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str
 
 
 def update_policy(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str, Any]:
-    """Update an existing Policy"""
+    """기존 Policy를 업데이트합니다."""
     try:
         region = properties.get("Region", os.environ.get("AWS_REGION", "us-east-1"))
         client = boto3.client("bedrock-agentcore-control", region_name=region)
@@ -372,12 +372,12 @@ def update_policy(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str
         policy_name = properties.get("PolicyName")
         policy_description = properties.get("PolicyDescription", f"Policy: {policy_name}")
 
-        # Extract policy ID from physical resource ID
+        # 물리적 리소스 ID에서 policy ID 추출
         policy_id = physical_resource_id
 
         logger.info(f"Updating policy {policy_id} in engine {policy_engine_id}")
 
-        # Check if statement has changed
+        # statement가 변경되었는지 확인
         old_statement = old_properties.get("PolicyStatement", "")
         if policy_statement != old_statement:
             logger.info("Policy statement changed, updating...")
@@ -416,7 +416,7 @@ def update_policy(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str
 
 
 def delete_policy(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str, Any]:
-    """Delete a Policy"""
+    """Policy를 삭제합니다."""
     try:
         region = properties.get("Region", os.environ.get("AWS_REGION", "us-east-1"))
         client = boto3.client("bedrock-agentcore-control", region_name=region)
@@ -430,7 +430,7 @@ def delete_policy(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str
             client.delete_policy(policyEngineId=policy_engine_id, policyId=policy_id)
             logger.info(f"Policy deletion initiated for {policy_id}")
 
-            # Wait for policy to be deleted
+        # policy가 삭제될 때까지 대기
             wait_for_policy_deleted(client, policy_engine_id, policy_id)
             logger.info(f"Policy {policy_id} deleted successfully")
 
@@ -443,7 +443,7 @@ def delete_policy(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str
 
     except Exception as e:
         logger.error(f"Error deleting policy: {str(e)}")
-        # Don't fail on delete to avoid blocking stack deletion
+        # 스택 삭제를 막지 않도록 삭제 오류를 발생시키지 않음
         return send_response(
             event,
             "SUCCESS",
@@ -453,12 +453,12 @@ def delete_policy(event: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str
 
 
 # ============================================================================
-# HELPER FUNCTIONS
+# 헬퍼 함수
 # ============================================================================
 
 
 def wait_for_policy_engine_active(client, policy_engine_id: str, max_wait_time: int = 300):
-    """Wait for policy engine to become active"""
+    """policy engine이 활성화될 때까지 기다립니다."""
     start_time = time.time()
 
     while time.time() - start_time < max_wait_time:
@@ -483,7 +483,7 @@ def wait_for_policy_engine_active(client, policy_engine_id: str, max_wait_time: 
 
 
 def wait_for_policy_active(client, policy_engine_id: str, policy_id: str, max_wait_time: int = 300):
-    """Wait for policy to become active"""
+    """policy가 활성화될 때까지 기다립니다."""
     start_time = time.time()
 
     while time.time() - start_time < max_wait_time:
@@ -498,7 +498,7 @@ def wait_for_policy_active(client, policy_engine_id: str, policy_id: str, max_wa
             if status == "ACTIVE":
                 return
             elif status in ["FAILED", "DELETING", "CREATE_FAILED"]:
-                # Create a copy and remove datetime fields that can't be JSON serialized
+                # 복사본을 만들고 JSON으로 직렬화할 수 없는 datetime 필드 제거
                 response_copy = response.copy()
                 response_copy.pop("createdAt", None)
                 response_copy.pop("updatedAt", None)
@@ -508,7 +508,7 @@ def wait_for_policy_active(client, policy_engine_id: str, policy_id: str, max_wa
             time.sleep(10)
 
         except client.exceptions.ResourceNotFoundException:
-            # Policy might not be immediately available
+            # Policy를 즉시 사용할 수 없을 수 있음
             logger.info("Policy not found yet, waiting...")
             time.sleep(10)
         except Exception as e:
@@ -519,7 +519,7 @@ def wait_for_policy_active(client, policy_engine_id: str, policy_id: str, max_wa
 
 
 def wait_for_policy_deleted(client, policy_engine_id: str, policy_id: str, max_wait_time: int = 300):
-    """Wait for policy to be deleted"""
+    """policy가 삭제될 때까지 기다립니다."""
     start_time = time.time()
 
     while time.time() - start_time < max_wait_time:
@@ -535,11 +535,11 @@ def wait_for_policy_deleted(client, policy_engine_id: str, policy_id: str, max_w
                 logger.info("Policy is being deleted, waiting...")
                 time.sleep(10)
             else:
-                # If status is not DELETING, wait a bit more
+            # 상태가 DELETING이 아니면 조금 더 대기
                 time.sleep(10)
 
         except client.exceptions.ResourceNotFoundException:
-            # Policy has been deleted
+            # Policy가 삭제됨
             logger.info(f"Policy {policy_id} has been deleted successfully")
             return
         except Exception as e:
@@ -550,7 +550,7 @@ def wait_for_policy_deleted(client, policy_engine_id: str, policy_id: str, max_w
 
 
 def wait_for_policy_engine_deleted(client, policy_engine_id: str, max_wait_time: int = 300):
-    """Wait for policy engine to be deleted"""
+    """policy engine이 삭제될 때까지 기다립니다."""
     start_time = time.time()
 
     while time.time() - start_time < max_wait_time:
@@ -566,11 +566,11 @@ def wait_for_policy_engine_deleted(client, policy_engine_id: str, max_wait_time:
                 logger.info("Policy engine is being deleted, waiting...")
                 time.sleep(10)
             else:
-                # If status is not DELETING, wait a bit more
+            # 상태가 DELETING이 아니면 조금 더 대기
                 time.sleep(10)
 
         except client.exceptions.ResourceNotFoundException:
-            # Policy engine has been deleted
+            # Policy engine이 삭제됨
             logger.info(f"Policy engine {policy_engine_id} has been deleted successfully")
             return
         except Exception as e:
@@ -587,12 +587,12 @@ def send_response(
     response_data: Dict[str, Any] = None,
     physical_resource_id: str = None,
 ) -> Dict[str, Any]:
-    """Send response to CloudFormation"""
+    """CloudFormation에 응답을 보냅니다."""
     import urllib3
 
     response_data = response_data or {}
 
-    # Use provided physical_resource_id or generate from event
+    # 제공된 physical_resource_id를 사용하거나 이벤트에서 생성
     if not physical_resource_id:
         physical_resource_id = event.get("PhysicalResourceId", f"failed-{int(time.time())}")
 
@@ -608,7 +608,7 @@ def send_response(
 
     logger.info(f"Sending response: {json.dumps(response_body)}")
 
-    # Send response to CloudFormation
+    # CloudFormation에 응답 전송
     http = urllib3.PoolManager()
 
     try:

@@ -1,11 +1,11 @@
 """
-Streamlit UI for AgentCore Identity Sample 12: M2M + 3LO Auth Flows.
+AgentCore Identity Sample 12(M2M + 3LO 인증 흐름)용 Streamlit UI입니다.
 
-Provides a two-screen experience:
-  Screen 1 -- Centered login card (no sidebar)
-  Screen 2 -- Dashboard with sidebar flow selector and chat area
+두 개의 화면을 제공합니다.
+  화면 1: 가운데 정렬된 로그인 카드(사이드바 없음)
+  화면 2: 사이드바 흐름 선택기와 채팅 영역이 있는 대시보드
 
-Usage:
+사용법:
     streamlit run streamlit_app.py
 """
 
@@ -22,7 +22,7 @@ import requests
 import streamlit as st
 
 # ---------------------------------------------------------------------------
-# Constants
+# 상수
 # ---------------------------------------------------------------------------
 SAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
 COGNITO_CONFIG_PATH = os.path.join(SAMPLE_DIR, "cognito_config.json")
@@ -58,7 +58,7 @@ PRESET_BUTTONS = {
 
 
 # ---------------------------------------------------------------------------
-# Page configuration
+# 페이지 구성
 # ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="Sample 12: M2M + 3LO Auth",
@@ -68,7 +68,7 @@ st.set_page_config(
 
 
 # ---------------------------------------------------------------------------
-# Custom CSS
+# 사용자 지정 CSS
 # ---------------------------------------------------------------------------
 st.markdown(
     """
@@ -128,7 +128,7 @@ st.markdown(
 
 
 # ---------------------------------------------------------------------------
-# Session state defaults
+# 세션 상태 기본값
 # ---------------------------------------------------------------------------
 _DEFAULTS = {
     "logged_in": False,
@@ -137,7 +137,7 @@ _DEFAULTS = {
     "agent_arn": None,
     "chat_history": [],
     "consent_url": None,
-    "consent_state": "not_started",  # not_started | pending | completed
+    "consent_state": "not_started",  # 시작 전 | 대기 중 | 완료
     "callback_proc": None,
     "selected_flow": "m2m",
     "cognito_config": None,
@@ -150,7 +150,7 @@ for key, val in _DEFAULTS.items():
 
 
 # ---------------------------------------------------------------------------
-# Cleanup callback server on exit
+# 종료 시 콜백 서버 정리
 # ---------------------------------------------------------------------------
 def _cleanup_callback_server():
     proc = st.session_state.get("callback_proc")
@@ -166,7 +166,7 @@ atexit.register(_cleanup_callback_server)
 
 
 # ---------------------------------------------------------------------------
-# Helper: load Cognito config
+# 보조 함수: Cognito 구성 불러오기
 # ---------------------------------------------------------------------------
 @st.cache_data
 def load_cognito_config() -> dict | None:
@@ -177,10 +177,10 @@ def load_cognito_config() -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# Helper: Cognito authentication
+# 보조 함수: Cognito 인증
 # ---------------------------------------------------------------------------
 def get_bearer_token(config: dict, username: str, password: str) -> str:
-    """Authenticate with Cognito and return an access token."""
+    """Cognito로 인증하고 액세스 토큰을 반환합니다."""
     cognito = boto3.client("cognito-idp", region_name=config["region"])
     auth = cognito.initiate_auth(
         ClientId=config["client_id"],
@@ -191,7 +191,7 @@ def get_bearer_token(config: dict, username: str, password: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Helper: resolve deployed agent ARN
+# 보조 함수: 배포된 에이전트 ARN 확인
 # ---------------------------------------------------------------------------
 def _find_project_dir() -> str:
     for entry in os.listdir(SAMPLE_DIR):
@@ -202,7 +202,7 @@ def _find_project_dir() -> str:
 
 
 def _find_in_json(obj, key):
-    """Recursively search for a key in nested JSON."""
+    """중첩된 JSON에서 키를 재귀적으로 검색합니다."""
     if isinstance(obj, dict):
         if key in obj:
             return obj[key]
@@ -219,9 +219,9 @@ def _find_in_json(obj, key):
 
 
 def resolve_agent_arn() -> str:
-    """Read the deployed agent ARN from deployed-state.json.
+    """deployed-state.json에서 배포된 에이전트 ARN을 읽습니다.
 
-    Searches for runtimeArn recursively to work across CLI versions.
+    CLI 버전에 관계없이 동작하도록 runtimeArn을 재귀적으로 검색합니다.
     """
     project_dir = _find_project_dir()
     state_file = os.path.join(project_dir, "agentcore", ".cli", "deployed-state.json")
@@ -236,10 +236,10 @@ def resolve_agent_arn() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Helper: parse agent streaming response
+# 보조 함수: 에이전트 스트리밍 응답 파싱
 # ---------------------------------------------------------------------------
 def _format_response(text: str) -> str:
-    """Clean up agent response text for display."""
+    """표시할 에이전트 응답 텍스트를 정리합니다."""
     return text.replace("\\n", "\n").strip('"')
 
 
@@ -271,7 +271,7 @@ def parse_event_stream(response: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Helper: invoke agent
+# 보조 함수: 에이전트 호출
 # ---------------------------------------------------------------------------
 def invoke_agent(agent_arn: str, prompt: str, bearer_token: str, user_id: str, region: str) -> str:
     client = boto3.client("bedrock-agentcore", region_name=region)
@@ -293,7 +293,7 @@ def invoke_agent(agent_arn: str, prompt: str, bearer_token: str, user_id: str, r
 
 
 # ---------------------------------------------------------------------------
-# Helper: OAuth2 callback server management
+# 보조 함수: OAuth2 콜백 서버 관리
 # ---------------------------------------------------------------------------
 def _callback_server_running() -> bool:
     try:
@@ -304,7 +304,7 @@ def _callback_server_running() -> bool:
 
 
 def start_callback_server(region: str, bearer_token: str):
-    """Start the OAuth2 callback server subprocess if not already running."""
+    """OAuth2 콜백 서버가 실행 중이 아니면 하위 프로세스로 시작합니다."""
     proc = st.session_state.get("callback_proc")
     if proc and proc.poll() is None and _callback_server_running():
         _store_token_in_server(bearer_token)
@@ -332,7 +332,7 @@ def start_callback_server(region: str, bearer_token: str):
 
 
 def _store_token_in_server(bearer_token: str):
-    """Post the bearer token to the callback server for session binding."""
+    """세션 바인딩을 위해 콜백 서버에 bearer token을 POST합니다."""
     try:
         requests.post(
             CALLBACK_TOKEN_URL,
@@ -355,10 +355,10 @@ def stop_callback_server():
 
 
 # ---------------------------------------------------------------------------
-# Helper: extract consent URL from agent response
+# 보조 함수: 에이전트 응답에서 동의 URL 추출
 # ---------------------------------------------------------------------------
 def extract_consent_url(text: str) -> str | None:
-    """Return the first consent-like URL found in agent response text."""
+    """에이전트 응답 텍스트에서 찾은 첫 번째 동의 URL 형태의 값을 반환합니다."""
     urls = CONSENT_URL_PATTERN.findall(text)
     consent_prefixes = [
         "https://bedrock-agentcore",
@@ -376,7 +376,7 @@ def extract_consent_url(text: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Helper: truncate ARN for display
+# 보조 함수: 표시할 ARN 줄이기
 # ---------------------------------------------------------------------------
 def _truncate_arn(arn: str, max_len: int = 45) -> str:
     if len(arn) <= max_len:
@@ -385,7 +385,7 @@ def _truncate_arn(arn: str, max_len: int = 45) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Helper: sign out
+# 보조 함수: 로그아웃
 # ---------------------------------------------------------------------------
 def _sign_out():
     stop_callback_server()
@@ -402,10 +402,10 @@ def _sign_out():
 
 
 # ===========================================================================
-# SCREEN 1: LOGIN
+# 화면 1: 로그인
 # ===========================================================================
 if not st.session_state.logged_in:
-    # Hide sidebar on login screen
+    # 로그인 화면에서 사이드바 숨기기
     st.markdown('<div class="no-sidebar"></div>', unsafe_allow_html=True)
 
     config = load_cognito_config()
@@ -413,7 +413,7 @@ if not st.session_state.logged_in:
         st.error("cognito_config.json not found. Run `python setup_cognito.py` first.")
         st.stop()
 
-    # Centered card layout
+    # 가운데 정렬된 카드 레이아웃
     _, center, _ = st.columns([1, 2, 1])
     with center:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
@@ -451,12 +451,12 @@ if not st.session_state.logged_in:
                     st.session_state.cognito_config = config
                     st.session_state.logged_in = True
 
-                    # Auto-resolve agent ARN
+                    # 에이전트 ARN 자동 확인
                     try:
                         arn = resolve_agent_arn()
                         st.session_state.agent_arn = arn
                     except Exception:
-                        pass  # Will show a warning on the dashboard
+                        pass  # 대시보드에 경고 표시
 
                     st.rerun()
                 except Exception as exc:
@@ -468,7 +468,7 @@ if not st.session_state.logged_in:
 
 
 # ===========================================================================
-# SCREEN 2: DASHBOARD (logged in)
+# 화면 2: 대시보드(로그인 상태)
 # ===========================================================================
 config = st.session_state.cognito_config or load_cognito_config()
 if config is None:
@@ -480,17 +480,17 @@ flow_key = st.session_state.selected_flow
 is_3lo = flow_key in ("github", "google")
 
 # ---------------------------------------------------------------------------
-# Sidebar
+# 사이드바
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    # -- User badge --
+    # -- 사용자 배지 --
     st.markdown(
         f'<span class="sidebar-badge badge-green">Signed in as {st.session_state.username}</span>',
         unsafe_allow_html=True,
     )
-    st.caption("")  # spacer
+    st.caption("")  # 여백
 
-    # -- Agent ARN --
+    # -- 에이전트 ARN --
     if st.session_state.agent_arn:
         st.caption(f"Agent: `{_truncate_arn(st.session_state.agent_arn)}`")
     else:
@@ -503,17 +503,17 @@ with st.sidebar:
             except Exception as exc:
                 st.error(str(exc))
 
-    # -- Region --
+    # -- 리전 --
     st.caption(f"Region: `{config.get('region', 'N/A')}`")
 
-    # -- Sign out --
+    # -- 로그아웃 --
     if st.button("Sign Out", use_container_width=True):
         _sign_out()
         st.rerun()
 
     st.divider()
 
-    # -- Flow selector --
+    # -- 흐름 선택기 --
     st.markdown("**Auth Flow**")
     selected_flow = st.radio(
         "Select flow",
@@ -523,13 +523,13 @@ with st.sidebar:
         label_visibility="collapsed",
     )
 
-    # Reset consent state when switching flows
+    # 흐름 전환 시 동의 상태 재설정
     if selected_flow != st.session_state.selected_flow:
         st.session_state.consent_state = "not_started"
         st.session_state.consent_url = None
         st.session_state.last_3lo_prompt = None
         st.session_state.selected_flow = selected_flow
-        # Auto-start callback server for 3LO flows
+        # 3LO 흐름에서 콜백 서버 자동 시작
         if selected_flow in ("github", "google") and st.session_state.jwt_token:
             start_callback_server(config["region"], st.session_state.jwt_token)
         else:
@@ -539,13 +539,13 @@ with st.sidebar:
     flow_key = st.session_state.selected_flow
     is_3lo = flow_key in ("github", "google")
 
-    # -- 3LO consent section --
+    # -- 3LO 동의 섹션 --
     if is_3lo:
         st.divider()
         provider_label = "GitHub" if flow_key == "github" else "Google"
         state = st.session_state.consent_state
 
-        # Status indicator
+        # 상태 표시기
         if state == "not_started":
             st.markdown(
                 '<span class="sidebar-badge badge-blue">Not started</span>',
@@ -562,7 +562,7 @@ with st.sidebar:
                 unsafe_allow_html=True,
             )
 
-        # Consent URL link button
+        # 동의 URL 링크 버튼
         if st.session_state.consent_url and state == "pending":
             st.link_button(
                 f"Authorize on {provider_label}",
@@ -570,7 +570,7 @@ with st.sidebar:
                 use_container_width=True,
             )
 
-            # Re-invoke button
+            # 다시 호출 버튼
             if st.button("Re-invoke after consent", use_container_width=True, type="primary"):
                 st.session_state.consent_state = "completed"
                 if st.session_state.last_3lo_prompt and st.session_state.jwt_token and st.session_state.agent_arn:
@@ -591,48 +591,48 @@ with st.sidebar:
                         st.session_state.chat_history.append({"role": "assistant", "content": f"Error: {exc}"})
                     st.rerun()
 
-        # Callback server indicator
+        # 콜백 서버 표시기
         cb_running = _callback_server_running()
         st.caption(f"Callback server: {'Running' if cb_running else 'Stopped'}")
 
-    # -- Response time --
+    # -- 응답 시간 --
     if st.session_state.last_response_time is not None:
         st.caption(f"Last response: {st.session_state.last_response_time}s")
 
 # ---------------------------------------------------------------------------
-# Main area
+# 기본 영역
 # ---------------------------------------------------------------------------
 
-# Gate: require agent ARN
+# 진입 조건: 에이전트 ARN 필요
 if not st.session_state.agent_arn:
     st.warning("No deployed agent found. Resolve the Agent ARN from the sidebar, or run `agentcore deploy -y`.")
     st.stop()
 
-# -- Flow header --
+# -- 흐름 헤더 --
 title, subtitle = FLOW_HEADERS[flow_key]
 st.subheader(title)
 st.caption(subtitle)
 
-# -- Auto-start callback server for 3LO on first render --
+# -- 첫 렌더링 시 3LO 콜백 서버 자동 시작 --
 if is_3lo and st.session_state.jwt_token and not _callback_server_running():
     start_callback_server(config["region"], st.session_state.jwt_token)
 
-# -- Chat history --
+# -- 채팅 기록 --
 for msg in st.session_state.chat_history:
     with st.chat_message(msg["role"]):
         st.markdown(_format_response(msg["content"]))
 
-# -- Preset button --
+# -- 사전 설정 버튼 --
 preset_prompt = None
 preset_label = PRESET_BUTTONS[flow_key]
 if st.button(preset_label, key=f"preset_{flow_key}", use_container_width=False):
     preset_prompt = preset_label
 
-# -- Chat input --
+# -- 채팅 입력 --
 user_input = st.chat_input("Type a prompt for the agent...")
 prompt_to_send = preset_prompt or user_input
 
-# -- Send prompt --
+# -- 프롬프트 전송 --
 if prompt_to_send:
     st.session_state.chat_history.append({"role": "user", "content": prompt_to_send})
 

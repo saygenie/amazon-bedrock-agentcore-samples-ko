@@ -1,9 +1,9 @@
-"""Verify that the AgentCore Browser routes traffic through the Squid proxy.
+"""AgentCore Browser가 Squid 프록시를 통해 트래픽을 라우팅하는지 확인한다.
 
-Reads CloudFormation outputs, builds a proxyConfiguration, starts a browser
-session, and checks that the browser's public IP matches the Squid proxy's IP.
+CloudFormation 출력을 읽고 proxyConfiguration을 구성한 뒤 브라우저 세션을
+시작하여 브라우저의 퍼블릭 IP가 Squid 프록시의 IP와 일치하는지 확인한다.
 
-Usage:
+사용법:
     export AWS_DEFAULT_REGION=us-west-2
     python verify_proxy.py
 """

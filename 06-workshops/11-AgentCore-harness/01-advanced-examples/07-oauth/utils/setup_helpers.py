@@ -1,10 +1,10 @@
 """
-Helper functions for provisioning infrastructure used by the
-harness-oauth-gateway notebook.
+harness-oauth-gateway 노트북에서 사용하는 인프라를 프로비저닝하는
+도우미 함수다.
 
-Each function is self-contained: it creates one logical resource group,
-prints progress, and returns a dict with the values the notebook needs.
-All functions are idempotent — safe to re-run if a resource already exists.
+각 함수는 독립적으로 하나의 논리적 리소스 그룹을 생성하고,
+진행 상황을 출력한 뒤 노트북에 필요한 값이 담긴 dict를 반환한다.
+모든 함수는 멱등성을 보장하므로 리소스가 이미 있어도 안전하게 다시 실행할 수 있다.
 """
 
 import boto3
@@ -16,12 +16,12 @@ import zipfile
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Internal helpers
+# 내부 도우미
 # ─────────────────────────────────────────────────────────────────────
 
 
 def _find_pool_by_name(cog, pool_name):
-    """Return pool ID if a Cognito user pool with this name exists, else None."""
+    """해당 이름의 Cognito 사용자 풀이 있으면 풀 ID를, 없으면 None을 반환한다."""
     for p in cog.list_user_pools(MaxResults=60).get("UserPools", []):
         if p["Name"] == pool_name:
             return p["Id"]
@@ -29,7 +29,7 @@ def _find_pool_by_name(cog, pool_name):
 
 
 def _find_client_by_name(cog, pool_id, client_name):
-    """Return (client_id, client_secret|None) if an app client exists."""
+    """앱 클라이언트가 있으면 (client_id, client_secret|None)을 반환한다."""
     for c in cog.list_user_pool_clients(UserPoolId=pool_id, MaxResults=60)["UserPoolClients"]:
         if c["ClientName"] == client_name:
             full = cog.describe_user_pool_client(
@@ -41,7 +41,7 @@ def _find_client_by_name(cog, pool_id, client_name):
 
 
 def _ensure_role(iam_c, role_name, trust_doc):
-    """Create an IAM role if it doesn't exist. Returns the role ARN."""
+    """IAM 역할이 없으면 생성하고 역할 ARN을 반환한다."""
     try:
         return iam_c.create_role(
             RoleName=role_name,
@@ -52,7 +52,7 @@ def _ensure_role(iam_c, role_name, trust_doc):
 
 
 def _ensure_policy(iam_c, account_id, policy_name, policy_doc):
-    """Create a managed policy if it doesn't exist. Returns the ARN."""
+    """관리형 정책이 없으면 생성하고 ARN을 반환한다."""
     arn = f"arn:aws:iam::{account_id}:policy/{policy_name}"
     try:
         iam_c.create_policy(PolicyName=policy_name, PolicyDocument=policy_doc)
@@ -62,25 +62,25 @@ def _ensure_policy(iam_c, account_id, policy_name, policy_doc):
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Cognito Pool #1 — User Auth (USER_PASSWORD_AUTH)
+# Cognito 풀 #1: 사용자 인증(USER_PASSWORD_AUTH)
 # ─────────────────────────────────────────────────────────────────────
 
 
 def create_user_auth_pool(region: str, prefix: str, username: str, password: str) -> dict:
-    """Create (or reuse) a Cognito user pool for end-user authentication.
+    """최종 사용자 인증용 Cognito 사용자 풀을 생성하거나 재사용한다.
 
-    Creates:
-      - User pool with USER_PASSWORD_AUTH
-      - App client (no secret)
-      - A test user with the supplied credentials
+    생성 항목:
+      - USER_PASSWORD_AUTH를 사용하는 사용자 풀
+      - 앱 클라이언트(보안 암호 없음)
+      - 제공된 자격 증명을 사용하는 테스트 사용자
 
-    Returns dict with keys:  pool_id, client_id, discovery_url
+    반환하는 dict의 키: pool_id, client_id, discovery_url
     """
     cog = boto3.client("cognito-idp", region_name=region)
     pool_name = f"{prefix}-user-pool"
     client_name = f"{prefix}-user-client"
 
-    # ── Pool ──
+    # ── 풀 ──
     pool_id = _find_pool_by_name(cog, pool_name)
     if pool_id:
         print(f"  Pool #1 already exists: {pool_id}")
@@ -92,7 +92,7 @@ def create_user_auth_pool(region: str, prefix: str, username: str, password: str
         )["UserPool"]["Id"]
         print(f"  Pool #1 created: {pool_id}")
 
-    # ── App client ──
+    # ── 앱 클라이언트 ──
     client_id, _ = _find_client_by_name(cog, pool_id, client_name)
     if client_id:
         print(f"  Pool #1 client already exists: {client_id}")
@@ -105,7 +105,7 @@ def create_user_auth_pool(region: str, prefix: str, username: str, password: str
         )["UserPoolClient"]["ClientId"]
         print(f"  Pool #1 client created: {client_id}")
 
-    # ── Test user (create or reset password) ──
+    # ── 테스트 사용자(생성 또는 비밀번호 재설정) ──
     try:
         cog.admin_create_user(
             UserPoolId=pool_id,
@@ -127,20 +127,20 @@ def create_user_auth_pool(region: str, prefix: str, username: str, password: str
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Cognito Pool #2 — M2M (client_credentials + resource server)
+# Cognito 풀 #2: M2M(client_credentials + 리소스 서버)
 # ─────────────────────────────────────────────────────────────────────
 
 
 def create_m2m_pool(region: str, prefix: str) -> dict:
-    """Create (or reuse) a Cognito user pool for machine-to-machine auth.
+    """M2M 인증용 Cognito 사용자 풀을 생성하거나 재사용한다.
 
-    Creates:
-      - User pool
-      - Resource server with an 'invoke' scope
-      - Cognito domain (for the token endpoint)
-      - App client with client_credentials grant + secret
+    생성 항목:
+      - 사용자 풀
+      - 'invoke' 범위가 있는 리소스 서버
+      - Cognito 도메인(토큰 엔드포인트용)
+      - client_credentials 권한 부여와 보안 암호를 사용하는 앱 클라이언트
 
-    Returns dict with keys:
+    반환하는 dict의 키:
       pool_id, client_id, client_secret, discovery_url,
       scope, domain_prefix, token_endpoint
     """
@@ -150,7 +150,7 @@ def create_m2m_pool(region: str, prefix: str) -> dict:
     rs_id = f"{prefix}-gateway"
     scope = f"{rs_id}/invoke"
 
-    # ── Pool ──
+    # ── 풀 ──
     pool_id = _find_pool_by_name(cog, pool_name)
     if pool_id:
         print(f"  Pool #2 already exists: {pool_id}")
@@ -161,7 +161,7 @@ def create_m2m_pool(region: str, prefix: str) -> dict:
         )["UserPool"]["Id"]
         print(f"  Pool #2 created: {pool_id}")
 
-    # ── Resource server ──
+    # ── 리소스 서버 ──
     try:
         cog.create_resource_server(
             UserPoolId=pool_id,
@@ -176,7 +176,7 @@ def create_m2m_pool(region: str, prefix: str) -> dict:
         else:
             raise
 
-    # ── Domain ──
+    # ── 도메인 ──
     desc = cog.describe_user_pool(UserPoolId=pool_id)["UserPool"]
     domain_prefix = desc.get("Domain")
     if domain_prefix:
@@ -187,7 +187,7 @@ def create_m2m_pool(region: str, prefix: str) -> dict:
         print(f"  Domain created: {domain_prefix}")
     token_endpoint = f"https://{domain_prefix}.auth.{region}.amazoncognito.com/oauth2/token"
 
-    # ── App client ──
+    # ── 앱 클라이언트 ──
     client_id, client_secret = _find_client_by_name(cog, pool_id, client_name)
     if client_id and client_secret:
         print(f"  Pool #2 client already exists: {client_id}")
@@ -218,7 +218,7 @@ def create_m2m_pool(region: str, prefix: str) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────
-# OAuth2 Credential Provider (AgentCore Identity)
+# OAuth2 자격 증명 공급자(AgentCore Identity)
 # ─────────────────────────────────────────────────────────────────────
 
 
@@ -229,21 +229,21 @@ def create_credential_provider(
     client_id: str,
     client_secret: str,
 ) -> dict:
-    """Create (or reuse) an OAuth2 credential provider in AgentCore Identity.
+    """AgentCore Identity에서 OAuth2 자격 증명 공급자를 생성하거나 재사용한다.
 
-    Returns dict with keys:  name, arn
+    반환하는 dict의 키: name, arn
     """
     ac = boto3.client("bedrock-agentcore-control", region_name=region)
     name = f"{prefix}-m2m-provider"
 
-    # Check if it already exists
+    # 이미 있는지 확인한다.
     try:
         existing = ac.get_oauth2_credential_provider(name=name)
         arn = existing["credentialProviderArn"]
         print(f"  Credential provider already exists: {arn}")
         return dict(name=name, arn=arn)
     except Exception:
-        pass  # doesn't exist yet
+        pass  # 아직 존재하지 않는다.
 
     resp = ac.create_oauth2_credential_provider(
         name=name,
@@ -262,14 +262,14 @@ def create_credential_provider(
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Lambda Function
+# Lambda 함수
 # ─────────────────────────────────────────────────────────────────────
 
 
 def deploy_lambda(region: str, prefix: str) -> dict:
-    """Deploy (or reuse) the order-management Lambda function.
+    """주문 관리 Lambda 함수를 배포하거나 재사용한다.
 
-    Returns dict with keys:  function_name, function_arn, role_name
+    반환하는 dict의 키: function_name, function_arn, role_name
     """
     iam_c = boto3.client("iam")
     lam = boto3.client("lambda", region_name=region)
@@ -299,12 +299,12 @@ def deploy_lambda(region: str, prefix: str) -> dict:
 
     fn_name = f"{prefix}-order-mgmt"
 
-    # Check if Lambda already exists
+    # Lambda가 이미 있는지 확인한다.
     try:
         fn_arn = lam.get_function(FunctionName=fn_name)["Configuration"]["FunctionArn"]
         print(f"  Lambda already exists: {fn_name}")
     except lam.exceptions.ResourceNotFoundException:
-        # Need IAM propagation only for new roles
+        # 새 역할에만 IAM 전파 시간이 필요하다.
         print("  Waiting 10 s for IAM propagation…")
         time.sleep(10)
 
@@ -330,7 +330,7 @@ def deploy_lambda(region: str, prefix: str) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Gateway + Lambda target
+# Gateway + Lambda 대상
 # ─────────────────────────────────────────────────────────────────────
 
 
@@ -344,17 +344,17 @@ def create_gateway_with_lambda_target(
     lambda_arn: str,
     lambda_function_name: str,
 ) -> dict:
-    """Create (or reuse) an AgentCore Gateway with CUSTOM_JWT inbound auth
-    and a Lambda target using GATEWAY_IAM_ROLE outbound auth.
+    """CUSTOM_JWT 인바운드 인증을 사용하는 AgentCore Gateway와
+    GATEWAY_IAM_ROLE 아웃바운드 인증을 사용하는 Lambda 대상을 생성하거나 재사용한다.
 
-    Returns dict with keys:
+    반환하는 dict의 키:
       gateway_id, gateway_arn, gateway_url, target_id,
       role_name, policy_name
     """
     iam_c = boto3.client("iam")
     ac = boto3.client("bedrock-agentcore-control", region_name=region)
 
-    # ── Gateway execution role ──
+    # ── Gateway 실행 역할 ──
     gw_role_name = f"{prefix}-gateway-role"
     trust = json.dumps(
         {
@@ -387,7 +387,7 @@ def create_gateway_with_lambda_target(
     gw_policy_arn = _ensure_policy(iam_c, account_id, gw_policy_name, policy_doc)
     iam_c.attach_role_policy(RoleName=gw_role_name, PolicyArn=gw_policy_arn)
 
-    # ── Gateway (try create, handle conflict if already exists) ──
+    # ── Gateway(생성을 시도하고 이미 있으면 충돌 처리) ──
     gateway_name = f"{prefix}-gateway"
     try:
         print("  Waiting 10 s for IAM propagation…")
@@ -410,7 +410,7 @@ def create_gateway_with_lambda_target(
         gw_url = gw.get("gatewayUrl", "")
         print(f"  Gateway created: {gw_id}")
     except ac.exceptions.ConflictException:
-        # Already exists — find it by iterating the list
+        # 이미 존재하므로 목록을 순회하여 찾는다.
         gw_id = None
         for g in ac.list_gateways().get("items", []):
             info = ac.get_gateway(gatewayIdentifier=g["gatewayId"])
@@ -423,7 +423,7 @@ def create_gateway_with_lambda_target(
             raise RuntimeError(f"Gateway {gateway_name} exists but could not be found via list")
         print(f"  Gateway already exists: {gw_id}")
 
-    # Wait for READY
+    # READY 상태가 될 때까지 기다린다.
     print("  Waiting for gateway READY…")
     for _ in range(30):
         status = ac.get_gateway(gatewayIdentifier=gw_id)["status"]
@@ -432,7 +432,7 @@ def create_gateway_with_lambda_target(
         time.sleep(10)
     print(f"  Gateway status: {status}")
 
-    # ── Lambda target (try create, handle conflict) ──
+    # ── Lambda 대상(생성을 시도하고 충돌 처리) ──
     target_name = f"{prefix}-lambda-target"
     tool_schemas = [
         {
@@ -474,7 +474,7 @@ def create_gateway_with_lambda_target(
         tgt_id = tgt["targetId"]
         print(f"  Target created: {tgt_id}")
     except ac.exceptions.ConflictException:
-        # Already exists — find it
+        # 이미 존재하므로 찾아서 사용한다.
         tgt_id = None
         for t in ac.list_gateway_targets(gatewayIdentifier=gw_id).get("items", []):
             tgt_id = t["targetId"]
@@ -483,7 +483,7 @@ def create_gateway_with_lambda_target(
             raise RuntimeError(f"Target on {gw_id} exists but could not be found via list")
         print(f"  Target already exists: {tgt_id}")
 
-    # Wait for target READY
+    # 대상이 READY 상태가 될 때까지 기다린다.
     print("  Waiting for target READY…")
     for _ in range(30):
         status = ac.get_gateway_target(gatewayIdentifier=gw_id, targetId=tgt_id)["status"]
@@ -492,7 +492,7 @@ def create_gateway_with_lambda_target(
         time.sleep(10)
     print(f"  Target status: {status}")
 
-    # Re-fetch gateway to get full ARN/URL if we reused
+    # 재사용한 경우 전체 ARN/URL을 가져오기 위해 Gateway를 다시 조회한다.
     gw_full = ac.get_gateway(gatewayIdentifier=gw_id)
     return dict(
         gateway_id=gw_id,
@@ -505,14 +505,14 @@ def create_gateway_with_lambda_target(
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Harness execution role
+# Harness 실행 역할
 # ─────────────────────────────────────────────────────────────────────
 
 
 def create_harness_execution_role(region: str, prefix: str, account_id: str) -> dict:
-    """Create (or reuse) the IAM execution role the harness assumes at runtime.
+    """Harness가 런타임에 수임하는 IAM 실행 역할을 생성하거나 재사용한다.
 
-    Returns dict with keys:  role_arn, role_name, policy_name
+    반환하는 dict의 키: role_arn, role_name, policy_name
     """
     iam_c = boto3.client("iam")
     role_name = f"{prefix}-harness-role"
@@ -631,15 +631,15 @@ def create_harness_execution_role(region: str, prefix: str, account_id: str) -> 
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Cleanup — discover-and-delete all resources by name
+# 정리: 이름으로 모든 리소스를 찾아 삭제
 # ─────────────────────────────────────────────────────────────────────
 
 
 def cleanup_all(region: str, prefix: str):
-    """Delete every resource created by this notebook, in reverse order.
+    """이 노트북에서 생성한 모든 리소스를 역순으로 삭제한다.
 
-    Discovers resources by name so it works even after a kernel restart.
-    Skips gracefully if a resource was never created.
+    이름으로 리소스를 찾으므로 커널을 다시 시작한 뒤에도 동작한다.
+    생성된 적 없는 리소스는 문제없이 건너뛴다.
     """
     account_id = boto3.client("sts", region_name=region).get_caller_identity()["Account"]
     cog = boto3.client("cognito-idp", region_name=region)
@@ -677,7 +677,7 @@ def cleanup_all(region: str, prefix: str):
             except Exception:
                 return
 
-    # 1. Harness
+        # 1. Harness 구성
     print("\n[1/7] Harness")
     try:
         matches = [h for h in ac.list_harnesses().get("harnesses", []) if h.get("harnessName") == harness_name]
@@ -692,7 +692,7 @@ def cleanup_all(region: str, prefix: str):
     except Exception as e:
         skip(f"Harness: {e}")
 
-    # 2. Gateway + targets
+    # 2. Gateway + 대상
     print("\n[2/7] Gateway + targets")
     try:
         gws = [g for g in ac.list_gateways().get("items", []) if g.get("name") == gateway_name]
@@ -713,7 +713,7 @@ def cleanup_all(region: str, prefix: str):
     except Exception as e:
         skip(f"Gateway: {e}")
 
-    # 3. Credential provider
+    # 3. 자격 증명 공급자
     print("\n[3/7] Credential provider")
     try:
         ac.get_oauth2_credential_provider(name=cred_name)
@@ -726,7 +726,7 @@ def cleanup_all(region: str, prefix: str):
             else f"{e}"
         )
 
-    # 4. Lambda
+        # 4. Lambda 구성
     print("\n[4/7] Lambda")
     try:
         lam.get_function(FunctionName=fn_name)
@@ -737,7 +737,7 @@ def cleanup_all(region: str, prefix: str):
     except Exception as e:
         skip(f"Lambda: {e}")
 
-    # 5. IAM roles & policies
+    # 5. IAM 역할 및 정책
     print("\n[5/7] IAM roles & policies")
 
     def _del_role(rname, policy_names=None):
@@ -770,7 +770,7 @@ def cleanup_all(region: str, prefix: str):
     _del_role(gw_role, [gw_policy])
     _del_role(harness_role, [harness_policy])
 
-    # 6. Cognito Pool #2
+    # 6. Cognito 풀 #2
     print("\n[6/7] Cognito Pool #2")
     try:
         m = [p for p in cog.list_user_pools(MaxResults=60)["UserPools"] if p["Name"] == pool2_name]
@@ -790,7 +790,7 @@ def cleanup_all(region: str, prefix: str):
     except Exception as e:
         skip(f"Pool #2: {e}")
 
-    # 7. Cognito Pool #1
+    # 7. Cognito 풀 #1
     print("\n[7/7] Cognito Pool #1")
     try:
         m = [p for p in cog.list_user_pools(MaxResults=60)["UserPools"] if p["Name"] == pool1_name]

@@ -1,41 +1,41 @@
-# Getting Started with harness in AgentCore 
+# AgentCore Harness 시작하기
 
-This folder contains the introductory tutorial for harness in Amazon Bedrock AgentCore.
+이 폴더에는 Amazon Bedrock AgentCore Harness 입문 튜토리얼이 있습니다.
 
-## What is harness in AgentCore?
+## AgentCore Harness란?
 
-Harness helps developers experiment and ship agents faster by letting them define and run agents in one API call, skipping framework setup, orchestration code, and deployment. Developers specify the model, system prompt, and tools in a single API call.
+AgentCore Harness를 사용하면 프레임워크 설정, 오케스트레이션 코드 작성, 배포 과정을 거치지 않고 한 번의 API 호출로 에이전트를 정의하고 실행할 수 있어 더 빠르게 에이전트를 실험하고 출시할 수 있습니다. 개발자는 한 번의 API 호출에 모델, 시스템 프롬프트, 도구를 지정합니다.
 
-## Getting Started Guide
+## 시작 가이드
 
-### With AgentCore CLI.
+### AgentCore CLI 사용
 
-The markdown file [CLI](CLI.md) contains a complete walkthrough that demonstrates the harness workflow using AgentCore CLI.
+Markdown 파일 [CLI](CLI.md)에는 AgentCore CLI를 사용해 AgentCore Harness 워크플로를 실습하는 전체 과정이 담겨 있습니다.
 
-**What you'll learn:**
-1. Creating an agent and invoking it, using Bedrock model provider
-2. Creating an agent and invoking it, using OpenAI model provider
+**학습 내용:**
+1. Bedrock 모델 공급자를 사용해 에이전트 생성 및 호출
+2. OpenAI 모델 공급자를 사용해 에이전트 생성 및 호출
 
-### Getting Started using Jupyter notebook and boto3.
+### Jupyter 노트북과 Boto3로 시작하기
 
-The jupyter notebook [01_getting_started_bedrock.ipynb](01_getting_started_bedrock.ipynb) contains a complete walkthrough that demonstrates the core Harness workflow:
+Jupyter 노트북 [01_getting_started_bedrock.ipynb](01_getting_started_bedrock.ipynb)에는 핵심 AgentCore Harness 워크플로를 실습하는 전체 과정이 담겨 있습니다.
 
-**What you'll learn:**
-1. Creating an IAM execution role with necessary permissions
-2. Creating a Harness agent
-3. Invoking the agent with prompts
-4. Running shell commands on the agent's isolated microVM
-5. Cleaning up resources
+**학습 내용:**
+1. 필요한 권한이 있는 IAM 실행 역할 생성
+2. AgentCore Harness 에이전트 생성
+3. 프롬프트로 에이전트 호출
+4. 에이전트의 격리된 microVM에서 셸 명령 실행
+5. 리소스 정리
 
-## Important Notes
+## 중요 사항
 
-- Each Harness session runs in an isolated Firecracker microVM
-- Use `execute_command` to run shell commands on the agent's VM (not local `!` commands)
-- The agent has `file_operations` and `shell` tools available by default
-- Sessions are identified by a unique `session_id`
+- 각 AgentCore Harness 세션은 격리된 Firecracker microVM에서 실행됩니다.
+- 에이전트의 VM에서 셸 명령을 실행하려면 `execute_command`를 사용하세요. 로컬 `!` 명령은 사용하지 마세요.
+- 에이전트에서는 기본적으로 `file_operations` 및 `shell` 도구를 사용할 수 있습니다.
+- 세션은 고유한 `session_id`로 식별됩니다.
 
-## Next Steps
+## 다음 단계
 
-After completing this tutorial, explore:
-- [**01-advanced-examples/**](../01-advanced-examples/) — Custom containers, CLI scripts, and advanced patterns
-- [**02-use-cases/**](../02-use-cases/) — Real-world applications like travel agents and webapp testing
+이 튜토리얼을 완료한 후 다음 내용을 살펴보세요.
+- [**01-advanced-examples/**](../01-advanced-examples/) — 사용자 지정 컨테이너, CLI 스크립트, 고급 패턴
+- [**02-use-cases/**](../02-use-cases/) — 여행 에이전트, 웹 애플리케이션 테스트 등의 실제 애플리케이션

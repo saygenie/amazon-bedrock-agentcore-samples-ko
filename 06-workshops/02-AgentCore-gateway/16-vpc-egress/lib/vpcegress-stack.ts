@@ -58,10 +58,10 @@ export class VpcegressStack extends cdk.Stack {
       trafficType: ec2.FlowLogTrafficType.ALL,
     });
 
-    // --- Pre-delete SG cleanup ---
-    // On stack deletion, this custom resource attempts to delete all non-default
-    // security groups in the VPC. If any SG still has ENI dependencies (e.g. from
-    // VPC Lattice Resource Gateway), the Lambda fails and prevents VPC deletion.
+    // --- 삭제 전 Security Group 정리 ---
+    // 스택 삭제 시 이 Custom Resource는 VPC의 기본값이 아닌 모든 Security Group
+    // 삭제를 시도합니다. Security Group에 ENI 종속성이 남아 있으면(예: VPC Lattice
+    // Resource Gateway) Lambda가 실패하고 VPC 삭제를 막습니다.
     const sgCleanupFn = new lambda.Function(this, "SgCleanupFn", {
       runtime: lambda.Runtime.PYTHON_3_13,
       handler: "index.handler",
@@ -134,9 +134,9 @@ def handler(event, context):
       },
     });
 
-    // sgCleanup implicitly depends on the VPC (via vpcId ref).
-    // On deletion, CloudFormation deletes in reverse dependency order:
-    // sgCleanup (runs Lambda to delete SGs) → then VPC.
+    // sgCleanup은 vpcId 참조를 통해 VPC에 암시적으로 종속됩니다.
+    // 삭제 시 CloudFormation은 종속성의 역순으로 삭제합니다.
+    // sgCleanup(Security Group 삭제 Lambda 실행) → VPC.
 
     new cdk.CfnOutput(this, "VpcId", { value: this.vpc.vpcId });
     new cdk.CfnOutput(this, "PublicSubnetIds", {

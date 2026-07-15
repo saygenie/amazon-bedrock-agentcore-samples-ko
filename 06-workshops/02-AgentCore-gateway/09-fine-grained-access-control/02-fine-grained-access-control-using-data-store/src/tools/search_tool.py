@@ -1,14 +1,14 @@
 """
-Search Tool - Mock search functionality for Gateway
+Search Tool - Gateway용 모의 검색 기능입니다.
 
-This tool simulates a search engine with mock results.
+이 도구는 모의 결과를 사용하는 검색 엔진을 시뮬레이션합니다.
 """
 
 import json
 from datetime import datetime
 
 
-# Mock search index
+# 모의 검색 index
 MOCK_SEARCH_INDEX = {
     "documents": [
         {
@@ -73,14 +73,14 @@ MOCK_SEARCH_INDEX = {
 
 def search_documents(query, max_results=10):
     """
-    Search mock documents by query string.
+    query 문자열로 모의 문서를 검색합니다.
 
-    Args:
-        query: Search query string
-        max_results: Maximum number of results to return
+    인자:
+        query: 검색 query 문자열
+        max_results: 반환할 최대 결과 수
 
-    Returns:
-        List of matching documents with relevance scores
+    반환:
+        관련도 점수가 포함된 일치 문서 목록
     """
     query_lower = query.lower()
     query_terms = query_lower.split()
@@ -90,20 +90,20 @@ def search_documents(query, max_results=10):
     for doc in MOCK_SEARCH_INDEX["documents"]:
         score = 0
 
-        # Check title
+            # title 확인
         if query_lower in doc["title"].lower():
             score += 10
 
-        # Check content
+            # content 확인
         if query_lower in doc["content"].lower():
             score += 5
 
-        # Check keywords
+            # keyword 확인
         for keyword in doc["keywords"]:
             if keyword in query_lower:
                 score += 3
 
-        # Check individual terms
+            # 개별 term 확인
         for term in query_terms:
             if term in doc["title"].lower():
                 score += 2
@@ -115,7 +115,7 @@ def search_documents(query, max_results=10):
         if score > 0:
             results.append({"document": doc, "relevance_score": score})
 
-    # Sort by relevance score
+    # 관련도 점수로 정렬
     results.sort(key=lambda x: x["relevance_score"], reverse=True)
 
     return results[:max_results]
@@ -123,26 +123,26 @@ def search_documents(query, max_results=10):
 
 def lambda_handler(event, context):
     """
-    Lambda handler for search tool.
+    search tool용 Lambda 핸들러입니다.
 
-    Expected input:
+    예상 입력:
     {
         "query": "search terms",
         "max_results": 10 (optional),
         "filter_keywords": ["keyword1", "keyword2"] (optional)
     }
 
-    Returns search results with relevance scores.
+    관련도 점수가 포함된 검색 결과를 반환합니다.
     """
     print(f"Search tool received event: {json.dumps(event)}")
 
-    # Parse input
+        # 입력 파싱
     body = event if isinstance(event, dict) else json.loads(event)
     query = body.get("query", "")
     max_results = body.get("max_results", 10)
     filter_keywords = body.get("filter_keywords", [])
 
-    # Validate query
+        # query 검증
     if not query:
         return {
             "statusCode": 400,
@@ -155,14 +155,14 @@ def lambda_handler(event, context):
             ),
         }
 
-    # Perform search
+        # 검색 수행
     results = search_documents(query, max_results)
 
-    # Apply keyword filter if provided
+        # 제공된 경우 keyword filter 적용
     if filter_keywords:
         results = [r for r in results if any(kw in r["document"]["keywords"] for kw in filter_keywords)]
 
-    # Format results
+        # 결과 형식 지정
     formatted_results = []
     for item in results:
         doc = item["document"]
@@ -195,7 +195,7 @@ def lambda_handler(event, context):
     return response
 
 
-# MCP Tool Definition for Gateway registration
+# Gateway 등록용 MCP Tool Definition
 TOOL_DEFINITION = {
     "name": "search_tool",
     "description": "Search for documents and information using keywords. Returns relevant results with snippets and URLs.",
@@ -222,7 +222,7 @@ TOOL_DEFINITION = {
 
 
 if __name__ == "__main__":
-    # Test the tool locally
+# 로컬에서 도구 테스트
     test_cases = [
         {"query": "bedrock"},
         {"query": "lambda interceptor", "max_results": 5},

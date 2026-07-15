@@ -16,7 +16,7 @@ def weather() -> dict:
     }
 
 
-# Programmatic skill — defined inline, no SKILL.md file needed
+# 프로그래밍 방식의 skill - 인라인으로 정의하므로 SKILL.md 파일이 필요 없음
 math_tutor = Skill(
     name="math-tutor",
     description="Solve math problems step-by-step, showing all work and explaining reasoning",
@@ -32,7 +32,7 @@ math_tutor = Skill(
 )
 
 model = BedrockModel(model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0")
-# Mix file-based skill (weather-reporter) with programmatic skill (math_tutor)
+# 파일 기반 skill(weather-reporter)과 프로그래밍 방식의 skill(math_tutor)을 함께 사용
 skills = AgentSkills(skills=["./skills/weather-reporter", math_tutor])
 agent = Agent(model=model, tools=[calculator, weather], plugins=[skills])
 

@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""FastAPI dependencies."""
+"""FastAPI 종속성."""
 
 import logging
 
@@ -20,12 +20,12 @@ def get_current_user(
     x_amzn_oidc_data: str = Header(..., include_in_schema=False),
     settings: Settings = Depends(get_settings),
 ) -> str:
-    """Extract user email from ALB OIDC JWT."""
+    """ALB OIDC JWT에서 사용자 이메일을 추출한다."""
     return get_user_email_from_jwt(x_amzn_oidc_data, settings.aws_region)
 
 
 def get_agent_service(settings: Settings = Depends(get_settings)) -> AgentService:
-    """Get AgentService instance."""
+    """AgentService 인스턴스를 가져온다."""
     global _agent_service
     if _agent_service is None:
         _agent_service = AgentService(

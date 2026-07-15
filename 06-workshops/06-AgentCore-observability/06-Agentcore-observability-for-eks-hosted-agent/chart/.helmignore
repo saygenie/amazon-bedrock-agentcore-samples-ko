@@ -1,8 +1,8 @@
-# Patterns to ignore when building packages.
-# This supports shell glob matching, relative path matching, and
-# negation (prefixed with !). Only one pattern per line.
+# 패키지를 빌드할 때 무시할 패턴입니다.
+# shell glob 일치, 상대 경로 일치, 부정(! 접두사)을
+# 지원합니다. 한 줄에 패턴 하나만 지정합니다.
 .DS_Store
-# Common VCS dirs
+# 일반적인 VCS 디렉터리
 .git/
 .gitignore
 .bzr/
@@ -10,13 +10,13 @@
 .hg/
 .hgignore
 .svn/
-# Common backup files
+# 일반적인 백업 파일
 *.swp
 *.bak
 *.tmp
 *.orig
 *~
-# Various IDEs
+# 여러 IDE
 .project
 .idea/
 *.tmproj

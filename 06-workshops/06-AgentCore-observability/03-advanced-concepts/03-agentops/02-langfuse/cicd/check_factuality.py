@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Factuality Check Module
+사실성 검사 모듈
 
-This module extracts the factuality score checking logic from the GitHub workflow
-and provides a reusable function to validate factuality results.
+이 모듈은 GitHub 워크플로에서 사실성 점수 검사 로직을 분리하고,
+사실성 결과를 검증하는 재사용 가능 함수를 제공합니다.
 """
 
 import sys
@@ -15,17 +15,17 @@ def load_factuality_results(
     results_file: str = "factuality_results.json",
 ) -> Dict[str, Any]:
     """
-    Load factuality results from JSON file.
+    JSON 파일에서 사실성 결과를 로드합니다.
 
-    Args:
-        results_file: Path to the factuality results JSON file
+    인수:
+        results_file: 사실성 결과 JSON 파일 경로
 
-    Returns:
-        Dictionary containing the factuality results
+    반환:
+        사실성 결과가 포함된 딕셔너리
 
-    Raises:
-        FileNotFoundError: If the results file doesn't exist
-        json.JSONDecodeError: If the file contains invalid JSON
+    예외:
+        FileNotFoundError: 결과 파일이 없는 경우
+        json.JSONDecodeError: 파일에 유효하지 않은 JSON이 포함된 경우
     """
     try:
         with open(results_file, "r") as f:
@@ -41,12 +41,12 @@ def load_factuality_results(
 
 def print_factuality_summary(results: Dict[str, Any]) -> None:
     """
-    Print a formatted summary of factuality results.
+    사실성 결과 요약을 형식에 맞춰 출력합니다.
 
-    Args:
-        results: Dictionary containing factuality results
+    인수:
+        results: 사실성 결과가 포함된 딕셔너리
     """
-    # Extract metrics
+    # 지표 추출
     avg_factuality = results["average_factuality_score"]
     total_items = results["total_items"]
     experiment_name = results["experiment_name"]
@@ -55,7 +55,7 @@ def print_factuality_summary(results: Dict[str, Any]) -> None:
     print(f"Total items evaluated: {total_items}")
     print(f"Average Factuality Score: {avg_factuality:.3f} ({avg_factuality * 100:.1f}%)")
 
-    # Print individual scores
+    # 개별 점수 출력
     print("\nIndividual scores:")
     for i, score_data in enumerate(results["scores"]):
         print(f"  Item {i + 1}: {score_data['value']:.3f} ({score_data.get('name', 'Unknown')})")
@@ -65,14 +65,14 @@ def print_factuality_summary(results: Dict[str, Any]) -> None:
 
 def check_factuality_threshold(results: Dict[str, Any], threshold: float = 0.5) -> bool:
     """
-    Check if the average factuality score meets the threshold requirement.
+    평균 사실성 점수가 임곗값 요구 사항을 충족하는지 확인합니다.
 
-    Args:
-        results: Dictionary containing factuality results
-        threshold: Minimum acceptable factuality score (default: 0.5)
+    인수:
+        results: 사실성 결과가 포함된 딕셔너리
+        threshold: 허용 가능한 최소 사실성 점수(기본값: 0.5)
 
-    Returns:
-        True if the score meets the threshold, False otherwise
+    반환:
+        점수가 임곗값을 충족하면 True, 그렇지 않으면 False
     """
     avg_factuality = results["average_factuality_score"]
 
@@ -88,29 +88,29 @@ def check_factuality_threshold(results: Dict[str, Any], threshold: float = 0.5) 
 
 def main(results_file: str = "factuality_results.json", threshold: float = 0.5) -> int:
     """
-    Main function to check factuality results.
+    사실성 결과를 검사하는 기본 함수입니다.
 
-    Args:
-        results_file: Path to the factuality results JSON file
-        threshold: Minimum acceptable factuality score
+    인수:
+        results_file: 사실성 결과 JSON 파일 경로
+        threshold: 허용 가능한 최소 사실성 점수
 
-    Returns:
-        Exit code: 0 for success, 1 for failure
+    반환:
+        종료 코드: 성공 시 0, 실패 시 1
     """
-    # Load results from file
+    # 파일에서 결과 로드
     results = load_factuality_results(results_file)
 
-    # Print summary
+    # 요약 출력
     print_factuality_summary(results)
 
-    # Check threshold
+    # 임곗값 확인
     passed = check_factuality_threshold(results, threshold)
 
     return 0 if passed else 1
 
 
 if __name__ == "__main__":
-    # Parse command line arguments
+    # 명령줄 인수 파싱
     import argparse
 
     parser = argparse.ArgumentParser(description="Check factuality results from evaluation")
@@ -130,6 +130,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Run the check
+    # 검사 실행
     exit_code = main(args.results_file, args.threshold)
     sys.exit(exit_code)

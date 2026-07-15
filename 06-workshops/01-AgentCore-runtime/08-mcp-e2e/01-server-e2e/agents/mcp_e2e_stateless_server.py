@@ -9,9 +9,9 @@ mcp = FastMCP(
     name="Stateless-MCP-Server",
     host="0.0.0.0",  # nosec B104
     stateless_http=True,
-)  # Stateless mode - no session persistence
+)  # Stateless mode - session 지속성 없음
 
-db = FinanceDB()  # Dynamo DB helper
+db = FinanceDB()  # DynamoDB 도우미
 
 
 @mcp.tool()
@@ -71,7 +71,7 @@ def budget_analysis(user_alias: str, time_period: str = "current_month") -> Prom
         user_alias: User identifier
         time_period: Time period to analyze (current_month, last_month, last_3_months)
     """
-    # Get current spending data from DynamoDB
+    # DynamoDB에서 현재 지출 데이터 가져오기
     transactions = db.get_transactions(user_alias)
     budgets = db.get_budgets(user_alias)
 
@@ -117,7 +117,7 @@ def savings_plan(user_alias: str, target_amount: float, target_months: int = 12)
         target_amount: Target savings amount
         target_months: Number of months to reach the target (default 12)
     """
-    # Calculate current financial situation from DynamoDB
+    # DynamoDB에서 현재 재무 상태 계산
     balance_data = db.get_balance(user_alias)
     total_income = balance_data["income"]
     total_expenses = balance_data["expenses"]
@@ -158,14 +158,14 @@ def get_monthly_summary(user_alias: str) -> str:
     now = datetime.now()
     current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    # Get transactions from DynamoDB
+    # DynamoDB에서 transaction 가져오기
     all_transactions = db.get_transactions(user_alias)
     monthly_transactions = [t for t in all_transactions if datetime.fromisoformat(t["date"]) >= current_month_start]
 
     monthly_income = sum(float(t["amount"]) for t in monthly_transactions if t["type"] == "income")
     monthly_expenses = sum(abs(float(t["amount"])) for t in monthly_transactions if t["type"] == "expense")
 
-    # Group expenses by category
+    # Category별로 지출 그룹화
     expenses_by_category = {}
     for t in monthly_transactions:
         if t["type"] == "expense":
@@ -189,13 +189,13 @@ def get_monthly_summary(user_alias: str) -> str:
 @mcp.resource("finance://budgets/{user_alias}")
 def get_budget_status(user_alias: str) -> str:
     """Get current budget status and performance as JSON"""
-    # Get data from DynamoDB
+    # DynamoDB에서 데이터 가져오기
     all_transactions = db.get_transactions(user_alias)
     all_budgets = db.get_budgets(user_alias)
 
     budget_status = {}
 
-    # Calculate current month spending by category
+    # Category별 현재 월 지출 계산
     now = datetime.now()
     current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
@@ -205,7 +205,7 @@ def get_budget_status(user_alias: str) -> str:
             category = transaction["category"]
             monthly_spending[category] = monthly_spending.get(category, 0) + abs(float(transaction["amount"]))
 
-    # Compare with budgets
+    # Budget과 비교
     for budget in all_budgets:
         category = budget["category"]
         budget_limit = float(budget["monthly_limit"])
@@ -222,7 +222,7 @@ def get_budget_status(user_alias: str) -> str:
             "set_date": budget["set_date"],
         }
 
-    # Add categories with spending but no budget
+    # 지출은 있지만 budget이 없는 category 추가
     for category, spent in monthly_spending.items():
         if category not in budget_status:
             budget_status[category] = {

@@ -1,43 +1,41 @@
 #!/usr/bin/env bash
-# Deploy the Fun Facts x402 seller stack via AWS CDK.
+# AWS CDK를 통해 Fun Facts x402 seller stack을 배포합니다.
 #
-# The Lambda is Node.js with pre-installed node_modules (same pattern as
-# agentcore-payments sellers) so this script runs `npm install` inside
-# seller/lambda/ before `cdk deploy` packages the asset.
+# Lambda는 node_modules가 미리 설치된 Node.js를 사용합니다
+# (agentcore-payments seller와 같은 패턴). 따라서 `cdk deploy`가 asset을
+# package하기 전에 이 script가 seller/lambda/에서 `npm install`을 실행합니다.
 #
-# Prerequisites:
+# 사전 요구 사항:
 #   - AWS CLI v2 configured (aws configure)
 #   - AWS CDK v2 installed (npm install -g aws-cdk)
 #   - Node.js 20+ and npm
 #   - Python 3.10+ with pip (for the CDK Python dependencies)
 #
-# Optional:
+# 선택 사항:
 #   - SELLER_WALLET_ADDRESS=0x…            # EVM (Base Sepolia) payout wallet
 #   - SELLER_SOLANA_WALLET_ADDRESS=…       # Solana (Devnet) payout wallet
 #   - X402_FACILITATOR_URL=…               # Override facilitator (defaults to x402.org)
 #
-# Usage (from anywhere):
+# 사용법(어느 경로에서나 실행 가능):
 #   bash test/integration/deploy-seller.sh
 #
-# After deploy, copy the printed SellerApiUrl into .env as SELLER_API_URL.
+# 배포 후 출력된 SellerApiUrl을 .env의 SELLER_API_URL로 복사하세요.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Scripts live at <use-case>/test/integration/ — ../../ resolves the
-# use-case root, the anchor for seller/ and .env.
+# Script는 <use-case>/test/integration/에 있으므로 ../../로 seller/와 .env의
+# 기준인 use case root를 확인합니다.
 USE_CASE_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 LAMBDA_DIR="${USE_CASE_ROOT}/seller/lambda"
 CDK_DIR="${USE_CASE_ROOT}/seller/cdk"
 
-# Pull the payout wallets + region from .env so the values the notebook
-# prompted for in §2 flow through to the CDK deploy. Shell-env vars
-# already set on the current session take precedence.
+# Notebook 2절에서 입력받은 값이 CDK 배포에 전달되도록 .env에서 payout wallet과
+# region을 가져옵니다. 현재 session에 이미 설정된 shell 환경 변수가 우선합니다.
 if [ -f "${USE_CASE_ROOT}/.env" ]; then
-    # Guard against unreplaced placeholders like "<ACCOUNT_ID>" — bash
-    # would try to interpret `<ACCOUNT_ID>` as a redirection and error
-    # out with "No such file or directory" when sourcing. Tell the user
-    # cleanly what went wrong instead.
+    # "<ACCOUNT_ID>"처럼 교체되지 않은 placeholder를 확인합니다. Bash는 source할 때
+    # `<ACCOUNT_ID>`를 redirection으로 해석해 "No such file or directory" 오류를
+    # 낼 수 있으므로 사용자에게 원인을 명확히 안내합니다.
     if grep -q "<ACCOUNT_ID>" "${USE_CASE_ROOT}/.env"; then
         echo "❌ ${USE_CASE_ROOT}/.env still contains <ACCOUNT_ID> placeholders." >&2
         echo "   Run:  bash test/integration/setup-roles.sh" >&2
@@ -58,7 +56,7 @@ echo "Lambda:   ${LAMBDA_DIR}"
 echo "CDK:      ${CDK_DIR}"
 echo ""
 
-# ── 0. Wallet sanity check ──
+# ── 0. Wallet 기본 확인 ──
 warn=()
 if [ -z "${SELLER_WALLET_ADDRESS:-}" ]; then
     warn+=("  • SELLER_WALLET_ADDRESS (EVM) — required for Base Sepolia payments")
@@ -88,7 +86,7 @@ if [ ${#warn[@]} -gt 0 ]; then
     echo ""
 fi
 
-# ── 1. Install Lambda node_modules ──
+# ── 1. Lambda node_modules 설치 ──
 echo "Installing Lambda node_modules..."
 (cd "${LAMBDA_DIR}" && npm install --silent --omit=dev)
 
@@ -104,7 +102,7 @@ echo "Installing CDK Python dependencies..."
 pip install --quiet --upgrade pip
 pip install --quiet -r "${CDK_DIR}/requirements.txt"
 
-# ── 3. Bootstrap (idempotent) ──
+# ── 3. Bootstrap(멱등) ──
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 if ! aws cloudformation describe-stacks --stack-name CDKToolkit --region "${REGION}" >/dev/null 2>&1; then
     echo ""
@@ -112,7 +110,7 @@ if ! aws cloudformation describe-stacks --stack-name CDKToolkit --region "${REGI
     (cd "${CDK_DIR}" && cdk bootstrap "aws://${ACCOUNT_ID}/${REGION}")
 fi
 
-# ── 4. Deploy ──
+# ── 4. 배포 ──
 echo ""
 echo "Deploying AgentCorePaymentsFunFactsSellerStack..."
 (cd "${CDK_DIR}" && cdk deploy --require-approval never --outputs-file ./outputs.json)
@@ -128,9 +126,9 @@ echo "   EVM payout wallet:   ${EVM_WALLET}"
 echo "   Solana payout wallet: ${SVM_WALLET}"
 echo ""
 
-# Upsert SELLER_API_URL into .env so §3/§5/§7 in the notebook pick it
-# up automatically on the next load_dotenv() without the user editing
-# by hand. Preserves comments and other lines.
+# 사용자가 직접 편집하지 않아도 다음 load_dotenv()에서 Notebook 3/5/7절이
+# 자동으로 읽도록 SELLER_API_URL을 .env에 upsert합니다. 주석과 다른 줄은
+# 보존합니다.
 ENV_FILE="${USE_CASE_ROOT}/.env"
 if [ ! -f "${ENV_FILE}" ]; then
     cp "${USE_CASE_ROOT}/env-sample.txt" "${ENV_FILE}"

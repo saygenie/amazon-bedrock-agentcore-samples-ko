@@ -1,37 +1,37 @@
-# Lambda AgentCore Invocation with CloudWatch Observability
+# CloudWatch Observability를 활용한 Lambda의 AgentCore 호출
 
-This tutorial demonstrates how to invoke Strands agents hosted on Amazon Bedrock AgentCore Runtime from AWS Lambda functions, with full CloudWatch Gen AI Observability enabled.
+이 자습서에서는 완전한 CloudWatch Gen AI Observability가 활성화된 AWS Lambda 함수에서 Amazon Bedrock AgentCore Runtime에 호스팅된 Strands Agents를 호출하는 방법을 살펴봅니다.
 
-## Overview
+## 개요
 
-Learn how to build a serverless architecture where Lambda functions invoke MCP-enabled agents running on AgentCore Runtime, with complete visibility into both Lambda execution and agent behavior through CloudWatch.
+Lambda 함수가 AgentCore Runtime에서 실행되는 MCP 지원 에이전트를 호출하고 CloudWatch를 통해 Lambda 실행과 에이전트 동작을 모두 완전하게 파악할 수 있는 서버리스 아키텍처를 구축하는 방법을 학습합니다.
 
-## Project Structure
+## 프로젝트 구조
 ```
 05-Lambda-AgentCore-invocation/
-├── agentcore_observability_lambda.ipynb  # Main tutorial notebook
-├── lambda_agentcore_invoker.py           # Lambda function code
-├── mcp_agent_multi_server.py             # Agent with multiple MCP servers
-├── requirements.txt                      # Python dependencies
-├── .gitignore                            # Git ignore patterns
-└── README.md                             # This file
+├── agentcore_observability_lambda.ipynb  # 기본 실습 Notebook
+├── lambda_agentcore_invoker.py           # Lambda 함수 코드
+├── mcp_agent_multi_server.py             # 여러 MCP server를 사용하는 Agent
+├── requirements.txt                      # Python 의존성
+├── .gitignore                            # Git ignore 패턴
+└── README.md                             # 이 파일
 
-Note: Dockerfile is generated dynamically in the notebook and not tracked in git.
+참고: Dockerfile은 노트북에서 동적으로 생성되며 git에서 추적하지 않습니다.
 ```
 
-## Tutorial Details
+## 자습서 세부 정보
 
-| Information         | Details                                                                          |
+| 정보                | 세부 정보                                                                         |
 |:-------------------|:----------------------------------------------------------------------------------|
-| Tutorial type      | Conversational                                                                   |
-| Agent type         | Single                                                                           |
-| Agentic Framework  | Strands Agents                                                                   |
-| LLM model          | Anthropic Claude Haiku 4.5                                                      |
-| Tutorial components| Lambda invocation, AgentCore Runtime, MCP servers, CloudWatch Observability     |
-| Example complexity | Advanced                                                                         |
-| SDK used           | Amazon BedrockAgentCore Python SDK, boto3, AWS Lambda                           |
+| 자습서 유형        | 대화형                                                                            |
+| 에이전트 유형      | 단일 에이전트                                                                     |
+| 에이전트 프레임워크| Strands Agents                                                                    |
+| LLM 모델           | Anthropic Claude Haiku 4.5                                                       |
+| 자습서 구성 요소   | Lambda 호출, AgentCore Runtime, MCP 서버, CloudWatch Observability               |
+| 예제 난이도        | 고급                                                                              |
+| 사용 SDK           | Amazon BedrockAgentCore Python SDK, boto3, AWS Lambda                            |
 
-## Architecture
+## 아키텍처
 ```
 ┌─────────┐      ┌────────────────┐      ┌──────────────────┐      ┌─────────────────┐
 │   API   │─────>│  AWS Lambda    │─────>│  AgentCore       │─────>│  Strands Agent  │
@@ -45,60 +45,60 @@ Note: Dockerfile is generated dynamically in the notebook and not tracked in git
                  └─────────────────────────────────────────────────────────────┘
 ```
 
-## Key Features
+## 주요 기능
 
-* Integrating multiple MCP servers (AWS Documentation + AWS CDK) with Strands Agents
-* Hosting agents on Amazon Bedrock AgentCore Runtime
-* Invoking hosted agents from AWS Lambda functions
-* Configuring CloudWatch Gen AI Observability for comprehensive agent monitoring
-* Viewing traces, spans, and metrics in CloudWatch console
+* 여러 MCP 서버(AWS Documentation + AWS CDK)를 Strands Agents와 통합
+* Amazon Bedrock AgentCore Runtime에서 에이전트 호스팅
+* AWS Lambda 함수에서 호스팅된 에이전트 호출
+* 포괄적인 에이전트 모니터링을 위한 CloudWatch Gen AI Observability 구성
+* CloudWatch 콘솔에서 트레이스, 스팬 및 지표 확인
 
-## What You'll Learn
+## 학습 내용
 
-1. How to deploy an MCP-enabled agent to AgentCore Runtime
-2. How to create a Lambda function that invokes the runtime agent
-3. How to enable CloudWatch Gen AI Observability for your agents
-4. How to view and analyze traces showing agent execution flow
+1. MCP 지원 에이전트를 AgentCore Runtime에 배포하는 방법
+2. Runtime 에이전트를 호출하는 Lambda 함수를 생성하는 방법
+3. 에이전트에 CloudWatch Gen AI Observability를 활성화하는 방법
+4. 에이전트 실행 흐름을 보여 주는 트레이스를 확인하고 분석하는 방법
 
-## Prerequisites
+## 사전 요구 사항
 
 * Python 3.10+
-* AWS credentials configured with appropriate permissions
+* 적절한 권한으로 구성된 AWS 자격 증명
 * Amazon Bedrock AgentCore SDK
-* Permissions to create Lambda functions and IAM roles
-* CloudWatch Transaction Search enabled (see tutorial for setup instructions)
+* Lambda 함수와 IAM 역할을 생성할 수 있는 권한
+* CloudWatch Transaction Search 활성화(설정 지침은 자습서 참조)
 
-## Getting Started
+## 시작하기
 
-1. Install the required packages:
+1. 필요한 패키지를 설치합니다.
 ```bash
    pip install -r requirements.txt
 ```
 
-2. Enable CloudWatch Transaction Search (one-time setup per AWS account via console)
+2. CloudWatch Transaction Search를 활성화합니다(AWS 계정별로 콘솔에서 한 번만 설정).
 
-3. Open and run the Jupyter notebook:
+3. Jupyter notebook을 열어 실행합니다.
 ```bash
    jupyter notebook agentcore_observability_lambda.ipynb
 ```
 
-4. Follow the step-by-step instructions in the notebook to:
-   - Create and deploy the MCP agent
-   - Build and deploy the Lambda function
-   - Test the integration
-   - View traces in CloudWatch
+4. notebook의 단계별 지침에 따라 다음을 수행합니다.
+   - MCP 에이전트 생성 및 배포
+   - Lambda 함수 빌드 및 배포
+   - 통합 테스트
+   - CloudWatch에서 트레이스 확인
 
-## Components
+## 구성 요소
 
-### Lambda Function (`lambda_agentcore_invoker.py`)
-Serverless function that receives user prompts and invokes the AgentCore Runtime agent. Includes error handling and comprehensive logging.
+### Lambda 함수 (`lambda_agentcore_invoker.py`)
+사용자 prompt를 받아 AgentCore Runtime 에이전트를 호출하는 서버리스 함수입니다. 오류 처리와 포괄적인 로깅을 포함합니다.
 
-### MCP Agent (`mcp_agent_multi_server.py`)
-Strands agent configured with multiple MCP servers (AWS Documentation and AWS CDK) and OpenTelemetry instrumentation for observability.
+### MCP 에이전트 (`mcp_agent_multi_server.py`)
+여러 MCP 서버(AWS Documentation 및 AWS CDK)와 관측성을 위한 OpenTelemetry 계측이 구성된 Strands Agents입니다.
 
-## Usage
+## 사용 방법
 
-The Lambda function expects the following event format:
+Lambda 함수에는 다음 이벤트 형식이 필요합니다.
 ```json
 {
   "prompt": "Your question here",
@@ -106,7 +106,7 @@ The Lambda function expects the following event format:
 }
 ```
 
-Response format:
+응답 형식:
 ```json
 {
   "statusCode": 200,
@@ -117,27 +117,27 @@ Response format:
 }
 ```
 
-## Observability Features
+## 관측성 기능
 
-* **Gen AI Traces**: Visualize complete agent workflow with span timelines
-* **CloudWatch Logs**: Detailed logging of Lambda and agent execution
-* **Performance Metrics**: Track token usage, duration, and error rates
-* **Transaction Search**: Query and analyze traces across your application
+* **Gen AI 트레이스**: 스팬 타임라인으로 전체 에이전트 워크플로 시각화
+* **CloudWatch Logs**: Lambda 및 에이전트 실행의 상세 로깅
+* **성능 지표**: 토큰 사용량, 소요 시간 및 오류율 추적
+* **Transaction Search**: 애플리케이션 전반의 트레이스 쿼리 및 분석
 
-## Clean Up
+## 정리
 
-After completing the tutorial, delete the following resources to avoid unnecessary charges:
+불필요한 비용이 발생하지 않도록 자습서를 완료한 후 다음 리소스를 삭제하세요.
 
-1. Lambda function and associated IAM roles
-2. AgentCore Runtime agent and endpoint
-3. CloudWatch Log groups
-4. Container images in ECR (if applicable)
+1. Lambda 함수 및 연결된 IAM 역할
+2. AgentCore Runtime 에이전트 및 엔드포인트
+3. CloudWatch 로그 그룹
+4. ECR의 컨테이너 이미지(해당하는 경우)
 
-## Additional Resources
+## 추가 자료
 
-- [Amazon Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/agentcore.html)
-- [CloudWatch Gen AI Observability Guide](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/GenAI-observability.html)
+- [Amazon Bedrock AgentCore 문서](https://docs.aws.amazon.com/bedrock/latest/userguide/agentcore.html)
+- [CloudWatch Gen AI Observability 가이드](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/GenAI-observability.html)
 
-## License
+## 라이선스
 
-This project is licensed under the terms specified in the repository.
+이 프로젝트에는 저장소에 명시된 라이선스 조건이 적용됩니다.

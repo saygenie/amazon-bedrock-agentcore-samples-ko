@@ -1,61 +1,61 @@
-# Enable Payment Limits on an Agent
+# 에이전트에 결제 한도 적용
 
-## Overview
+## 개요
 
-This tutorial builds a payment-enabled agent that accesses paid x402 endpoints on Coinbase Bazaar. Two notebooks show the same payment flow with different frameworks — proving AgentCore payments is framework-agnostic.
+이 자습서는 Coinbase Bazaar의 유료 x402 엔드포인트에 액세스하는 결제 지원 에이전트를 구축합니다. 두 Notebook은 서로 다른 프레임워크로 동일한 결제 흐름을 보여 주어 AgentCore payments가 프레임워크에 독립적임을 확인합니다.
 
-| Notebook | Framework | Payment handling |
+| Notebook | 프레임워크 | 결제 처리 |
 |----------|-----------|-----------------|
-| `strands_payment_agent.ipynb` | Strands Agents | `AgentCorePaymentsPlugin` (automatic, zero payment code) |
-| `langgraph_payment_agent.ipynb` | LangGraph | `wrap_with_auto_402()` using `PaymentManager.generate_payment_header()` |
+| `strands_payment_agent.ipynb` | Strands Agents | `AgentCorePaymentsPlugin`(자동 처리, 결제 코드 없음) |
+| `langgraph_payment_agent.ipynb` | LangGraph | `PaymentManager.generate_payment_header()`를 사용하는 `wrap_with_auto_402()` |
 
-The payment infrastructure (PaymentManager, sessions, instruments, payment limits) is the same in both. Only the agent framework integration differs.
+Payment 인프라(PaymentManager, session, instrument, 결제 한도)는 두 예제에서 동일합니다. 에이전트 프레임워크 통합 방식만 다릅니다.
 
-### What you'll learn
+### 학습 내용
 
-| Feature | What the tutorial demonstrates |
+| 기능 | 자습서 주요 내용 |
 |---------|-------------------------------|
-| Payment processing | Agent calls Coinbase Bazaar x402 endpoints, plugin/wrapper handles 402 automatically |
-| Payment limits | Create sessions with budgets ($1.00, $0.50, $0.01), track spend, see overspend rejection |
-| Built-in tools (Strands) | Agent queries its own budget, lists wallets, inspects instrument details at runtime |
-| Wallet-agnostic design | Same agent code works with Coinbase CDP or Stripe (Privy) |
+| 결제 처리 | 에이전트가 Coinbase Bazaar x402 엔드포인트를 호출하고 plugin/wrapper가 402를 자동 처리 |
+| 결제 한도 | 예산이 $1.00, $0.50, $0.01인 session을 생성하고 지출을 추적하며 초과 지출 거부 확인 |
+| Built-in tools(Strands) | 에이전트가 자체 예산 조회, wallet 목록 표시, Runtime에서 instrument 세부 정보 검사 |
+| Wallet 독립적 설계 | 동일한 에이전트 코드가 Coinbase CDP 또는 Stripe(Privy)에서 작동 |
 
-### Tutorial Details
+### 자습서 세부 정보
 
-| Information         | Details                                                         |
+| 정보                | 세부 정보                                                       |
 |:--------------------|:----------------------------------------------------------------|
-| Tutorial type       | Conversational                                                  |
-| Agent type          | Single                                                          |
-| Agentic Framework   | Strands Agents + LangGraph                                      |
-| LLM model           | Anthropic Claude Sonnet                                         |
-| Tutorial components | PaymentManager, AgentCorePaymentsPlugin, x402 endpoints         |
-| Example complexity  | Easy                                                            |
-| SDK used            | bedrock-agentcore SDK, Strands Agents SDK, LangGraph             |
+| 자습서 유형         | 대화형                                                          |
+| 에이전트 유형       | 단일                                                            |
+| 에이전틱 프레임워크 | Strands Agents + LangGraph                                      |
+| LLM 모델            | Anthropic Claude Sonnet                                         |
+| 자습서 구성 요소    | PaymentManager, AgentCorePaymentsPlugin, x402 엔드포인트         |
+| 예제 난이도         | 쉬움                                                            |
+| 사용 SDK            | bedrock-agentcore SDK, Strands Agents SDK, LangGraph            |
 
-## Prerequisites
+## 사전 요구 사항
 
-* Tutorial 00 completed (`.env` has manager ARN, connector ID, instrument ID)
-* Wallet funded with testnet USDC from https://faucet.circle.com/
-* For Strands: `pip install 'bedrock-agentcore[strands-agents]'`
-* For LangGraph: `pip install langchain-aws langgraph bedrock-agentcore pydantic requests python-dotenv`
+* 자습서 00 완료(`.env`에 manager ARN, connector ID, instrument ID가 있음)
+* https://faucet.circle.com/ 에서 받은 testnet USDC로 wallet 자금 충전
+* Strands: `pip install 'bedrock-agentcore[strands-agents]'`
+* LangGraph: `pip install langchain-aws langgraph bedrock-agentcore pydantic requests python-dotenv`
 
-Sessions are created fresh in each notebook — no stale session from `.env` needed.
+각 Notebook에서 session을 새로 생성하므로 `.env`의 이전 session은 필요하지 않습니다.
 
-This tutorial works with either wallet provider (Coinbase CDP or Stripe/Privy). The agent code is the same; only the `.env` values from Tutorial 00 differ.
+이 자습서는 두 wallet 제공업체(Coinbase CDP 또는 Stripe/Privy) 중 어느 쪽에서도 작동합니다. 에이전트 코드는 같고 자습서 00의 `.env` 값만 다릅니다.
 
-> **Testnet only.** All code uses Base Sepolia (Ethereum) with free USDC from [faucet.circle.com](https://faucet.circle.com/). Testnet USDC has no real-world value.
+> **Testnet 전용.** 모든 코드는 [faucet.circle.com](https://faucet.circle.com/)에서 무료로 받은 USDC와 함께 Base Sepolia(Ethereum)를 사용합니다. Testnet USDC는 실제 가치가 없습니다.
 
-## Verification
+## 검증
 
-After running the notebook, verify payment limits are enforced by:
+Notebook을 실행한 후 다음 방법으로 결제 한도가 적용되는지 확인합니다.
 
-1. Checking the session spend output shows amounts deducted after each x402 call.
-2. Confirming the overspend rejection message appears when the session budget is exhausted.
+1. Session 지출 출력에서 각 x402 호출 후 금액이 차감되는지 확인합니다.
+2. Session 예산이 소진되면 초과 지출 거부 message가 표시되는지 확인합니다.
 
-## Cleanup
+## 정리
 
-Payment sessions expire automatically after their configured `expiryTimeInMinutes`. To delete all payment resources (Manager, Connector, Instrument), run the cleanup cell in Tutorial 00 after completing experimentation with all notebooks.
+Payment session은 구성된 `expiryTimeInMinutes`가 지나면 자동으로 만료됩니다. 모든 Notebook 실험을 마친 후 자습서 00의 정리 셀을 실행하여 모든 결제 리소스(Manager, Connector, Instrument)를 삭제하세요.
 
-## Conclusion
+## 결론
 
-This tutorial demonstrates payment-enabled agents using two frameworks. The Strands agent uses a plugin for automatic 402 handling, while the LangGraph agent uses a wrapper pattern. Payment limits are enforced at the infrastructure level regardless of the framework.
+이 자습서는 두 프레임워크를 사용하는 결제 지원 에이전트를 보여 줍니다. Strands 에이전트는 402 자동 처리에 plugin을 사용하고 LangGraph 에이전트는 wrapper 패턴을 사용합니다. 결제 한도는 프레임워크와 관계없이 인프라 수준에서 적용됩니다.

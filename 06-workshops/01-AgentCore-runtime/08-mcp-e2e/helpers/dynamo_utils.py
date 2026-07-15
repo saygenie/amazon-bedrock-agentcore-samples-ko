@@ -11,13 +11,13 @@ class FinanceDB:
         self.table = self.dynamodb.Table(table_name)
 
     def create_table(self) -> str:
-        """Create the finance tracker table if it doesn't exist"""
+        """Finance tracker table이 없으면 생성합니다."""
         try:
-            # Check if table already exists
+            # Table이 이미 있는지 확인
             self.table.load()
             return f"Table {self.table_name} already exists"
         except self.dynamodb.meta.client.exceptions.ResourceNotFoundException:
-            # Table doesn't exist, create it
+            # Table이 없으므로 생성
             try:
                 table = self.dynamodb.create_table(
                     TableName=self.table_name,
@@ -39,7 +39,7 @@ class FinanceDB:
             return f"Error checking table: {str(e)}"
 
     def delete_table(self) -> str:
-        """Delete the finance tracker table"""
+        """Finance tracker table을 삭제합니다."""
         try:
             self.table.delete()
             self.table.wait_until_not_exists()
@@ -55,12 +55,12 @@ class FinanceDB:
         description: str,
         category: str,
     ) -> str:
-        """Add a transaction to DynamoDB"""
+        """DynamoDB에 transaction을 추가합니다."""
         item = {
             "pk": f"USER#{user_alias}",
             "sk": f"TRANSACTION#{datetime.now().isoformat()}",
             "type": transaction_type,
-            "amount": Decimal(str(amount)),  # Convert float to Decimal
+            "amount": Decimal(str(amount)),  # float를 Decimal로 변환
             "description": description,
             "category": category,
             "date": datetime.now().isoformat(),
@@ -71,12 +71,12 @@ class FinanceDB:
         return f"{transaction_type.title()} of ${abs(amount):.2f} added for {user_alias}"
 
     def set_budget(self, user_alias: str, category: str, monthly_limit: float) -> str:
-        """Set budget for a category"""
+        """Category의 budget을 설정합니다."""
         item = {
             "pk": f"USER#{user_alias}",
             "sk": f"BUDGET#{category}",
             "category": category,
-            "monthly_limit": Decimal(str(monthly_limit)),  # Convert float to Decimal
+            "monthly_limit": Decimal(str(monthly_limit)),  # float를 Decimal로 변환
             "set_date": datetime.now().isoformat(),
         }
 
@@ -84,7 +84,7 @@ class FinanceDB:
         return f"Budget set for {category}: ${monthly_limit:.2f}/month"
 
     def get_transactions(self, user_alias: str) -> List[Dict]:
-        """Get all transactions for a user"""
+        """사용자의 모든 transaction을 가져옵니다."""
         response = self.table.query(
             KeyConditionExpression="pk = :pk AND begins_with(sk, :sk)",
             ExpressionAttributeValues={
@@ -95,7 +95,7 @@ class FinanceDB:
         return response.get("Items", [])
 
     def get_budgets(self, user_alias: str) -> List[Dict]:
-        """Get all budgets for a user"""
+        """사용자의 모든 budget을 가져옵니다."""
         response = self.table.query(
             KeyConditionExpression="pk = :pk AND begins_with(sk, :sk)",
             ExpressionAttributeValues={":pk": f"USER#{user_alias}", ":sk": "BUDGET#"},
@@ -103,10 +103,10 @@ class FinanceDB:
         return response.get("Items", [])
 
     def get_balance(self, user_alias: str) -> Dict:
-        """Calculate balance from transactions"""
+        """Transaction에서 balance를 계산합니다."""
         transactions = self.get_transactions(user_alias)
 
-        total = sum(float(t["amount"]) for t in transactions)  # Convert Decimal to float
+        total = sum(float(t["amount"]) for t in transactions)  # Decimal을 float로 변환
         income = sum(float(t["amount"]) for t in transactions if t["type"] == "income")
         expenses = sum(abs(float(t["amount"])) for t in transactions if t["type"] == "expense")
 

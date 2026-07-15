@@ -1,20 +1,20 @@
-"""MCP server for the elicitation + sampling notebook (06-elicitation.ipynb).
+"""elicitation + sampling Notebook(06-elicitation.ipynb)용 MCP 서버입니다.
 
-Demonstrates:
-  - Form-mode elicitation: single, boolean, sequential   (book_room, cancel_with_confirm, log_expense)
-  - Sampling (`sampling/createMessage`)                  (sampling_demo)
-  - Long-compute + form-mode confirmation                (optimize_and_apply)
-  - URL-mode elicitation Flow 4.2                        (connect_external_account)
-  - URL Required Error Flow 4.3                          (protected_resource)
+다음을 시연합니다.
+  - Form mode elicitation: 단일, boolean, 순차   (book_room, cancel_with_confirm, log_expense)
+  - Sampling(`sampling/createMessage`)            (sampling_demo)
+  - 장기 연산 + form mode 확인                    (optimize_and_apply)
+  - URL mode elicitation Flow 4.2                  (connect_external_account)
+  - URL Required Error Flow 4.3                    (protected_resource)
 
-This server is deployed to AgentCore Runtime and surfaced through a gateway
-configured with BOTH `streamingConfiguration.enableResponseStreaming: true`
-AND `sessionConfiguration` (sessions enabled). Elicitation requires both.
-No Lambda interceptor.
+이 서버는 AgentCore Runtime에 배포되고
+`streamingConfiguration.enableResponseStreaming: true`와
+`sessionConfiguration`(session 활성화)이 모두 구성된 gateway를 통해 제공됩니다.
+Elicitation에는 둘 다 필요합니다. Lambda 인터셉터는 사용하지 않습니다.
 """
 
 import asyncio
-import uuid  # noqa: F401  -- used by URL-elicitation tools below
+import uuid  # noqa: F401 -- 아래 URL Elicitation 도구에서 사용
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from typing import Literal
@@ -25,8 +25,8 @@ from pydantic import BaseModel, Field
 
 @asynccontextmanager
 async def lifespan(server: FastMCP):
-    """Per-process state. `protected_resource_calls` is keyed by session id
-    for the Flow 4.3 retry pattern."""
+    """프로세스별 상태입니다. Flow 4.3 재시도 패턴을 위해
+    `protected_resource_calls`는 session ID를 키로 사용합니다."""
     yield {"protected_resource_calls": defaultdict(int)}
 
 
@@ -41,7 +41,7 @@ def _session_id(ctx: Context) -> str:
     )
 
 
-# --- Form-mode elicitation ---------------------------------------------
+# --- 폼 모드 Elicitation -----------------------------------------------
 
 
 class BookingDetails(BaseModel):
@@ -111,7 +111,7 @@ async def log_expense(ctx: Context, amount: float) -> str:
     return f"Not submitted (action={conf.action})."
 
 
-# --- Long-compute + elicitation gate -----------------------------------
+# --- 장기 연산 + elicitation gate --------------------------------------
 
 
 class _ApplyConfirmation(BaseModel):
@@ -157,7 +157,7 @@ async def apply_recommendations(ctx: Context, change_ids: list[str]) -> str:
     return f"No changes applied (action={result.action})."
 
 
-# --- Sampling ----------------------------------------------------------
+# --- MCP Sampling 기능 -------------------------------------------------
 
 
 @mcp.tool()
@@ -171,9 +171,9 @@ async def sampling_demo(ctx: Context, prompt: str) -> str:
     return getattr(result, "text", str(result))
 
 
-# --- URL-mode elicitation (MCP 2025-11-25) -----------------------------
-# fastmcp 3.2.4's `ctx.elicit()` is form-mode only — URL mode is reached via
-# the underlying `ServerSession` on `ctx.request_context.session`.
+# --- URL 모드 Elicitation(MCP 2025-11-25) -------------------------------
+# fastmcp 3.2.4의 `ctx.elicit()`은 form mode 전용이며, URL mode는
+# `ctx.request_context.session`의 기반 `ServerSession`을 통해 사용
 
 
 @mcp.tool()
@@ -250,10 +250,9 @@ async def protected_resource(ctx: Context) -> dict:
 
 
 if __name__ == "__main__":
-    # stateless_http=False keeps the SSE push-back channel (required for
-    # elicitation + sampling).
+# stateless_http=False는 elicitation + sampling에 필요한 SSE push-back channel을 유지
     mcp.run(
         transport="streamable-http",
         host="0.0.0.0",
         stateless_http=False,  # nosec B104
-    )  # nosec B104 - AgentCore Runtime container requires bind to all interfaces
+    )  # nosec B104 - AgentCore Runtime 컨테이너는 모든 인터페이스에 바인딩해야 함

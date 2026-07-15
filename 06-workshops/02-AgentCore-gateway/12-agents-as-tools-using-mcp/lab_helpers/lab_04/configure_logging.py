@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Configure CloudWatch Logs Delivery for AgentCore Runtime
+AgentCore Runtime용 CloudWatch Logs Delivery 구성
 
-This module provides functionality to configure CloudWatch Logs delivery for
-AgentCore Runtime to enable container logs (stdout/stderr) to flow to CloudWatch.
+이 모듈은 AgentCore Runtime의 컨테이너 로그(stdout/stderr)를 CloudWatch로
+전송할 수 있도록 CloudWatch Logs Delivery를 구성하는 기능을 제공합니다.
 
-Based on AWS documentation:
+AWS 문서 기반:
 - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/observability-configure.html
 - https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutDeliverySource.html
 """
@@ -22,33 +22,33 @@ def configure_runtime_logging(
     log_type: str = "APPLICATION_LOGS",
 ) -> Dict[str, str]:
     """
-    Configure CloudWatch Logs Delivery for an AgentCore Runtime.
+    AgentCore Runtime용 CloudWatch Logs Delivery를 구성합니다.
 
-    This function sets up the complete logging pipeline:
-    1. Creates CloudWatch Log Group
-    2. Creates Delivery Source (links to Runtime ARN)
-    3. Creates Delivery Destination (links to Log Group)
-    4. Creates Delivery (links Source to Destination)
+    이 함수는 전체 로깅 파이프라인을 설정합니다.
+    1. CloudWatch Log Group 생성
+    2. Delivery Source 생성(Runtime ARN에 연결)
+    3. Delivery Destination 생성(Log Group에 연결)
+    4. Delivery 생성(Source와 Destination 연결)
 
-    Args:
-        runtime_arn: Full ARN of the AgentCore Runtime
-        runtime_id: Runtime ID (last segment of ARN)
-        region: AWS region (default: us-west-2)
-        log_type: Type of logs (default: APPLICATION_LOGS)
-                  Valid values: APPLICATION_LOGS, USAGE_LOGS, TRACES
+    인자:
+        runtime_arn: AgentCore Runtime의 전체 ARN
+        runtime_id: Runtime ID(ARN의 마지막 세그먼트)
+        region: AWS 리전(기본값: us-west-2)
+        log_type: 로그 유형(기본값: APPLICATION_LOGS)
+                  유효한 값: APPLICATION_LOGS, USAGE_LOGS, TRACES
 
-    Returns:
-        Dictionary containing:
-        - log_group_name: Name of the created log group
-        - delivery_source_arn: ARN of the delivery source
-        - delivery_destination_arn: ARN of the delivery destination
-        - delivery_id: ID of the delivery
-        - delivery_status: Status of the delivery
+    반환:
+        다음 항목이 포함된 딕셔너리:
+        - log_group_name: 생성된 로그 그룹 이름
+        - delivery_source_arn: Delivery Source ARN
+        - delivery_destination_arn: Delivery Destination ARN
+        - delivery_id: Delivery ID
+        - delivery_status: Delivery 상태
 
-    Raises:
-        Exception: If critical steps fail
+    예외:
+        Exception: 중요한 단계가 실패한 경우
 
-    Example:
+    예:
         >>> result = configure_runtime_logging(
         ...     runtime_arn="arn:aws:bedrock-agentcore:us-west-2:123:runtime/my-runtime-ABC",
         ...     runtime_id="my-runtime-ABC",
@@ -61,18 +61,18 @@ def configure_runtime_logging(
     print("🔧 Configuring CloudWatch Logs Delivery for AgentCore Runtime")
     print("=" * 80)
 
-    # Initialize AWS clients
+    # AWS 클라이언트 초기화
     logs_client = boto3.client("logs", region_name=region)
 
-    # Get AWS account ID from runtime ARN
+    # Runtime ARN에서 AWS 계정 ID 가져오기
     account_id = runtime_arn.split(":")[4]
 
-    # Derived configuration
+    # 파생 구성
     log_group_name = f"/aws/bedrock-agentcore/runtimes/{runtime_id}-DEFAULT"
 
-    # Extract last 12 chars of runtime_id to keep names under 60 char limit
-    # AWS API requires delivery source/destination names <= 60 characters
-    short_id = runtime_id.split("-")[-1]  # Gets the unique suffix (e.g., "V5wJhp4zqq")
+    # 이름을 60자 제한 이내로 유지하기 위해 runtime_id의 마지막 12자 추출
+    # AWS API에서는 Delivery Source/Destination 이름이 60자 이하여야 함
+    short_id = runtime_id.split("-")[-1]  # 고유 접미사 가져오기(예: "V5wJhp4zqq")
     delivery_source_name = f"aiml301-lab04-src-{short_id}"
     delivery_destination_name = f"aiml301-lab04-dst-{short_id}"
 
@@ -91,7 +91,7 @@ def configure_runtime_logging(
         "delivery_status": None,
     }
 
-    # Step 1: Create Log Group
+    # 1단계: Log Group 생성
     print("\n📋 Step 1: Creating CloudWatch Log Group...")
     try:
         logs_client.create_log_group(logGroupName=log_group_name)
@@ -101,7 +101,7 @@ def configure_runtime_logging(
     except Exception as e:
         print(f"  ⚠️  Warning: {e}")
 
-    # Step 2: Create Delivery Source
+    # 2단계: Delivery Source 생성
     print("\n📋 Step 2: Creating Delivery Source...")
     try:
         response = logs_client.put_delivery_source(
@@ -125,7 +125,7 @@ def configure_runtime_logging(
         print(f"  ❌ Failed to create delivery source: {e}")
         raise
 
-    # Step 3: Create Delivery Destination
+    # 3단계: Delivery Destination 생성
     print("\n📋 Step 3: Creating Delivery Destination...")
     try:
         response = logs_client.put_delivery_destination(
@@ -150,7 +150,7 @@ def configure_runtime_logging(
         print(f"  ❌ Failed to create delivery destination: {e}")
         raise
 
-    # Step 4: Create Delivery (Link Source to Destination)
+    # 4단계: Delivery 생성(Source를 Destination에 연결)
     print("\n📋 Step 4: Creating Delivery (linking source to destination)...")
     try:
         response = logs_client.create_delivery(
@@ -166,7 +166,7 @@ def configure_runtime_logging(
 
     except logs_client.exceptions.ResourceAlreadyExistsException:
         print("  ℹ️  Delivery already exists for this source")
-        # Find existing delivery
+        # 기존 Delivery 찾기
         response = logs_client.describe_deliveries()
         for delivery in response.get("deliveries", []):
             if delivery.get("deliverySourceName") == delivery_source_name:
@@ -177,9 +177,9 @@ def configure_runtime_logging(
         print(f"  ⚠️  Warning creating delivery: {e}")
         print("  ℹ️  Delivery may already exist - continuing...")
 
-    # Step 5: Verify Delivery Status
+    # 5단계: Delivery 상태 확인
     print("\n📋 Step 5: Verifying delivery status...")
-    time.sleep(2)  # Allow AWS to propagate changes
+    time.sleep(2)  # AWS 변경 사항 전파 대기
 
     try:
         response = logs_client.describe_deliveries()
@@ -211,20 +211,20 @@ def configure_runtime_logging(
 
 def cleanup_runtime_logging(runtime_id: str, region: str = "us-west-2") -> bool:
     """
-    Clean up CloudWatch Logs Delivery configuration for a Runtime.
+    Runtime의 CloudWatch Logs Delivery 구성을 정리합니다.
 
-    This removes:
-    - Delivery (link between source and destination)
+    다음 항목을 제거합니다.
+    - Delivery(Source와 Destination 간 연결)
     - Delivery Source
     - Delivery Destination
-    - Log Group (optional, commented out by default)
+    - Log Group(선택 사항, 기본적으로 주석 처리됨)
 
-    Args:
-        runtime_id: Runtime ID (last segment of ARN)
-        region: AWS region (default: us-west-2)
+    인자:
+        runtime_id: Runtime ID(ARN의 마지막 세그먼트)
+        region: AWS 리전(기본값: us-west-2)
 
-    Returns:
-        True if cleanup succeeded, False otherwise
+    반환:
+        정리에 성공하면 True, 그렇지 않으면 False
     """
 
     print("\n" + "=" * 80)
@@ -233,7 +233,7 @@ def cleanup_runtime_logging(runtime_id: str, region: str = "us-west-2") -> bool:
 
     logs_client = boto3.client("logs", region_name=region)
 
-    # Use same naming convention as configure_runtime_logging
+    # configure_runtime_logging과 동일한 명명 규칙 사용
     short_id = runtime_id.split("-")[-1]
     delivery_source_name = f"aiml301-lab04-src-{short_id}"
     delivery_destination_name = f"aiml301-lab04-dst-{short_id}"
@@ -241,7 +241,7 @@ def cleanup_runtime_logging(runtime_id: str, region: str = "us-west-2") -> bool:
 
     success = True
 
-    # Step 1: Delete Delivery
+    # 1단계: Delivery 삭제
     print(f"\n📋 Step 1: Deleting delivery for source: {delivery_source_name}...")
     try:
         response = logs_client.describe_deliveries()
@@ -262,7 +262,7 @@ def cleanup_runtime_logging(runtime_id: str, region: str = "us-west-2") -> bool:
         print(f"  ⚠️  Error deleting delivery: {e}")
         success = False
 
-    # Step 2: Delete Delivery Source
+    # 2단계: Delivery Source 삭제
     print(f"\n📋 Step 2: Deleting delivery source: {delivery_source_name}...")
     try:
         logs_client.delete_delivery_source(name=delivery_source_name)
@@ -273,7 +273,7 @@ def cleanup_runtime_logging(runtime_id: str, region: str = "us-west-2") -> bool:
         print(f"  ⚠️  Error deleting delivery source: {e}")
         success = False
 
-    # Step 3: Delete Delivery Destination
+    # 3단계: Delivery Destination 삭제
     print(f"\n📋 Step 3: Deleting delivery destination: {delivery_destination_name}...")
     try:
         logs_client.delete_delivery_destination(name=delivery_destination_name)
@@ -284,8 +284,8 @@ def cleanup_runtime_logging(runtime_id: str, region: str = "us-west-2") -> bool:
         print(f"  ⚠️  Error deleting delivery destination: {e}")
         success = False
 
-    # Step 4: Delete Log Group (optional - commented out by default)
-    # Uncomment if you want to delete log groups during cleanup
+    # 4단계: Log Group 삭제(선택 사항, 기본적으로 주석 처리됨)
+    # 정리 중 로그 그룹도 삭제하려면 주석을 해제
     print(f"\n📋 Step 4: Deleting log group: {log_group_name}...")
     try:
         logs_client.delete_log_group(logGroupName=log_group_name)
@@ -308,7 +308,7 @@ def cleanup_runtime_logging(runtime_id: str, region: str = "us-west-2") -> bool:
 
 
 if __name__ == "__main__":
-    # Example usage
+    # 사용 예
     import sys
 
     if len(sys.argv) < 3:

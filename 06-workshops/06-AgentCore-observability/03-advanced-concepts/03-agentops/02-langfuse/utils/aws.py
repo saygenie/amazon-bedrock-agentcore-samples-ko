@@ -1,5 +1,5 @@
 """
-Utility functions for AWS services and other common operations.
+AWS 서비스 및 기타 공통 작업을 위한 유틸리티 함수입니다.
 """
 
 import boto3
@@ -17,25 +17,25 @@ def get_ssm_parameter(
     aws_session_token: Optional[str] = None,
 ) -> Optional[str]:
     """
-    Retrieve a parameter value from AWS Systems Manager Parameter Store.
+    AWS Systems Manager Parameter Store에서 파라미터 값을 가져옵니다.
 
-    Args:
-        parameter_name (str): The name of the parameter to retrieve
-        decrypt (bool): Whether to decrypt SecureString parameters (default: True)
-        region_name (str, optional): AWS region name
-        aws_access_key_id (str, optional): AWS access key ID
-        aws_secret_access_key (str, optional): AWS secret access key
-        aws_session_token (str, optional): AWS session token
+    인수:
+        parameter_name (str): 가져올 파라미터 이름
+        decrypt (bool): SecureString 파라미터의 복호화 여부(기본값: True)
+        region_name (str, optional): AWS 리전 이름
+        aws_access_key_id (str, optional): AWS 액세스 키 ID
+        aws_secret_access_key (str, optional): AWS 보안 액세스 키
+        aws_session_token (str, optional): AWS 세션 토큰
 
-    Returns:
-        str: The parameter value, or None if not found or error occurs
+    반환:
+        str: 파라미터 값. 찾지 못했거나 오류가 발생하면 None
 
-    Raises:
-        NoCredentialsError: If AWS credentials are not configured
-        ClientError: If there's an AWS service error
+    예외:
+        NoCredentialsError: AWS 자격 증명이 구성되지 않은 경우
+        ClientError: AWS 서비스 오류가 발생한 경우
     """
     try:
-        # Create SSM client with optional credentials
+        # 선택적 자격 증명으로 SSM 클라이언트 생성
         session_kwargs = {}
         if region_name:
             session_kwargs["region_name"] = region_name
@@ -48,7 +48,7 @@ def get_ssm_parameter(
 
         ssm_client = boto3.client("ssm", **session_kwargs)
 
-        # Get parameter
+        # 파라미터 가져오기
         response = ssm_client.get_parameter(Name=parameter_name, WithDecryption=decrypt)
 
         return response["Parameter"]["Value"]
@@ -79,26 +79,26 @@ def get_ssm_parameters_by_path(
     aws_session_token: Optional[str] = None,
 ) -> Dict[str, str]:
     """
-    Retrieve multiple parameters from AWS Systems Manager Parameter Store by path.
+    AWS Systems Manager Parameter Store에서 경로를 기준으로 여러 파라미터를 가져옵니다.
 
-    Args:
-        parameter_path (str): The path prefix for parameters to retrieve
-        recursive (bool): Whether to retrieve parameters recursively (default: True)
-        decrypt (bool): Whether to decrypt SecureString parameters (default: True)
-        region_name (str, optional): AWS region name
-        aws_access_key_id (str, optional): AWS access key ID
-        aws_secret_access_key (str, optional): AWS secret access key
-        aws_session_token (str, optional): AWS session token
+    인수:
+        parameter_path (str): 가져올 파라미터의 경로 접두사
+        recursive (bool): 파라미터를 재귀적으로 가져올지 여부(기본값: True)
+        decrypt (bool): SecureString 파라미터의 복호화 여부(기본값: True)
+        region_name (str, optional): AWS 리전 이름
+        aws_access_key_id (str, optional): AWS 액세스 키 ID
+        aws_secret_access_key (str, optional): AWS 보안 액세스 키
+        aws_session_token (str, optional): AWS 세션 토큰
 
-    Returns:
-        Dict[str, str]: Dictionary mapping parameter names to their values
+    반환:
+        Dict[str, str]: 파라미터 이름을 값에 매핑한 딕셔너리
 
-    Raises:
-        NoCredentialsError: If AWS credentials are not configured
-        ClientError: If there's an AWS service error
+    예외:
+        NoCredentialsError: AWS 자격 증명이 구성되지 않은 경우
+        ClientError: AWS 서비스 오류가 발생한 경우
     """
     try:
-        # Create SSM client with optional credentials
+        # 선택적 자격 증명으로 SSM 클라이언트 생성
         session_kwargs = {}
         if region_name:
             session_kwargs["region_name"] = region_name
@@ -114,7 +114,7 @@ def get_ssm_parameters_by_path(
         parameters = {}
         paginator = ssm_client.get_paginator("get_parameters_by_path")
 
-        # Paginate through all parameters
+        # 모든 파라미터를 페이지 단위로 조회
         for page in paginator.paginate(Path=parameter_path, Recursive=recursive, WithDecryption=decrypt):
             for param in page["Parameters"]:
                 parameters[param["Name"]] = param["Value"]
@@ -141,23 +141,23 @@ def get_ssm_parameter_as_json(
     aws_session_token: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """
-    Retrieve a parameter value from AWS Systems Manager Parameter Store and parse it as JSON.
+    AWS Systems Manager Parameter Store에서 파라미터 값을 가져와 JSON으로 파싱합니다.
 
-    Args:
-        parameter_name (str): The name of the parameter to retrieve
-        decrypt (bool): Whether to decrypt SecureString parameters (default: True)
-        region_name (str, optional): AWS region name
-        aws_access_key_id (str, optional): AWS access key ID
-        aws_secret_access_key (str, optional): AWS secret access key
-        aws_session_token (str, optional): AWS session token
+    인수:
+        parameter_name (str): 가져올 파라미터 이름
+        decrypt (bool): SecureString 파라미터의 복호화 여부(기본값: True)
+        region_name (str, optional): AWS 리전 이름
+        aws_access_key_id (str, optional): AWS 액세스 키 ID
+        aws_secret_access_key (str, optional): AWS 보안 액세스 키
+        aws_session_token (str, optional): AWS 세션 토큰
 
-    Returns:
-        Dict[str, Any]: The parsed JSON value, or None if not found or error occurs
+    반환:
+        Dict[str, Any]: 파싱된 JSON 값. 찾지 못했거나 오류가 발생하면 None
 
-    Raises:
-        NoCredentialsError: If AWS credentials are not configured
-        ClientError: If there's an AWS service error
-        json.JSONDecodeError: If the parameter value is not valid JSON
+    예외:
+        NoCredentialsError: AWS 자격 증명이 구성되지 않은 경우
+        ClientError: AWS 서비스 오류가 발생한 경우
+        json.JSONDecodeError: 파라미터 값이 유효한 JSON이 아닌 경우
     """
     try:
         parameter_value = get_ssm_parameter(
@@ -182,13 +182,13 @@ def get_ssm_parameter_as_json(
         return None
 
 
-# Example usage:
+# 사용 예:
 if __name__ == "__main__":
-    # Example 1: Get a single parameter
+    # 예제 1: 단일 파라미터 가져오기
     api_key = get_ssm_parameter("/myapp/api-key")
 
-    # Example 2: Get multiple parameters by path
+    # 예제 2: 경로를 기준으로 여러 파라미터 가져오기
     config_params = get_ssm_parameters_by_path("/myapp/config/")
 
-    # Example 3: Get a JSON parameter
+    # 예제 3: JSON 파라미터 가져오기
     db_config = get_ssm_parameter_as_json("/myapp/database-config")

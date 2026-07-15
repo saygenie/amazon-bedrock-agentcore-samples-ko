@@ -10,7 +10,7 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  // Modal state for collecting missing values
+  // 누락된 값을 수집하는 모달 상태
   const [showModal, setShowModal] = useState(false);
   const [modalData, setModalData] = useState({
     originalNamespace: '',
@@ -18,7 +18,7 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
     resolvedNamespace: ''
   });
 
-  // Helper function to detect placeholders in namespace
+  // namespace의 자리 표시자를 감지하는 도우미 함수
   const detectPlaceholders = (namespace) => {
     const placeholderPattern = /\{(\w+)\}/g;
     const placeholders = [];
@@ -31,18 +31,18 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
     return placeholders;
   };
 
-  // Helper function to resolve namespace with available values
+  // 사용 가능한 값으로 namespace를 완성하는 도우미 함수
   const resolveNamespace = (namespace, values = {}) => {
     let resolved = namespace;
     
-    // Use provided values or fall back to memoryConfig
+    // 제공된 값을 사용하고, 없으면 memoryConfig로 대체
     const allValues = {
       actorId: values.actorId || memoryConfig.actor_id,
       sessionId: values.sessionId || memoryConfig.session_id,
       ...values
     };
     
-    // Replace all placeholders
+    // 모든 자리 표시자 교체
     Object.entries(allValues).forEach(([key, value]) => {
       if (value && value.trim()) {
         resolved = resolved.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
@@ -52,7 +52,7 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
     return resolved;
   };
 
-  // Helper function to get missing values
+  // 누락된 값을 가져오는 도우미 함수
   const getMissingValues = (namespace) => {
     const placeholders = detectPlaceholders(namespace);
     const missing = {};
@@ -73,7 +73,7 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
     const missingValues = getMissingValues(originalNamespace);
     
     if (Object.keys(missingValues).length > 0) {
-      // Show modal to collect missing values
+      // 누락된 값을 수집할 모달 표시
       setModalData({
         originalNamespace,
         missingValues,
@@ -81,7 +81,7 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
       });
       setShowModal(true);
     } else {
-      // No missing values, proceed directly
+      // 누락된 값이 없으므로 바로 진행
       const resolvedNamespace = resolveNamespace(originalNamespace);
       setFormData(prev => ({ ...prev, namespace: resolvedNamespace }));
       handleAutoFetch({ ...formData, namespace: resolvedNamespace });
@@ -96,7 +96,7 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
     setError('');
     setSuccess('');
     
-    // Auto-fetch when namespace is selected (for manual input)
+    // 수동 입력에서 namespace를 선택하면 자동으로 가져오기
     if (field === 'namespace' && value.trim()) {
       const updatedFormData = { ...formData, [field]: value };
       handleAutoFetch(updatedFormData);
@@ -179,13 +179,13 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
         onMemoryFetch(data.memories);
       } else {
         setSuccess('Query completed successfully.');
-        onMemoryFetch([]); // Pass empty array to show empty state in main area
+        onMemoryFetch([]); // 기본 영역에 빈 상태를 표시하도록 빈 배열 전달
       }
 
     } catch (err) {
       console.error('❌ Long-term memory fetch error:', err);
       
-      // Parse specific error messages from backend
+      // 백엔드에서 구체적인 오류 메시지 파싱
       let errorMessage = 'Failed to fetch long-term memory';
       
       if (err.response?.status === 404) {
@@ -259,13 +259,13 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
         onMemoryFetch(data.memories);
       } else {
         setSuccess('Query completed successfully.');
-        onMemoryFetch([]); // Pass empty array to show empty state in main area
+        onMemoryFetch([]); // 기본 영역에 빈 상태를 표시하도록 빈 배열 전달
       }
 
     } catch (err) {
       console.error('❌ Long-term memory submit error:', err);
       
-      // Parse specific error messages from backend
+      // 백엔드에서 구체적인 오류 메시지 파싱
       let errorMessage = 'Failed to fetch long-term memory';
       
       if (err.response?.status === 404) {
@@ -304,11 +304,11 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
             {availableNamespaces.length > 0 ? (
               <div className="namespace-selector">
                 {availableNamespaces.map((ns, index) => {
-                  // Check if this namespace has missing values
+                  // 이 namespace에 누락된 값이 있는지 확인
                   const missingValues = getMissingValues(ns.namespace);
                   const hasMissingValues = Object.keys(missingValues).length > 0;
                   
-                  // For display, show resolved namespace only if no values are missing
+                  // 누락된 값이 없을 때만 완성된 namespace 표시
                   const displayNamespace = hasMissingValues ? ns.namespace : resolveNamespace(ns.namespace);
                   
                   const isSelected = formData.namespace === displayNamespace || 
@@ -323,19 +323,19 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
                       <div className="namespace-type">
                         <span className={`type-badge ${ns.type.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}>
                           {(() => {
-                            // Standard AgentCore strategy types
+                            // 표준 AgentCore Strategy 유형
                             const standardTypes = {
                               'SEMANTIC': 'Facts',
                               'USER_PREFERENCE': 'Preferences',
                               'SUMMARIZATION': 'Summaries'
                             };
                             
-                            // If it's a standard type, use the friendly name
+                            // 표준 유형이면 이해하기 쉬운 이름 사용
                             if (standardTypes[ns.type]) {
                               return standardTypes[ns.type];
                             }
                             
-                            // For custom types, format them nicely
+                            // 사용자 지정 유형은 읽기 좋은 형식으로 지정
                             return ns.type
                               .split('_')
                               .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -382,7 +382,7 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
           )}
         </div>
 
-        {/* Status Messages */}
+        {/* 상태 메시지 */}
         {error && (
           <div className="status-message error">
             <AlertCircle size={16} />
@@ -398,7 +398,7 @@ const LongTermMemoryForm = ({ onMemoryFetch, memoryConfig, availableNamespaces }
         )}
       </div>
 
-      {/* Modal for collecting missing values */}
+      {/* 누락된 값을 수집하는 모달 */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">

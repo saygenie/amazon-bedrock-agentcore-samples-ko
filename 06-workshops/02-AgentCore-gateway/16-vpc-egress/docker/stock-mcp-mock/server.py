@@ -4,7 +4,7 @@ from fastmcp import FastMCP
 
 mcp = FastMCP("Stock Price MCP Server")
 
-# Mock stock data
+# Mock 주식 데이터
 STOCKS = {
     "AAPL": {"name": "Apple Inc.", "base_price": 195.50},
     "GOOGL": {"name": "Alphabet Inc.", "base_price": 141.80},

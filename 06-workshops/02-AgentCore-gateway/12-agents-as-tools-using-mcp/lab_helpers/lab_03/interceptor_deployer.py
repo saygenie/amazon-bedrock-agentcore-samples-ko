@@ -1,4 +1,4 @@
-"""Deploy Lambda interceptor for AgentCore Gateway"""
+"""AgentCore Gateway용 Lambda 인터셉터를 배포합니다."""
 
 import json
 import zipfile
@@ -9,15 +9,15 @@ import boto3
 
 def deploy_interceptor(region: str, prefix: str, gateway_arn: str = None) -> str:
     """
-    Deploy Lambda interceptor function
+    Lambda 인터셉터 함수를 배포합니다.
 
-    Args:
-        region: AWS region
-        prefix: Resource name prefix
-        gateway_arn: Gateway ARN for Lambda permission (optional)
+    인자:
+        region: AWS 리전
+        prefix: 리소스 이름 접두사
+        gateway_arn: Lambda 권한에 사용할 Gateway ARN(선택 사항)
 
-    Returns:
-        function_arn: ARN of deployed Lambda function
+    반환:
+        function_arn: 배포된 Lambda 함수의 ARN
     """
     lambda_client = boto3.client("lambda", region_name=region)
     iam_client = boto3.client("iam", region_name=region)
@@ -25,7 +25,7 @@ def deploy_interceptor(region: str, prefix: str, gateway_arn: str = None) -> str
     function_name = f"{prefix}-interceptor-request"
     role_name = f"{prefix}-interceptor-role"
 
-    # Create IAM role
+    # IAM 역할 생성
     trust_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -46,20 +46,20 @@ def deploy_interceptor(region: str, prefix: str, gateway_arn: str = None) -> str
             PolicyArn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
         )
         print(f"✅ IAM role created: {role_arn}")
-        time.sleep(10)  # Wait for role propagation
+        time.sleep(10)  # 역할 전파 대기
 
     except iam_client.exceptions.EntityAlreadyExistsException:
         role_arn = iam_client.get_role(RoleName=role_name)["Role"]["Arn"]
         print(f"ℹ️  Using existing role: {role_arn}")
 
-    # Create deployment package
+    # 배포 패키지 생성
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         zip_file.write("lab_helpers/lab_03/interceptor-request.py", "lambda_function.py")
 
     zip_buffer.seek(0)
 
-    # Delete existing Lambda if it exists
+    # 기존 Lambda가 있으면 삭제
     try:
         lambda_client.get_function(FunctionName=function_name)
         print(f"🗑️  Deleting existing Lambda: {function_name}")
@@ -68,7 +68,7 @@ def deploy_interceptor(region: str, prefix: str, gateway_arn: str = None) -> str
     except lambda_client.exceptions.ResourceNotFoundException:
         pass
 
-    # Create Lambda
+    # Lambda 생성
     response = lambda_client.create_function(
         FunctionName=function_name,
         Runtime="python3.11",
@@ -81,7 +81,7 @@ def deploy_interceptor(region: str, prefix: str, gateway_arn: str = None) -> str
     function_arn = response["FunctionArn"]
     print(f"✅ Lambda created: {function_arn}")
 
-    # Add permission for gateway to invoke Lambda
+    # Gateway가 Lambda를 호출할 수 있는 권한 추가
     lambda_client.add_permission(
         FunctionName=function_name,
         StatementId="AllowGatewayInvoke",

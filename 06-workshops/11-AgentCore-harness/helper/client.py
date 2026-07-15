@@ -3,19 +3,19 @@ import boto3
 
 REGION = os.environ.get("AWS_DEFAULT_REGION")
 
-# Endpoint overrides
+# 엔드포인트 재정의
 _CP_ENDPOINT = os.environ.get("BEDROCK_AGENTCORE_CP_ENDPOINT")
 _DP_ENDPOINT = os.environ.get("BEDROCK_AGENTCORE_DP_ENDPOINT")
 
 
 def _make_session():
-    """Create a boto3 session"""
+    """boto3 세션을 생성한다."""
     session = boto3.Session(region_name=REGION)
     return session
 
 
 def get_agentcore_client():
-    """Return a boto3 client for the Harness data plane (invoke, ExecuteCommand)."""
+    """Harness 데이터 플레인(invoke, ExecuteCommand)용 boto3 클라이언트를 반환한다."""
     kwargs = {}
     if _DP_ENDPOINT:
         kwargs["endpoint_url"] = _DP_ENDPOINT
@@ -23,7 +23,7 @@ def get_agentcore_client():
 
 
 def get_agentcore_control_client():
-    """Return a boto3 client for the Harness control plane (create, get, update, delete)."""
+    """Harness 컨트롤 플레인(create, get, update, delete)용 boto3 클라이언트를 반환한다."""
     kwargs = {}
     if _CP_ENDPOINT:
         kwargs["endpoint_url"] = _CP_ENDPOINT

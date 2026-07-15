@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* Reset and Base Styles */
+/* 재설정 및 기본 스타일 */
 * {
   margin: 0;
   padding: 0;
@@ -16,7 +16,7 @@ body {
   line-height: 1.6;
 }
 
-/* Layout */
+/* 레이아웃 */
 .dashboard {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%);
@@ -29,7 +29,7 @@ body {
   min-width: 1200px;
 }
 
-/* Responsive container for different screen sizes */
+/* 화면 크기별 반응형 컨테이너 */
 @media (min-width: 1920px) {
   .container {
     max-width: 1800px;
@@ -42,7 +42,7 @@ body {
   }
 }
 
-/* Header */
+/* 헤더 */
 .modern-header {
   display: flex;
   align-items: center;
@@ -87,14 +87,14 @@ body {
   font-weight: 500;
 }
 
-/* Header Configuration */
+/* 헤더 구성 */
 .header-config {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-/* Responsive header for larger screens */
+/* 큰 화면용 반응형 header */
 @media (min-width: 1920px) {
   .header-config {
     gap: 24px;
@@ -150,7 +150,7 @@ body {
   min-width: 160px;
 }
 
-/* Specific width for Memory ID field */
+/* Memory ID 필드 전용 너비 */
 .config-field-inline:first-child .header-input {
   min-width: 220px;
 }
@@ -185,7 +185,7 @@ body {
   transform: none;
 }
 
-/* Header Actions */
+/* 헤더 작업 */
 .header-actions {
   display: flex;
   align-items: center;
@@ -259,7 +259,7 @@ body {
   cursor: not-allowed;
 }
 
-/* Dashboard Layout */
+/* 대시보드 레이아웃 */
 .dashboard-layout {
   display: flex;
   gap: 24px;
@@ -268,7 +268,7 @@ body {
   min-height: 600px;
 }
 
-/* Sidebar */
+/* 사이드바 */
 .sidebar {
   width: 350px;
   flex-shrink: 0;
@@ -277,7 +277,7 @@ body {
   gap: 20px;
 }
 
-/* Responsive sidebar for larger screens */
+/* 큰 화면용 반응형 sidebar */
 @media (min-width: 1920px) {
   .sidebar {
     width: 400px;
@@ -314,7 +314,7 @@ body {
   margin: 0;
 }
 
-/* Memory Type Selector */
+/* Memory 유형 선택기 */
 .memory-type-selector {
   display: flex;
   flex-direction: column;
@@ -357,7 +357,7 @@ body {
   font-size: 0.9rem;
 }
 
-/* Main Area */
+/* 기본 영역 */
 .main-area {
   flex: 1;
   display: flex;
@@ -374,7 +374,7 @@ body {
   min-height: 0;
 }
 
-/* Welcome Screen */
+/* 시작 화면 */
 .welcome-screen {
   display: flex;
   flex-direction: column;
@@ -408,7 +408,7 @@ body {
   max-width: 400px;
 }
 
-/* Results Section */
+/* 결과 섹션 */
 .results-section {
   display: flex;
   flex-direction: column;
@@ -460,7 +460,7 @@ body {
   font-size: 0.875rem;
 }
 
-/* Results Controls */
+/* 결과 컨트롤 */
 .results-controls {
   display: flex;
   align-items: center;
@@ -520,7 +520,7 @@ body {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
-/* Memory List - The key scrollable container */
+/* Memory 목록 - 핵심 스크롤 컨테이너 */
 .memory-list {
   flex: 1;
   overflow-y: auto;
@@ -532,7 +532,7 @@ body {
   min-height: 0;
 }
 
-/* Responsive memory list for larger screens */
+/* 큰 화면용 반응형 Memory 목록 */
 @media (min-width: 1920px) {
   .memory-list {
     padding: 20px 32px;
@@ -547,7 +547,7 @@ body {
   }
 }
 
-/* Memory Items */
+/* Memory 항목 */
 .memory-item {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid #e5e7eb;
@@ -635,7 +635,7 @@ body {
   word-wrap: break-word;
 }
 
-/* Responsive memory content for larger screens */
+/* 큰 화면용 반응형 Memory 콘텐츠 */
 @media (min-width: 1920px) {
   .memory-content {
     font-size: 1rem;
@@ -668,7 +668,7 @@ body {
   border-radius: 4px;
 }
 
-/* Empty State */
+/* 빈 상태 */
 .empty-state {
   flex: 1;
   display: flex;
@@ -700,7 +700,7 @@ body {
   font-size: 0.875rem;
 }
 
-/* Forms */
+/* 양식 */
 .memory-form {
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(226, 232, 240, 0.8);
@@ -796,7 +796,7 @@ body {
   }
 }
 
-/* Status Messages */
+/* 상태 메시지 */
 .status-message {
   display: flex;
   align-items: center;
@@ -820,7 +820,7 @@ body {
   color: #16a34a;
 }
 
-/* Error Banner for Header */
+/* 헤더 오류 배너 */
 .error-banner-modern {
   display: flex;
   align-items: center;
@@ -845,7 +845,7 @@ body {
   line-height: 1.4;
 }
 
-/* Namespace Selector */
+/* Namespace 선택기 */
 .namespace-selector {
   display: flex;
   flex-direction: column;
@@ -923,7 +923,7 @@ body {
   color: #d97706;
 }
 
-/* Modal Styles */
+/* 모달 스타일 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1069,8 +1069,7 @@ body {
   cursor: not-allowed;
 }
 
-/* S
-hort-term Memory Form Specific Layout */
+/* Short-term Memory Form 전용 레이아웃 */
 .short-term-memory-form .form-grid {
   display: flex;
   flex-direction: column;
@@ -1096,12 +1095,12 @@ hort-term Memory Form Specific Layout */
   content: '';
 }
 
-/* Target labels that contain asterisk */
+/* 별표가 포함된 label 지정 */
 .config-field-inline label:contains('*') {
   color: #64748b;
 }
 
-/* Make asterisks red */
+/* 별표를 빨간색으로 표시 */
 .header-config label {
   color: #64748b;
 }
@@ -1110,7 +1109,7 @@ hort-term Memory Form Specific Layout */
   content: '';
 }
 
-/* Red asterisk styling */
+/* 빨간색 별표 스타일 */
 .required-asterisk {
   color: #ef4444;
   font-weight: bold;

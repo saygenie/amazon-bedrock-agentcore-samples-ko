@@ -31,16 +31,16 @@ Resources:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: !Ref UserPoolName
-      MfaConfiguration: "OPTIONAL" # OPTIONAL allows MFA for users who configure it
+      MfaConfiguration: "OPTIONAL" # OPTIONAL은 MFA를 구성한 사용자에게 MFA를 허용
       UsernameConfiguration:
         CaseSensitive: false
       UsernameAttributes:
-        - email # <--- Use email as username
+        - email # <--- email을 사용자 이름으로 사용
       AutoVerifiedAttributes:
-        - email # <--- Auto-verify email if you want to skip confirmation step
-      # Enhanced security configuration
+        - email # <--- 확인 단계를 건너뛰려면 email 자동 확인
+      # 향상된 보안 구성
       UserPoolAddOns:
-        AdvancedSecurityMode: ENFORCED # Enable advanced security features
+        AdvancedSecurityMode: ENFORCED # 고급 보안 기능 활성화
       Policies:
         PasswordPolicy:
           MinimumLength: 12
@@ -62,7 +62,7 @@ Resources:
       GroupName: admin
       Description: Administrator group
       UserPoolId: !Ref UserPool
-      Precedence: 1 # Higher priority (lower number = higher precedence)
+      Precedence: 1 # 더 높은 우선순위(숫자가 낮을수록 우선순위가 높음)
 
   CustomerGroup:
     Type: AWS::Cognito::UserPoolGroup
@@ -78,7 +78,7 @@ Resources:
     Properties:
       ClientName: !Ref WebAppClientName
       UserPoolId: !Ref UserPool
-      GenerateSecret: false # Don't use secret for SPA or web apps
+      GenerateSecret: false # SPA 또는 웹 앱에는 secret을 사용하지 않음
       AllowedOAuthFlows:
         - code
       AllowedOAuthScopes:
@@ -234,12 +234,12 @@ Resources:
                   - sqs:SendMessage
                 Resource: !GetAtt PostSignupFunctionDLQ.Arn
 
-  # Dead Letter Queue for Lambda function
+  # Lambda 함수용 Dead Letter Queue
   PostSignupFunctionDLQ:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: PostSignupFunction-DLQ
-      MessageRetentionPeriod: 1209600 # 14 days
+      MessageRetentionPeriod: 1209600 # 14일
       KmsMasterKeyId: alias/aws/sqs
 
   PostSignupFunction:
@@ -251,7 +251,7 @@ Resources:
       Role: !GetAtt PostSignupFunctionRole.Arn
       Timeout: 10
       MemorySize: 128
-      ReservedConcurrentExecutions: 5 # Limit concurrent executions
+      ReservedConcurrentExecutions: 5 # 동시 실행 수 제한
       DeadLetterConfig:
         TargetArn: !GetAtt PostSignupFunctionDLQ.Arn
       Environment:

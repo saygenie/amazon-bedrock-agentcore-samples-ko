@@ -1,16 +1,16 @@
 """
-Setup script: Deploys a minimal MCP test server on AWS Lambda + HTTP API Gateway.
+설정 스크립트: AWS Lambda + HTTP API Gateway에 최소 구성의 MCP 테스트 서버를 배포합니다.
 
-No SAM or CDK required — pure boto3.
+SAM이나 CDK 없이 boto3만 사용합니다.
 
-The MCP server exposes two tools:
-  - get_time: returns current UTC time
-  - echo: echoes a message back
+MCP 서버는 다음 두 도구를 노출합니다.
+  - get_time: 현재 UTC 시간 반환
+  - echo: 메시지를 그대로 반환
 
-Usage:
+사용법:
     python setup_mcp_server.py
 
-Outputs:
+출력:
     mcp_server_config.json  { "endpoint": "https://..." }
 """
 
@@ -25,7 +25,7 @@ FUNCTION_NAME = "AgentCoreMCPTestServer"
 ROLE_NAME = "AgentCoreMCPLambdaRole"
 API_NAME = "AgentCoreMCPTestAPI"
 
-# Zero-dependency Lambda handler implementing the MCP Streamable HTTP protocol
+# MCP Streamable HTTP 프로토콜을 구현하는 외부 종속성 없는 Lambda 핸들러
 _LAMBDA_CODE = """
 import json
 from datetime import datetime, timezone

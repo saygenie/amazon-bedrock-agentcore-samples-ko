@@ -1,4 +1,4 @@
-"""Lab helpers module for AgentCore SRE Workshop."""
+"""AgentCore SRE Workshop용 Lab 헬퍼 모듈입니다."""
 
 from .short_term_memory import ShortTermMemoryHook
 

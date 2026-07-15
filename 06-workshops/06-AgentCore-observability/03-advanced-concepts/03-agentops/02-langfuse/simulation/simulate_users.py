@@ -2,25 +2,25 @@ import json
 import os
 import sys
 
-# Add parent directory to path to import utils
+# utils를 가져올 수 있도록 상위 디렉터리를 경로에 추가
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.agent import invoke_agent
 
-# Configuration
-AGENT_ARN = "arn:aws:bedrock-agentcore:us-west-2:308819823671:runtime/strands_claude45sonnet_prompt1_PRD-86HGVK6oub"  # Replace with your actual agent ARN
+# 구성
+AGENT_ARN = "arn:aws:bedrock-agentcore:us-west-2:308819823671:runtime/strands_claude45sonnet_prompt1_PRD-86HGVK6oub"  # 실제 에이전트 ARN으로 교체
 CONFIG_FILE = "load_config.json"
 
 
 def load_config(config_file):
     """
-    Load the configuration file containing prompts.
+    프롬프트가 포함된 구성 파일을 로드합니다.
 
-    Parameters:
-    - config_file (str): Path to the config JSON file
+    파라미터:
+    - config_file (str): 구성 JSON 파일 경로
 
-    Returns:
-    - dict: The loaded configuration
+    반환:
+    - dict: 로드된 구성
     """
     config_path = os.path.join(os.path.dirname(__file__), config_file)
 
@@ -32,14 +32,14 @@ def load_config(config_file):
 
 def simulate_user_interactions(agent_arn, prompts):
     """
-    Simulate user interactions by invoking the agent with each prompt.
+    각 프롬프트로 에이전트를 호출하여 사용자 상호작용을 시뮬레이션합니다.
 
-    Parameters:
-    - agent_arn (str): The ARN of the deployed agent runtime
-    - prompts (list): List of prompt dictionaries with 'name' and 'prompt' keys
+    파라미터:
+    - agent_arn (str): 배포된 에이전트 런타임의 ARN
+    - prompts (list): 'name' 및 'prompt' 키가 있는 프롬프트 딕셔너리 목록
 
-    Returns:
-    - list: List of results from each agent invocation
+    반환:
+    - list: 각 에이전트 호출의 결과 목록
     """
     results = []
 
@@ -52,10 +52,10 @@ def simulate_user_interactions(agent_arn, prompts):
         print(f"Prompt: {prompt}")
         print(f"{'=' * 80}")
 
-        # Invoke the agent
+        # 에이전트 호출
         result = invoke_agent(agent_arn, prompt)
 
-        # Check for errors
+        # 오류 확인
         if "error" in result:
             print(f"❌ Error invoking agent: {result['error']}")
             results.append(
@@ -68,7 +68,7 @@ def simulate_user_interactions(agent_arn, prompts):
             )
             continue
 
-        # Extract the response based on content type
+        # 콘텐츠 유형에 따라 응답 추출
         if result.get("content_type") == "application/json":
             response = result["response"]
         else:
@@ -93,7 +93,7 @@ def simulate_user_interactions(agent_arn, prompts):
 
 def main():
     """
-    Main function to load config and simulate user interactions.
+    구성을 로드하고 사용자 상호작용을 시뮬레이션하는 기본 함수입니다.
     """
     print(f"Loading configuration from {CONFIG_FILE}...")
 
@@ -108,10 +108,10 @@ def main():
         print(f"Found {len(prompts)} prompt(s) to process.")
         print(f"Using Agent ARN: {AGENT_ARN}")
 
-        # Simulate user interactions
+        # 사용자 상호작용 시뮬레이션
         results = simulate_user_interactions(AGENT_ARN, prompts)
 
-        # Print summary
+        # 요약 출력
         print(f"\n{'=' * 80}")
         print("SIMULATION SUMMARY")
         print(f"{'=' * 80}")

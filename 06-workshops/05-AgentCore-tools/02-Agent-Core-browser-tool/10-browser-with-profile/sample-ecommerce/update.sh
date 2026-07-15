@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Configuration
+# 구성
 STACK_NAME="sample-ecommerce-stack"
 REGION="us-east-1"
 
 echo "Getting bucket name from stack..."
 
-# Get bucket name from existing stack
+# 기존 스택에서 버킷 이름 가져오기
 BUCKET=$(aws cloudformation describe-stacks \
   --stack-name $STACK_NAME \
   --region $REGION \
@@ -20,7 +20,7 @@ fi
 
 echo "Uploading updated files to S3 bucket: $BUCKET"
 
-# Upload files to S3
+# S3에 파일 업로드
 aws s3 sync . s3://$BUCKET/ \
   --exclude "*.yaml" \
   --exclude "*.sh" \
@@ -28,7 +28,7 @@ aws s3 sync . s3://$BUCKET/ \
   --exclude ".git/*" \
   --region $REGION
 
-# Get CloudFront distribution ID
+# CloudFront 배포 ID 가져오기
 DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
   --stack-name $STACK_NAME \
   --region $REGION \
@@ -37,7 +37,7 @@ DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
 
 echo "Invalidating CloudFront cache..."
 
-# Invalidate CloudFront cache
+# CloudFront 캐시 무효화
 aws cloudfront create-invalidation \
   --distribution-id $DISTRIBUTION_ID \
   --paths "/*" \

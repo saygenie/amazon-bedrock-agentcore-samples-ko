@@ -1,27 +1,26 @@
 /**
- * Fun Facts x402 seller — Node.js AWS Lambda function.
+ * Fun Facts x402 seller - Node.js AWS Lambda function입니다.
  *
- * Mirrors the house-standard pattern used by agentcore-payments sellers
- * (see backend/lambdas/sellers/crypto-price):
+ * agentcore-payments seller에서 사용하는 표준 패턴을 따릅니다
+ * (backend/lambdas/sellers/crypto-price 참조).
  *
- *   - `@x402/hono` `paymentMiddlewareFromHTTPServer` does the full 402 +
- *     facilitator verify/settle handshake for us — no manual base64 header
- *     assembly, no manual /verify /settle HTTP calls.
- *   - Chain Agnostic Improvement Proposal 2 (CAIP-2) network identifiers
- *     (`eip155:84532` for Base Sepolia, `solana:…` for Devnet) — this is
- *     what the AgentCore Payments plugin emits on the wire when it signs
- *     an x402 payload, not the short `base-sepolia` / `solana-devnet`
- *     strings.
- *   - Price expressed as human-readable USD (`"$0.01"`) — the x402
- *     middleware converts to on-chain atomic amounts.
- *   - Response shape: `{ x402_content, x402_meta }` — the bazaar-friendly
- *     schema the AgentCore Registry can index.
- *   - `declareDiscoveryExtension` so this seller is discoverable through
- *     the Bazaar Model Context Protocol (MCP).
+ *   - `@x402/hono`의 `paymentMiddlewareFromHTTPServer`가 전체 402 및 facilitator
+ *     verify/settle handshake를 처리하므로 base64 header를 수동으로 조립하거나
+ *     /verify, /settle HTTP 호출을 직접 수행할 필요가 없습니다.
+ *   - Chain Agnostic Improvement Proposal 2 (CAIP-2) network 식별자를 사용합니다
+ *     (Base Sepolia는 `eip155:84532`, Devnet은 `solana:…`). 짧은
+ *     `base-sepolia`/`solana-devnet` 문자열이 아니라 AgentCore Payments plugin이
+ *     x402 payload에 서명할 때 wire로 내보내는 값입니다.
+ *   - 사람이 읽을 수 있는 USD(`"$0.01"`)로 가격을 표시하며 x402 middleware가
+ *     on-chain atomic amount로 변환합니다.
+ *   - 응답 형식은 AgentCore Registry가 index할 수 있는 Bazaar 친화적 schema인
+ *     `{ x402_content, x402_meta }`입니다.
+ *   - `declareDiscoveryExtension`을 사용하므로 Bazaar Model Context Protocol
+ *     (MCP)을 통해 이 seller를 검색할 수 있습니다.
  *
- * Multi-network: when both `SELLER_WALLET_ADDRESS` (EVM) and
- * `SELLER_SOLANA_WALLET_ADDRESS` are set, both `accepts` entries are
- * emitted and the agent picks whichever network its instrument is on.
+ * Multi-network: `SELLER_WALLET_ADDRESS`(EVM)와
+ * `SELLER_SOLANA_WALLET_ADDRESS`를 모두 설정하면 두 `accepts` 항목을 모두
+ * 내보내고 agent가 instrument가 속한 network를 선택합니다.
  */
 import { Hono } from "hono";
 import { handle } from "hono/aws-lambda";
@@ -32,25 +31,23 @@ import {
 } from "@x402/hono";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { registerExactEvmScheme } from "@x402/evm/exact/server";
-// SVM = Solana Virtual Machine — the on-chain runtime Solana programs
-// execute under. The x402 SVM scheme builds + verifies SPL-token
-// transfer transactions on Solana.
+// SVM은 Solana program이 실행되는 on-chain runtime인 Solana Virtual Machine입니다.
+// x402 SVM scheme은 Solana에서 SPL token transfer transaction을 build하고 검증합니다.
 import { registerExactSvmScheme } from "@x402/svm/exact/server";
 import {
   bazaarResourceServerExtension,
   declareDiscoveryExtension,
 } from "@x402/extensions/bazaar";
 
-// ── Config (from Lambda env vars) ───────────────────────────────────────
-// Wallet addresses default to "WALLET_NOT_CONFIGURED" so an unconfigured
-// seller emits clearly invalid placeholders in the 402 response. The
-// facilitator rejects them at settlement and the agent surfaces a
-// helpful error pointing the operator at SELLER_WALLET_ADDRESS /
-// SELLER_SOLANA_WALLET_ADDRESS in `.env`.
+// ── Config(Lambda 환경 변수에서 로드) ───────────────────────────────────
+// Wallet address 기본값은 "WALLET_NOT_CONFIGURED"이므로 구성되지 않은 seller는
+// 402 응답에 명백히 잘못된 placeholder를 내보냅니다. Facilitator는 settlement
+// 시 이를 거부하고, agent는 운영자가 `.env`의 SELLER_WALLET_ADDRESS 또는
+// SELLER_SOLANA_WALLET_ADDRESS를 확인하도록 안내하는 오류를 표시합니다.
 const X402_CONFIG = {
   facilitatorUrl:
     process.env.X402_FACILITATOR_URL || "https://x402.org/facilitator",
-  // CAIP-2 network identifiers
+  // CAIP-2 network 식별자
   evmNetwork: "eip155:84532", // Base Sepolia
   evmPayTo: process.env.SELLER_WALLET_ADDRESS || "WALLET_NOT_CONFIGURED",
   solanaNetwork: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1", // Devnet
@@ -60,7 +57,7 @@ const X402_CONFIG = {
 
 const PRICE = process.env.X402_PRICE || "$0.01";
 
-// ── Fun Facts data ──────────────────────────────────────────────────────
+// ── Fun Facts 데이터 ────────────────────────────────────────────────────
 const FACTS = {
   space: [
     "A day on Venus is longer than its year — it takes 243 Earth days to rotate but only 225 days to orbit the sun.",
@@ -111,10 +108,9 @@ function pickFact(rawTopic) {
 function buildAccepts(price) {
   const NOT_CONFIGURED = "WALLET_NOT_CONFIGURED";
   const accepts = [];
-  // Treat the placeholder the same as an unset env var: still emit the
-  // accepts entry so the 402 response has the right shape, but the
-  // facilitator will reject any payment proof at settlement and the
-  // agent surfaces a clear error message.
+  // Placeholder를 설정되지 않은 환경 변수와 동일하게 처리합니다. 402 응답의
+  // 형식을 유지하도록 accepts 항목은 내보내지만 facilitator가 settlement 시
+  // 모든 payment proof를 거부하고 agent가 명확한 오류 메시지를 표시합니다.
   if (X402_CONFIG.evmPayTo && X402_CONFIG.evmPayTo !== NOT_CONFIGURED) {
     accepts.push({
       scheme: "exact",
@@ -132,9 +128,9 @@ function buildAccepts(price) {
     });
   }
   if (!accepts.length) {
-    // No wallet configured — emit an EVM entry anyway so the 402 response
-    // has the right shape; the facilitator will reject the proof at
-    // settlement. Keeps the error message useful during first-run setup.
+    // 구성된 wallet이 없어도 402 응답 형식을 유지하도록 EVM 항목을 내보냅니다.
+    // Facilitator는 settlement 시 proof를 거부합니다. 따라서 첫 실행 설정 과정에서
+    // 유용한 오류 메시지를 유지할 수 있습니다.
     accepts.push({
       scheme: "exact",
       price,
@@ -148,8 +144,8 @@ function buildAccepts(price) {
 // ── Hono app + x402 middleware ──────────────────────────────────────────
 const app = new Hono();
 
-// Request logging — same shape as the reference seller so CloudWatch
-// queries are portable.
+// CloudWatch query를 재사용할 수 있도록 reference seller와 같은 형식으로
+// request를 logging합니다.
 app.use("*", async (c, next) => {
   const start = Date.now();
   const sig = c.req.header("payment-signature");
@@ -175,7 +171,7 @@ app.use("*", async (c, next) => {
   );
 });
 
-// x402 server — EVM + SVM schemes, Bazaar discovery extension.
+// x402 server - EVM 및 SVM scheme과 Bazaar discovery extension입니다.
 const facilitatorClient = new HTTPFacilitatorClient({
   url: X402_CONFIG.facilitatorUrl,
 });
@@ -184,9 +180,9 @@ registerExactEvmScheme(server);
 registerExactSvmScheme(server);
 server.registerExtension(bazaarResourceServerExtension);
 
-// Declare one paid route: GET /facts. The Bazaar discovery extension
-// exposes the topic query-parameter schema + an example output so the
-// AgentCore Registry can list this seller.
+// 유료 route GET /facts 하나를 선언합니다. AgentCore Registry가 이 seller를
+// 나열할 수 있도록 Bazaar discovery extension이 topic query parameter schema와
+// 예제 출력을 노출합니다.
 const routes = {
   "GET /facts": {
     accepts: buildAccepts(PRICE),
@@ -228,9 +224,9 @@ app.use(
   paymentMiddlewareFromHTTPServer(httpServer, undefined, undefined, false)
 );
 
-// ── Routes ──────────────────────────────────────────────────────────────
+// ── Route ───────────────────────────────────────────────────────────────
 
-// Paid route
+// 유료 route
 app.get("/facts", (c) => {
   const topic = c.req.query("topic") || "default";
   const { topic: resolvedTopic, fact } = pickFact(topic);
@@ -250,7 +246,7 @@ app.get("/facts", (c) => {
   });
 });
 
-// Public health check — no payment required.
+// 결제가 필요 없는 public 상태 확인 endpoint입니다.
 app.get("/health", (c) =>
   c.json({
     status: "ok",
@@ -261,7 +257,7 @@ app.get("/health", (c) =>
   })
 );
 
-// Discovery root.
+// Discovery root입니다.
 app.get("/", (c) =>
   c.json({
     service: "pay-for-api-fun-facts",

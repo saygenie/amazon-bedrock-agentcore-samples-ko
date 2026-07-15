@@ -1,8 +1,8 @@
-"""Minimal WebRTC Voice Agent with Nova Sonic.
+"""Nova Sonic을 사용하는 최소 WebRTC Voice Agent입니다.
 
-FastAPI server that bridges WebRTC audio from the browser to Nova Sonic
-via KVS TURN servers. Exposes a single /invocations endpoint that handles
-ICE config, WebRTC offer/answer, and ICE candidate exchange.
+KVS TURN Server를 통해 브라우저의 WebRTC 오디오를 Nova Sonic에 연결하는
+FastAPI Server입니다. ICE 구성, WebRTC offer/answer 및 ICE candidate 교환을
+처리하는 단일 /invocations 엔드포인트를 노출합니다.
 """
 
 import argparse
@@ -28,12 +28,12 @@ load_dotenv(override=True)
 CHANNEL_NAME = os.getenv("KVS_CHANNEL_NAME", "voice-agent-minimal")
 AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
 
-# Active peer connections, keyed by pc_id
+# pc_id를 키로 사용하는 활성 Peer Connection
 peer_connections = {}
 
 
 # ---------------------------------------------------------------------------
-# App lifecycle
+# 앱 수명 주기
 # ---------------------------------------------------------------------------
 
 
@@ -56,7 +56,7 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------------
-# Endpoints
+# 엔드포인트
 # ---------------------------------------------------------------------------
 
 
@@ -84,12 +84,12 @@ async def invocations(request: dict, background_tasks: BackgroundTasks):
 
 
 # ---------------------------------------------------------------------------
-# Action handlers
+# 작업 핸들러
 # ---------------------------------------------------------------------------
 
 
 def _handle_ice_config():
-    """Return KVS TURN/STUN server credentials for the browser."""
+    """브라우저용 KVS TURN/STUN Server 자격 증명을 반환합니다."""
     return {
         "iceServers": [
             {
@@ -103,10 +103,10 @@ def _handle_ice_config():
 
 
 async def _handle_offer(data, background_tasks):
-    """Accept a WebRTC offer, create a peer connection, return an answer."""
+    """WebRTC offer를 수락하고 Peer Connection을 생성한 뒤 answer를 반환합니다."""
     ice_servers = kvs.get_rtc_ice_servers(AWS_REGION, client_id="server", turn_only=data.get("turnOnly", False))
 
-    # Create peer connection with output audio track
+    # 출력 오디오 트랙이 포함된 Peer Connection 생성
     pc = RTCPeerConnection(RTCConfiguration(iceServers=ice_servers))
     audio_out = OutputTrack()
     pc.addTrack(audio_out)
@@ -114,7 +114,7 @@ async def _handle_offer(data, background_tasks):
     pc_id = f"pc_{len(peer_connections)}"
     peer_connections[pc_id] = pc
 
-    # When browser's audio track arrives, start Nova Sonic session
+    # 브라우저의 오디오 트랙이 도착하면 Nova Sonic 세션 시작
     @pc.on("track")
     async def on_track(track):
         if track.kind == "audio":
@@ -124,7 +124,7 @@ async def _handle_offer(data, background_tasks):
     async def on_ice_state():
         logger.info(f"ICE state: {pc.iceConnectionState}")
 
-    # SDP offer/answer exchange
+    # SDP offer/answer 교환
     await pc.setRemoteDescription(RTCSessionDescription(sdp=data["sdp"], type=data["type"]))
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
@@ -137,7 +137,7 @@ async def _handle_offer(data, background_tasks):
 
 
 async def _handle_disconnect(data):
-    """Close and remove a peer connection."""
+    """Peer Connection을 닫고 제거합니다."""
     pc = peer_connections.pop(data.get("pc_id"), None)
     if pc:
         await pc.close()
@@ -145,14 +145,14 @@ async def _handle_disconnect(data):
 
 
 async def _handle_ice_candidate(data):
-    """Add trickled ICE candidates to an existing peer connection."""
+    """기존 Peer Connection에 trickle ICE candidate를 추가합니다."""
     pc = peer_connections.get(data.get("pc_id"))
     if not pc:
         return {"status": "success"}
 
     for candidate_data in data.get("candidates", []):
         try:
-            # Strip "candidate:" prefix that browsers include
+            # 브라우저가 포함하는 "candidate:" 접두사 제거
             raw = candidate_data.get("candidate", "")
             if raw.startswith("candidate:"):
                 raw = raw.split(":", 1)[1]
@@ -168,7 +168,7 @@ async def _handle_ice_candidate(data):
 
 
 # ---------------------------------------------------------------------------
-# CLI entry point
+# CLI 진입점
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":

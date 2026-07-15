@@ -1,10 +1,10 @@
-# Byte-compiled / optimized / DLL files
+# 바이트 컴파일 / 최적화 / DLL 파일
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 
-# Distribution / packaging
+# 배포 / 패키징
 .Python
 build/
 develop-eggs/
@@ -22,7 +22,7 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
+# 가상 환경
 .venv/
 venv/
 env/
@@ -39,7 +39,7 @@ ENV/
 .ipynb_checkpoints
 *.ipynb_checkpoints/
 
-# Testing
+# 테스트
 .pytest_cache/
 .coverage
 .coverage.*
@@ -50,10 +50,10 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
-# Logs
+# 로그
 *.log
 
-# OS files
+# OS 파일
 .DS_Store
 .DS_Store?
 ._*
@@ -66,15 +66,15 @@ Thumbs.db
 *.swo
 *.bak
 
-# AWS credentials and config
+# AWS 자격 증명 및 구성
 .aws/
 *.pem
 *.key
 
-# Bedrock AgentCore runtime files
+# Amazon Bedrock AgentCore Runtime 파일
 .bedrock_agentcore/
 
-# Lambda deployment packages
+# Lambda 배포 패키지
 *.zip
 lambda_*.zip
 
@@ -82,5 +82,5 @@ lambda_*.zip
 .dockerignore
 Dockerfile
 
-# Project specific - sensitive config
+# 프로젝트별 민감한 구성
 .bedrock_agentcore.yaml

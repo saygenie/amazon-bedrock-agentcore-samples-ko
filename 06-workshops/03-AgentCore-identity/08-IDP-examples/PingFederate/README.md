@@ -1,26 +1,26 @@
-# Private IdP Connectivity: PingFederate with AgentCore Identity via VPC Lattice
+# 프라이빗 IdP 연결: VPC Lattice를 통한 PingFederate와 AgentCore Identity 연결
 
-> **Disclaimer:** This sample is for experimental and educational purposes only. It is not intended for production use.
+> **면책 조항:** 이 샘플은 실험 및 교육 목적으로만 제공되며 프로덕션 용도로는 적합하지 않습니다.
 
-This sample demonstrates how to connect **Amazon Bedrock AgentCore Identity** to a privately hosted **PingFederate** Identity Provider (IdP) using **Amazon VPC Lattice**, eliminating the need for the IdP to be exposed to the public internet.
+이 샘플에서는 **Amazon VPC Lattice**를 사용하여 **Amazon Bedrock AgentCore Identity**를 프라이빗하게 호스팅된 **PingFederate** Identity Provider(IdP)에 연결하는 방법을 보여 줍니다. 이 방식을 사용하면 IdP를 퍼블릭 인터넷에 노출할 필요가 없습니다.
 
-The sample covers two AgentCore Identity patterns:
+이 샘플에서는 두 가지 AgentCore Identity 패턴을 다룹니다.
 
-1. **Outbound OAuth** — the agent runtime acquires OAuth tokens from the private PingFederate IdP via AgentCore Identity and VPC Lattice (no public network path to the IdP).
-2. **Gateway inbound auth** — the agent presents its PingFederate token to an AgentCore Gateway configured with CUSTOM_JWT authorization, proving that the gateway can validate JWTs from a private IdP via VPC Lattice.
+1. **아웃바운드 OAuth** - 에이전트 Runtime이 AgentCore Identity와 VPC Lattice를 통해 프라이빗 PingFederate IdP에서 OAuth 토큰을 가져옵니다(IdP로 연결되는 퍼블릭 네트워크 경로 없음).
+2. **Gateway 인바운드 인증** - 에이전트가 CUSTOM_JWT 권한 부여로 구성된 AgentCore Gateway에 PingFederate 토큰을 제시하여, Gateway가 VPC Lattice를 통해 프라이빗 IdP의 JWT를 검증할 수 있음을 보여 줍니다.
 
-The token is a security credential and is never exposed to an LLM or returned to the caller — only non-sensitive metadata (client_id, scope, expiry) and the gateway tools/list response are returned to confirm success.
+토큰은 보안 자격 증명이므로 LLM에 노출되거나 호출자에게 반환되지 않습니다. 성공 여부를 확인하기 위해 민감하지 않은 메타데이터(client_id, scope, expiry)와 Gateway tools/list 응답만 반환됩니다.
 
-## Deployment Modes
+## 배포 모드
 
-This sample supports two VPC Lattice deployment modes:
+이 샘플은 두 가지 VPC Lattice 배포 모드를 지원합니다.
 
-| Mode | Deploy Command | Description |
+| 모드 | 배포 명령 | 설명 |
 |------|---------------|-------------|
-| **AgentCore-managed** (default) | `./deploy_sample.sh` | AgentCore Identity creates and manages VPC Lattice resources automatically. You provide VPC and subnet IDs. Simpler setup. |
-| **Self-managed** | `./deploy_sample.sh --self-managed-lattice` | You deploy VPC Lattice resources (resource gateway + configuration) via CDK. You manage the Lattice lifecycle. More control. |
+| **AgentCore 관리형**(기본값) | `./deploy_sample.sh` | AgentCore Identity가 VPC Lattice 리소스를 자동으로 생성하고 관리합니다. VPC 및 서브넷 ID를 제공하며 설정이 더 간단합니다. |
+| **자체 관리형** | `./deploy_sample.sh --self-managed-lattice` | CDK를 통해 VPC Lattice 리소스(리소스 게이트웨이 + 구성)를 배포합니다. Lattice 수명 주기를 직접 관리하며 더 세밀하게 제어할 수 있습니다. |
 
-## Architecture
+## 아키텍처
 
 ```
                         ┌──────────────────────┐
@@ -53,79 +53,79 @@ This sample supports two VPC Lattice deployment modes:
 └─────────────────────────────────────────────────────────┘
 ```
 
-## Why Private IdP Connectivity?
+## 프라이빗 IdP 연결이 필요한 이유
 
-Many enterprises run their Identity Providers (IdPs) in private networks with no public internet exposure. AgentCore Identity needs to communicate with the IdP to perform OAuth2 flows (token acquisition, discovery, JWKS retrieval).
+많은 기업이 퍼블릭 인터넷에 노출되지 않은 프라이빗 네트워크에서 Identity Provider(IdP)를 운영합니다. AgentCore Identity는 OAuth2 흐름(토큰 획득, 검색, JWKS 검색)을 수행하기 위해 IdP와 통신해야 합니다.
 
-**VPC Lattice** solves this by providing private, secure, unidirectional network connectivity from AgentCore Identity to your IdP without requiring:
-- A public-facing load balancer
-- VPN or Direct Connect
-- VPC peering
-- NAT gateways for the IdP
+**VPC Lattice**는 다음 항목 없이도 AgentCore Identity에서 IdP로 향하는 프라이빗하고 안전한 단방향 네트워크 연결을 제공하여 이 문제를 해결합니다.
+- 퍼블릭 로드 밸런서
+- VPN 또는 Direct Connect
+- VPC 피어링
+- IdP용 NAT 게이트웨이
 
-## Key Concepts
+## 핵심 개념
 
-### Private Hosted Zone
+### 프라이빗 호스팅 영역
 
-A critical requirement: the VPC Lattice resource gateway resolves the discovery URL domain **from within your VPC**. You must create a Route 53 **private hosted zone** that maps your certificate domain (e.g., `ping.example.com`) to the internal ALB. This CDK sample creates the private hosted zone automatically.
+핵심 요구 사항은 VPC Lattice 리소스 게이트웨이가 **VPC 내부에서** 검색 URL 도메인을 해석해야 한다는 점입니다. 인증서 도메인(예: `ping.example.com`)을 내부 ALB에 매핑하는 Route 53 **프라이빗 호스팅 영역**을 생성해야 합니다. 이 CDK 샘플은 프라이빗 호스팅 영역을 자동으로 생성합니다.
 
-Without the private hosted zone, AgentCore Identity will fail with "HTTP request failed against private endpoint" because the domain cannot be resolved within the VPC.
+프라이빗 호스팅 영역이 없으면 VPC 내에서 도메인을 해석할 수 없으므로 AgentCore Identity에서 "HTTP request failed against private endpoint" 오류가 발생합니다.
 
-### VPC Lattice Resource Gateway
+### VPC Lattice 리소스 게이트웨이
 
-A **Resource Gateway** is a set of Elastic Network Interfaces (ENIs) deployed in the private subnets of the VPC where your IdP runs. It serves as the ingress point for Lattice traffic into the VPC.
+**리소스 게이트웨이**는 IdP가 실행되는 VPC의 프라이빗 서브넷에 배포된 Elastic Network Interface(ENI) 세트입니다. VPC로 들어오는 Lattice 트래픽의 인그레스 지점 역할을 합니다.
 
-### VPC Lattice Resource Configuration
+### VPC Lattice 리소스 구성
 
-A **Resource Configuration** describes the target resource (your PingFederate ALB) so that Lattice knows where to route traffic. It specifies the DNS name, port, and protocol. The `rcfg-xxx` ID is what you provide to AgentCore Identity in self-managed mode.
+**리소스 구성**은 Lattice가 트래픽을 라우팅할 위치를 알 수 있도록 대상 리소스(PingFederate ALB)를 설명합니다. DNS 이름, 포트 및 프로토콜을 지정합니다. 자체 관리형 모드에서는 AgentCore Identity에 `rcfg-xxx` ID를 제공합니다.
 
-### AgentCore Identity Private Endpoint
+### AgentCore Identity 프라이빗 엔드포인트
 
-The `privateEndpoint` attribute on the OAuth2 credential provider tells AgentCore Identity to reach the IdP through VPC Lattice instead of the public internet:
+OAuth2 자격 증명 공급자의 `privateEndpoint` 속성은 AgentCore Identity가 퍼블릭 인터넷 대신 VPC Lattice를 통해 IdP에 연결하도록 지정합니다.
 
-- **AgentCore-managed mode**: provide `managedVpcResource` with VPC ID and subnet IDs — AgentCore creates the Lattice resources for you.
-- **Self-managed mode**: provide `selfManagedLatticeResource` with the `rcfg-xxx` resource configuration ID from your CDK-deployed Lattice resources.
+- **AgentCore 관리형 모드**: VPC ID 및 서브넷 ID와 함께 `managedVpcResource`를 제공합니다. AgentCore가 Lattice 리소스를 생성합니다.
+- **자체 관리형 모드**: CDK로 배포한 Lattice 리소스의 `rcfg-xxx` 리소스 구성 ID와 함께 `selfManagedLatticeResource`를 제공합니다.
 
-## What Gets Deployed
+## 배포되는 항목
 
-### CDK Stacks
+### CDK 스택
 
-| Stack | Resources | Always Deployed? |
+| 스택 | 리소스 | 항상 배포 여부 |
 |-------|-----------|-----------------|
-| **PrivateIdpVpcStack** | VPC with public/private subnets (2 AZs, 1 NAT gateway) | Yes |
-| **PrivateIdpPingFederateStack** | ECR repo, ECS Fargate service, internal ALB, Route 53 private hosted zone, Lambda custom resource (configures PingFederate OAuth/OIDC), Secrets Manager | Yes |
-| **PrivateIdpGatewayInfraStack** | MCP Echo Lambda (gateway target), IAM role for the gateway | Yes |
-| **PrivateIdpLatticeStack** | VPC Lattice resource gateway + resource configuration | Only with `--self-managed-lattice` |
+| **PrivateIdpVpcStack** | 퍼블릭/프라이빗 서브넷이 있는 VPC(AZ 2개, NAT 게이트웨이 1개) | 예 |
+| **PrivateIdpPingFederateStack** | ECR 리포지토리, ECS Fargate 서비스, 내부 ALB, Route 53 프라이빗 호스팅 영역, Lambda 사용자 지정 리소스(PingFederate OAuth/OIDC 구성), Secrets Manager | 예 |
+| **PrivateIdpGatewayInfraStack** | MCP Echo Lambda(Gateway 대상), Gateway용 IAM 역할 | 예 |
+| **PrivateIdpLatticeStack** | VPC Lattice 리소스 게이트웨이 + 리소스 구성 | `--self-managed-lattice`에서만 |
 
-### Manual Steps (after CDK deployment)
+### 수동 단계(CDK 배포 후)
 
-1. **Credential provider** — created via AWS CLI with `privateEndpoint` configuration
-2. **Gateway** — created via AWS CLI with CUSTOM_JWT auth and `privateEndpoint` for JWKS validation
-3. **Gateway target** — MCP Echo Lambda added as a gateway target via AWS CLI
-4. **Runtime** — deployed via [agentcore-cli](https://github.com/aws/agentcore-cli) using the code in `agent/`
+1. **자격 증명 공급자** - `privateEndpoint` 구성과 함께 AWS CLI를 통해 생성
+2. **Gateway** - CUSTOM_JWT 인증 및 JWKS 검증용 `privateEndpoint`와 함께 AWS CLI를 통해 생성
+3. **Gateway 대상** - AWS CLI를 통해 MCP Echo Lambda를 Gateway 대상으로 추가
+4. **Runtime** - `agent/`의 코드와 [agentcore-cli](https://github.com/aws/agentcore-cli)를 사용하여 배포
 
-## Prerequisites
+## 사전 요구 사항
 
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) v2.27+
 - [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting-started.html) v2 (`npm install -g aws-cdk`)
-- [uv](https://docs.astral.sh/uv/) for Python dependency management
+- Python 종속성 관리용 [uv](https://docs.astral.sh/uv/)
 - [Python 3.12+](https://www.python.org/downloads/)
-- [Docker](https://docs.docker.com/get-docker/) (for building/pushing the PingFederate container image)
+- PingFederate 컨테이너 이미지 빌드/푸시용 [Docker](https://docs.docker.com/get-docker/)
 - [agentcore-cli](https://github.com/aws/agentcore-cli) (`npm install -g @aws/agentcore`)
-- [Node.js 20+](https://nodejs.org/) (for agentcore-cli and CDK)
-- **PingFederate DevOps credentials** — [sign up here](https://devops.pingidentity.com/get-started/devopsRegistration/)
-- **A publicly trusted ACM certificate** — AgentCore Identity requires a publicly trusted TLS certificate to connect via VPC Lattice. The ALB itself remains internal.
-- AWS account with permissions to create VPC, ECS, VPC Lattice, Route 53, AgentCore Identity, and AgentCore Runtime resources
+- agentcore-cli 및 CDK용 [Node.js 20+](https://nodejs.org/)
+- **PingFederate DevOps 자격 증명** - [여기에서 가입](https://devops.pingidentity.com/get-started/devopsRegistration/)
+- **공개적으로 신뢰할 수 있는 ACM 인증서** - AgentCore Identity가 VPC Lattice를 통해 연결하려면 공개적으로 신뢰할 수 있는 TLS 인증서가 필요합니다. ALB 자체는 내부에 유지됩니다.
+- VPC, ECS, VPC Lattice, Route 53, AgentCore Identity 및 AgentCore Runtime 리소스를 생성할 권한이 있는 AWS 계정
 
-## Setup
+## 설정
 
-### 1. Configure
+### 1. 구성
 
 ```bash
 cd 06-workshops/03-AgentCore-identity/08-IDP-examples/PingFederate
 ```
 
-Create a `.env` file:
+`.env` 파일을 생성합니다.
 
 ```bash
 cat <<EOF > .env
@@ -136,34 +136,34 @@ PING_DOMAIN=ping.example.com
 EOF
 ```
 
-| Variable | Description |
+| 변수 | 설명 |
 |----------|-------------|
-| `PING_IDENTITY_DEVOPS_USER` | PingFederate DevOps email |
-| `PING_IDENTITY_DEVOPS_KEY` | PingFederate DevOps key |
-| `CERTIFICATE_ARN` | ARN of a **publicly trusted** ACM certificate for your domain |
-| `PING_DOMAIN` | Domain name matching the certificate (e.g., `ping.example.com`) |
+| `PING_IDENTITY_DEVOPS_USER` | PingFederate DevOps 이메일 |
+| `PING_IDENTITY_DEVOPS_KEY` | PingFederate DevOps 키 |
+| `CERTIFICATE_ARN` | 도메인에 대한 **공개적으로 신뢰할 수 있는** ACM 인증서의 ARN |
+| `PING_DOMAIN` | 인증서와 일치하는 도메인 이름(예: `ping.example.com`) |
 
-The deployment region is determined by `AWS_REGION` in your shell environment (or your AWS CLI default region). If `AWS_REGION` is not set, it defaults to `us-east-1`.
+배포 리전은 셸 환경의 `AWS_REGION` 또는 AWS CLI 기본 리전에 따라 결정됩니다. `AWS_REGION`이 설정되지 않은 경우 기본값은 `us-east-1`입니다.
 
-### 2. Deploy infrastructure
+### 2. 인프라 배포
 
 ```bash
-./deploy_sample.sh                    # AgentCore-managed Lattice (default)
-./deploy_sample.sh --self-managed-lattice  # Self-managed Lattice
+./deploy_sample.sh                    # AgentCore 관리형 Lattice(기본값)
+./deploy_sample.sh --self-managed-lattice  # 자체 관리형 Lattice
 ```
 
-The deployment takes approximately 15–20 minutes. The script will:
-1. Validate prerequisites
-2. Install Python dependencies
-3. Bootstrap CDK
-4. Deploy all stacks
-5. Output the AWS CLI commands to create the credential provider, gateway, and gateway target
+배포에는 약 15~20분이 걸립니다. 스크립트는 다음 작업을 수행합니다.
+1. 사전 요구 사항 검증
+2. Python 종속성 설치
+3. CDK 부트스트랩
+4. 모든 스택 배포
+5. 자격 증명 공급자, Gateway 및 Gateway 대상을 생성하는 AWS CLI 명령 출력
 
-### 3. Create the AgentCore Identity credential provider
+### 3. AgentCore Identity 자격 증명 공급자 생성
 
-After deployment, the script outputs the exact AWS CLI command. Choose based on your deployment mode:
+배포 후 스크립트가 정확한 AWS CLI 명령을 출력합니다. 배포 모드에 따라 선택하세요.
 
-**AgentCore-managed mode** (default):
+**AgentCore 관리형 모드**(기본값):
 
 ```bash
 aws bedrock-agentcore-control create-oauth2-credential-provider \
@@ -187,7 +187,7 @@ aws bedrock-agentcore-control create-oauth2-credential-provider \
     }'
 ```
 
-**Self-managed mode** (`--self-managed-lattice`):
+**자체 관리형 모드**(`--self-managed-lattice`):
 
 ```bash
 aws bedrock-agentcore-control create-oauth2-credential-provider \
@@ -209,9 +209,9 @@ aws bedrock-agentcore-control create-oauth2-credential-provider \
     }'
 ```
 
-### 4. Verify the credential provider
+### 4. 자격 증명 공급자 확인
 
-Wait ~3 minutes for the credential provider to become READY:
+자격 증명 공급자가 READY 상태가 될 때까지 약 3분 동안 기다립니다.
 
 ```bash
 aws bedrock-agentcore-control get-oauth2-credential-provider \
@@ -219,11 +219,11 @@ aws bedrock-agentcore-control get-oauth2-credential-provider \
     --query '{name: name, status: status}'
 ```
 
-### 5. Create the AgentCore Gateway
+### 5. AgentCore Gateway 생성
 
-The gateway uses CUSTOM_JWT inbound auth with PingFederate as the token issuer. The `privateEndpoint` tells the gateway to validate JWTs by reaching PingFederate's JWKS endpoint via VPC Lattice (private connectivity).
+Gateway는 PingFederate를 토큰 발급자로 사용하는 CUSTOM_JWT 인바운드 인증을 사용합니다. `privateEndpoint`는 Gateway가 VPC Lattice(프라이빗 연결)를 통해 PingFederate의 JWKS 엔드포인트에 연결하여 JWT를 검증하도록 지정합니다.
 
-The deploy script outputs the exact command with your stack values pre-filled. The command uses the IAM role and VPC configuration from the `PrivateIdpGatewayInfraStack`:
+배포 스크립트는 스택 값이 미리 채워진 정확한 명령을 출력합니다. 이 명령은 `PrivateIdpGatewayInfraStack`의 IAM 역할과 VPC 구성을 사용합니다.
 
 ```bash
 aws bedrock-agentcore-control create-gateway \
@@ -247,16 +247,16 @@ aws bedrock-agentcore-control create-gateway \
     --exception-level "DEBUG"
 ```
 
-Wait ~2–3 minutes for the gateway to become READY:
+Gateway가 READY 상태가 될 때까지 약 2~3분 동안 기다립니다.
 
 ```bash
 aws bedrock-agentcore-control list-gateways \
     --query 'items[?name==`PingGateway`].{id:gatewayId,status:status,url:gatewayUrl}'
 ```
 
-### 6. Add the MCP Echo Lambda target
+### 6. MCP Echo Lambda 대상 추가
 
-Once the gateway is READY, add the Lambda target. Replace `GATEWAY_ID` with the `gatewayId` from step 5:
+Gateway가 READY 상태가 되면 Lambda 대상을 추가합니다. `GATEWAY_ID`를 5단계에서 확인한 `gatewayId`로 바꾸세요.
 
 ```bash
 aws bedrock-agentcore-control create-gateway-target \
@@ -290,15 +290,14 @@ aws bedrock-agentcore-control create-gateway-target \
     --credential-provider-configurations '[{"credentialProviderType": "GATEWAY_IAM_ROLE"}]'
 ```
 
-The deploy script outputs this command with the actual Lambda ARN pre-filled.
+배포 스크립트는 실제 Lambda ARN이 미리 채워진 이 명령을 출력합니다.
 
-### 7. Deploy the runtime
+### 7. Runtime 배포
 
-The `agent/` directory contains a complete [agentcore-cli](https://github.com/aws/agentcore-cli) project — no scaffolding required. The deploy script automatically configures `aws-targets.json` with your account ID and region.
+`agent/` 디렉터리에는 완전한 [agentcore-cli](https://github.com/aws/agentcore-cli) 프로젝트가 있으므로 스캐폴딩이 필요하지 않습니다. 배포 스크립트는 계정 ID와 리전을 사용해 `aws-targets.json`을 자동으로 구성합니다.
 
-Before deploying, configure the gateway URL so the agent knows where to send authenticated requests.
-Open `agent/private-idp-ping-agent/agentcore/agentcore.json` and add `GATEWAY_URL` to the `envVars` array
-in the runtime definition:
+배포하기 전에 에이전트가 인증된 요청을 보낼 위치를 알 수 있도록 Gateway URL을 구성합니다.
+`agent/private-idp-ping-agent/agentcore/agentcore.json`을 열고 Runtime 정의의 `envVars` 배열에 `GATEWAY_URL`을 추가합니다.
 
 ```json
 "envVars": [
@@ -309,25 +308,25 @@ in the runtime definition:
 ]
 ```
 
-Replace `YOUR-GATEWAY-ID` with the `gatewayId` from step 5. The full URL follows the pattern
-`https://<gatewayId>.gateway.bedrock-agentcore.<region>.amazonaws.com/mcp`.
+`YOUR-GATEWAY-ID`를 5단계에서 확인한 `gatewayId`로 바꾸세요. 전체 URL은
+`https://<gatewayId>.gateway.bedrock-agentcore.<region>.amazonaws.com/mcp` 패턴을 따릅니다.
 
-Then deploy:
+그런 다음 배포합니다.
 
 ```bash
 cd agent/private-idp-ping-agent
 agentcore deploy -y
 ```
 
-> **Note:** You do **not** need to run `agentcore create`. The project structure and CDK config are already committed. `agentcore deploy` resolves your account and region from your configured AWS credentials.
+> **참고:** `agentcore create`를 실행할 필요가 **없습니다**. 프로젝트 구조와 CDK 구성은 이미 커밋되어 있습니다. `agentcore deploy`는 구성된 AWS 자격 증명에서 계정과 리전을 확인합니다.
 
-### 8. Test the runtime
+### 8. Runtime 테스트
 
 ```bash
 agentcore invoke --prompt "test"
 ```
 
-Expected output:
+예상 출력:
 
 ```json
 {
@@ -358,26 +357,26 @@ Expected output:
 }
 ```
 
-The runtime:
-1. Acquires an OAuth token from PingFederate via AgentCore Identity (outbound OAuth over VPC Lattice)
-2. Presents the token to AgentCore Gateway as a Bearer token (inbound JWT auth)
-3. The gateway validates the JWT by fetching PingFederate's JWKS over VPC Lattice (private connectivity)
-4. Returns the tools/list response from the MCP Echo Lambda target
+Runtime은 다음 작업을 수행합니다.
+1. AgentCore Identity를 통해 PingFederate에서 OAuth 토큰 획득(VPC Lattice를 통한 아웃바운드 OAuth)
+2. AgentCore Gateway에 토큰을 Bearer 토큰으로 제시(인바운드 JWT 인증)
+3. Gateway가 VPC Lattice(프라이빗 연결)를 통해 PingFederate의 JWKS를 가져와 JWT 검증
+4. MCP Echo Lambda 대상의 tools/list 응답 반환
 
-## Cleanup
+## 정리
 
-### 1. Delete the gateway and credential provider
+### 1. Gateway 및 자격 증명 공급자 삭제
 
 ```bash
-# Delete the gateway (this also deletes its targets)
+# Gateway 삭제(대상도 함께 삭제됨)
 aws bedrock-agentcore-control delete-gateway --gateway-identifier GATEWAY_ID
 
-# Delete the credential provider
+# Credential provider 삭제
 aws bedrock-agentcore-control delete-oauth2-credential-provider \
     --name "ping-private-idp"
 ```
 
-### 2. Delete the runtime
+### 2. Runtime 삭제
 
 ```bash
 cd agent/private-idp-ping-agent
@@ -385,41 +384,41 @@ agentcore destroy -y
 cd ../..
 ```
 
-### 3. Destroy CDK stacks
+### 3. CDK 스택 삭제
 
 ```bash
 ./cleanup_sample.sh
 ```
 
-The cleanup script deletes stacks in order: PrivateIdpLatticeStack → PrivateIdpGatewayInfraStack → PrivateIdpPingFederateStack → PrivateIdpVpcStack.
+정리 스크립트는 PrivateIdpLatticeStack → PrivateIdpGatewayInfraStack → PrivateIdpPingFederateStack → PrivateIdpVpcStack 순서로 스택을 삭제합니다.
 
-> **Note:** VPC Lattice ENIs (both self-managed and AgentCore-managed) can take up to 8 hours to be released by AWS. If PrivateIdpVpcStack deletion fails, wait and retry with `uv run cdk destroy PrivateIdpVpcStack --force`.
+> **참고:** 자체 관리형 및 AgentCore 관리형 VPC Lattice ENI가 AWS에서 해제되기까지 최대 8시간이 걸릴 수 있습니다. PrivateIdpVpcStack 삭제에 실패하면 기다린 후 `uv run cdk destroy PrivateIdpVpcStack --force`로 다시 시도하세요.
 
-## Runtime Project Structure
+## Runtime 프로젝트 구조
 
 ```
 agent/private-idp-ping-agent/
 ├── agentcore/
-│   ├── agentcore.json      # Runtime config + credential provider declaration
-│   ├── aws-targets.json    # Deployment target (empty — resolved from credentials)
+│   ├── agentcore.json      # Runtime 구성 + credential provider 선언
+│   ├── aws-targets.json    # 배포 대상(비어 있음 - 자격 증명에서 확인)
 │   ├── .gitignore
-│   └── cdk/                # CDK infrastructure (committed, ready to deploy)
+│   └── cdk/                # CDK 인프라(커밋되어 있으며 배포 준비 완료)
 └── app/
     └── private-idp-ping-agent/
-        ├── main.py         # Runtime with @requires_access_token
-        └── pyproject.toml  # Python dependencies
+        ├── main.py         # @requires_access_token을 사용하는 Runtime
+        └── pyproject.toml  # Python 종속성
 ```
 
-The runtime uses:
-- **`@requires_access_token`** decorator from `bedrock_agentcore.identity` to obtain OAuth tokens via the credential provider
-- **`BedrockAgentCoreApp`** from `bedrock_agentcore.runtime` for the runtime lifecycle
-- The **`GATEWAY_URL`** environment variable to call the AgentCore Gateway with the acquired token
+Runtime은 다음 항목을 사용합니다.
+- 자격 증명 공급자를 통해 OAuth 토큰을 얻기 위한 `bedrock_agentcore.identity`의 **`@requires_access_token`** 데코레이터
+- Runtime 수명 주기를 위한 `bedrock_agentcore.runtime`의 **`BedrockAgentCoreApp`**
+- 획득한 토큰으로 AgentCore Gateway를 호출하기 위한 **`GATEWAY_URL`** 환경 변수
 
-No LLM or agent framework is required — this sample focuses purely on proving private IdP connectivity. The token is handled securely within the decorated function and never exposed beyond it.
+LLM이나 에이전트 프레임워크는 필요하지 않습니다. 이 샘플은 프라이빗 IdP 연결을 검증하는 데만 중점을 둡니다. 토큰은 데코레이터가 적용된 함수 내에서 안전하게 처리되며 함수 외부에 노출되지 않습니다.
 
-> **Note:** The credential provider and gateway are created manually via AWS CLI because the agentcore-cli does not yet support `privateEndpoint` parameters. The `agentcore.json` declares the credential provider name for the runtime to reference.
+> **참고:** agentcore-cli는 아직 `privateEndpoint` 파라미터를 지원하지 않으므로 자격 증명 공급자와 Gateway는 AWS CLI를 통해 수동으로 생성합니다. `agentcore.json`은 Runtime에서 참조할 자격 증명 공급자 이름을 선언합니다.
 
-## How It Works
+## 작동 방식
 
 ```python
 from bedrock_agentcore.identity import requires_access_token
@@ -436,69 +435,69 @@ GATEWAY_URL = os.environ.get("GATEWAY_URL", "")
     auth_flow="M2M",
 )
 def fetch_token_from_private_idp(*, access_token: str) -> dict:
-    # The decorator handles:
-    # 1. Obtaining a workload identity token for this runtime
-    # 2. Exchanging it for an OAuth access token via the credential provider
-    # 3. The credential provider reaches PingFederate over VPC Lattice
-    # 4. Injecting the resulting access_token into this function
+    # Decorator에서 처리하는 작업:
+    # 1. 이 Runtime의 workload identity token 가져오기
+    # 2. Credential provider를 통해 OAuth access token으로 교환
+    # 3. Credential provider가 VPC Lattice를 통해 PingFederate에 연결
+    # 4. 결과 access_token을 이 함수에 주입
 
-    # Use the token to call AgentCore Gateway (inbound JWT auth)
+    # 토큰을 사용하여 AgentCore Gateway 호출(인바운드 JWT 인증)
     if GATEWAY_URL:
         gateway_result = call_gateway(access_token)
     ...
 ```
 
-The `@requires_access_token` decorator abstracts the entire token acquisition flow. Your code simply declares which credential provider and scopes it needs — the SDK handles workload identity, the OAuth exchange, and private network routing via VPC Lattice.
+`@requires_access_token` 데코레이터는 전체 토큰 획득 흐름을 추상화합니다. 코드에서는 필요한 자격 증명 공급자와 scope만 선언하면 됩니다. SDK가 워크로드 ID, OAuth 교환 및 VPC Lattice를 통한 프라이빗 네트워크 라우팅을 처리합니다.
 
-The gateway call demonstrates inbound auth — the same PingFederate token is presented as a `Bearer` token to the gateway, which validates it by fetching PingFederate's JWKS over VPC Lattice.
+Gateway 호출에서는 인바운드 인증을 보여 줍니다. 동일한 PingFederate 토큰을 Gateway에 `Bearer` 토큰으로 제시하면, Gateway는 VPC Lattice를 통해 PingFederate의 JWKS를 가져와 토큰을 검증합니다.
 
-## PingFederate Configuration
+## PingFederate 구성
 
-During deployment, a Lambda custom resource (`lambda/configure_pingfed/index.py`) running inside the VPC configures PingFederate via the Admin API:
+배포 중 VPC 내에서 실행되는 Lambda 사용자 지정 리소스(`lambda/configure_pingfed/index.py`)가 Admin API를 통해 PingFederate를 구성합니다.
 
-- **RSA Signing Key** for JWT token signing
-- **JWT Access Token Manager** using RS256
-- **OAuth Authorization Server** with scopes: `openid`, `profile`, `email`
-- **OIDC Policy** with standard claims
-- **OAuth Client** (`agentcore-client`) configured for client credentials grant
-- **Server settings** with the correct base URL for OIDC discovery
+- JWT 토큰 서명용 **RSA Signing Key**
+- RS256을 사용하는 **JWT Access Token Manager**
+- scope가 `openid`, `profile`, `email`인 **OAuth Authorization Server**
+- 표준 claim이 포함된 **OIDC Policy**
+- client credentials grant용으로 구성된 **OAuth Client**(`agentcore-client`)
+- OIDC 검색에 적합한 기본 URL이 포함된 **서버 설정**
 
-The client ID (`agentcore-client`) and secret (`agentcore-test-secret-12345`) are defined in `lambda/configure_pingfed/index.py`. For production use, rotate these values and store them securely.
+클라이언트 ID(`agentcore-client`)와 보안 암호(`agentcore-test-secret-12345`)는 `lambda/configure_pingfed/index.py`에 정의되어 있습니다. 프로덕션에서는 이 값을 교체하고 안전하게 저장하세요.
 
-## Cost Considerations
+## 비용 고려 사항
 
-This sample creates resources that incur AWS charges:
+이 샘플은 AWS 요금이 발생하는 리소스를 생성합니다.
 
-| Resource | Approximate Cost |
+| 리소스 | 예상 비용 |
 |----------|-----------------|
-| NAT Gateway | ~$32/month + data transfer |
-| ECS Fargate (2 vCPU, 4 GB) | ~$70/month |
-| Application Load Balancer | ~$16/month + LCU |
-| VPC Lattice (self-managed only) | Based on data processed |
-| EFS | Based on storage used |
+| NAT Gateway | 월 약 $32 + 데이터 전송 비용 |
+| ECS Fargate(2 vCPU, 4GB) | 월 약 $70 |
+| Application Load Balancer | 월 약 $16 + LCU |
+| VPC Lattice(자체 관리형만 해당) | 처리된 데이터 기준 |
+| EFS | 사용한 스토리지 기준 |
 
-**Run `./cleanup_sample.sh` immediately after testing to avoid ongoing charges.**
+**지속적인 요금 발생을 방지하려면 테스트 직후 `./cleanup_sample.sh`를 실행하세요.**
 
-## Troubleshooting
+## 문제 해결
 
 ### "HTTP request failed against private endpoint"
 
-This typically means the discovery URL domain cannot be resolved within the VPC. Verify:
-1. The private hosted zone exists and is associated with the VPC
-2. The A record in the private zone points to the internal ALB
-3. The domain in the discovery URL matches the private hosted zone name
+일반적으로 이 오류는 VPC 내에서 검색 URL 도메인을 해석할 수 없음을 의미합니다. 다음 사항을 확인하세요.
+1. 프라이빗 호스팅 영역이 존재하고 VPC에 연결되어 있는지 확인
+2. 프라이빗 영역의 A 레코드가 내부 ALB를 가리키는지 확인
+3. 검색 URL의 도메인이 프라이빗 호스팅 영역 이름과 일치하는지 확인
 
-The CDK stack creates the private hosted zone automatically. If you're adapting this for an existing IdP, ensure you have a private hosted zone mapping the IdP's domain to its internal endpoint.
+CDK 스택은 프라이빗 호스팅 영역을 자동으로 생성합니다. 이 샘플을 기존 IdP에 맞게 조정하는 경우 IdP 도메인을 내부 엔드포인트에 매핑하는 프라이빗 호스팅 영역이 있는지 확인하세요.
 
-### VPC Stack deletion fails
+### VPC 스택 삭제 실패
 
-VPC Lattice ENIs can take up to 8 hours to release. Wait and retry:
+VPC Lattice ENI가 해제되기까지 최대 8시간이 걸릴 수 있습니다. 기다린 후 다시 시도하세요.
 
 ```bash
 uv run cdk destroy PrivateIdpVpcStack --force
 ```
 
-To check ENI status:
+ENI 상태를 확인하려면 다음 명령을 실행합니다.
 
 ```bash
 VPC_ID=$(aws cloudformation describe-stacks --stack-name PrivateIdpVpcStack \
@@ -506,6 +505,6 @@ VPC_ID=$(aws cloudformation describe-stacks --stack-name PrivateIdpVpcStack \
 aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=$VPC_ID
 ```
 
-## Note
+## 참고
 
-PingFederate is not an AWS service. Please refer to PingIdentity documentation for costs and licensing. The PingFederate container image is pulled from Docker Hub under the PingIdentity DevOps program.
+PingFederate는 AWS 서비스가 아닙니다. 비용과 라이선스는 PingIdentity 문서를 참조하세요. PingFederate 컨테이너 이미지는 PingIdentity DevOps 프로그램에 따라 Docker Hub에서 가져옵니다.

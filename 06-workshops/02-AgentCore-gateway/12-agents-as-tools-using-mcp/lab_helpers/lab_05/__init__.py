@@ -1,7 +1,7 @@
 """
-Lab 05: Multi-Agent Orchestration Helper Modules
+Lab 05: Multi-Agent Orchestration 헬퍼 모듈
 
-Contains supervisor agent prompts, IAM setup, deployment utilities, and local agent execution for Lab 05.
+Lab 05의 supervisor agent prompt, IAM 설정, 배포 유틸리티 및 로컬 Agent 실행 기능을 포함합니다.
 """
 
 from .supervisor_prompt import (

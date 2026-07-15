@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Helper script to get temporary AWS credentials for the React app
- * This script uses the AWS CLI configuration to get temporary credentials
- * that can be used in the browser environment.
+ * React 앱에서 사용할 임시 AWS 자격 증명을 가져오는 도우미 스크립트
+ * 이 스크립트는 AWS CLI 구성을 사용하여 브라우저 환경에서
+ * 사용할 수 있는 임시 자격 증명을 가져옵니다.
  */
 
 const { execSync } = require('child_process');
@@ -14,7 +14,7 @@ async function getTemporaryCredentials() {
   try {
     console.log('🔑 Setting up AWS configuration for the dashboard...');
 
-    // First, check if we can access AWS
+    // 먼저 AWS에 액세스할 수 있는지 확인
     try {
       const identity = execSync('aws sts get-caller-identity --output json', { encoding: 'utf8' });
       const identityData = JSON.parse(identity);
@@ -23,7 +23,7 @@ async function getTemporaryCredentials() {
       throw new Error('AWS CLI not configured or no valid credentials found');
     }
 
-    // Get current AWS region
+    // 현재 AWS 리전 가져오기
     let region = null;
     try {
       const configOutput = execSync('aws configure get region', { encoding: 'utf8' });
@@ -35,7 +35,7 @@ async function getTemporaryCredentials() {
       throw new Error('AWS region not configured. Run: aws configure set region <your-region>');
     }
 
-    // Create environment variables content for frontend configuration
+    // 프런트엔드 구성용 환경 변수 내용 생성
     const envContent = `
 # AgentCore Memory Dashboard - Frontend Configuration
 # Generated on: ${new Date().toISOString()}
@@ -55,7 +55,7 @@ REACT_APP_DEBUG_MODE=true
 # No hardcoded values needed here
 `.trim();
 
-    // Write to .env file
+    // .env 파일에 쓰기
     const envPath = path.join(__dirname, '..', '.env');
     fs.writeFileSync(envPath, envContent);
 
@@ -78,5 +78,5 @@ REACT_APP_DEBUG_MODE=true
   }
 }
 
-// Run the script
+// 스크립트 실행
 getTemporaryCredentials();

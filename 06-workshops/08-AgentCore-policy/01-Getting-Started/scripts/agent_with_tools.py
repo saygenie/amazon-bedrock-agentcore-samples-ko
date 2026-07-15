@@ -1,8 +1,8 @@
 """
-Agent with Tools Module
+도구를 사용하는 에이전트 모듈
 
-This module provides functions to create and interact with an agent
-that has access to the insurance underwriting tools via AgentCore Gateway.
+이 모듈은 AgentCore Gateway를 통해 보험 인수 도구에 접근하는
+에이전트를 생성하고 상호 작용하는 함수를 제공합니다.
 """
 
 import json
@@ -17,7 +17,7 @@ from mcp.client.streamable_http import streamablehttp_client
 
 
 def load_config():
-    """Load configuration from config.json"""
+    """config.json에서 구성을 로드합니다."""
     config_path = Path(__file__).parent.parent / "config.json"
 
     if not config_path.exists():
@@ -28,7 +28,7 @@ def load_config():
     with open(config_path, "r", encoding="utf-8") as f:
         config = json.load(f)
 
-    # Validate required fields
+    # 필수 필드 검증
     if "gateway" not in config:
         raise ValueError("Gateway configuration not found in config.json\nPlease run setup_gateway.py first.")
 
@@ -36,12 +36,12 @@ def load_config():
 
 
 def create_streamable_http_transport(mcp_url: str, access_token: str):
-    """Create streamable HTTP transport for MCP client"""
+    """MCP 클라이언트용 Streamable HTTP 전송을 생성합니다."""
     return streamablehttp_client(mcp_url, headers={"Authorization": f"Bearer {access_token}"})
 
 
 def fetch_access_token(client_id, client_secret, token_url):
-    """Get access token from Cognito"""
+    """Cognito에서 액세스 토큰을 가져옵니다."""
     response = requests.post(
         token_url,
         data=f"grant_type=client_credentials&client_id={client_id}&client_secret={client_secret}",
@@ -56,12 +56,12 @@ def fetch_access_token(client_id, client_secret, token_url):
 
 
 def list_available_tools(gateway_url: str, access_token: str):
-    """List all available tools from the gateway"""
+    """Gateway에서 사용 가능한 모든 도구를 나열합니다."""
     try:
         mcp_client = MCPClient(lambda: create_streamable_http_transport(gateway_url, access_token))
         with mcp_client:
             tools_list = mcp_client.list_tools_sync()
-            # MCPAgentTool may not have description attribute, use getattr with default
+            # MCPAgentTool에 description 속성이 없을 수 있으므로 기본값과 함께 getattr 사용
             return [(tool.tool_name, getattr(tool, "description", "")) for tool in tools_list]
     except Exception as e:
         print(f"⚠️  Could not list tools: {e}")
@@ -70,9 +70,9 @@ def list_available_tools(gateway_url: str, access_token: str):
 
 class AgentSession:
     """
-    Context manager for agent sessions that properly handles MCP client lifecycle.
+    MCP 클라이언트 수명 주기를 올바르게 처리하는 에이전트 세션 컨텍스트 관리자입니다.
 
-    Usage:
+    사용법:
         with AgentSession() as session:
             response = session.invoke("What tools do you have?")
     """
@@ -87,8 +87,8 @@ class AgentSession:
         self.access_token = None
 
     def __enter__(self):
-        """Setup the agent session"""
-        # Load configuration
+        """에이전트 세션을 설정합니다."""
+        # 구성 로드
         if self.verbose:
             print("📦 Loading configuration...")
         self.config = load_config()
@@ -102,7 +102,7 @@ class AgentSession:
         self.gateway_url = gateway_config["gateway_url"]
         region = self.config.get("region")
 
-        # Set AWS region
+        # AWS 리전 설정
         os.environ["AWS_DEFAULT_REGION"] = region
 
         if self.verbose:
@@ -110,14 +110,14 @@ class AgentSession:
             print(f"   Gateway: {gateway_config.get('gateway_name', 'N/A')}")
             print(f"   Region: {region}")
 
-        # Get access token
+        # 액세스 토큰 가져오기
         if self.verbose:
             print("\n🔑 Authenticating...")
         self.access_token = fetch_access_token(CLIENT_ID, CLIENT_SECRET, TOKEN_URL)
         if self.verbose:
             print("✅ Authentication successful")
 
-        # List available tools
+        # 사용 가능한 도구 나열
         if self.verbose:
             print("\n📋 Listing available tools...")
         tool_info = list_available_tools(self.gateway_url, self.access_token)
@@ -129,7 +129,7 @@ class AgentSession:
                 if tool_desc:
                     print(f"     {tool_desc}")
 
-        # Setup Bedrock model
+        # Bedrock 모델 설정
         if self.verbose:
             print(f"\n🤖 Setting up model: {self.model_id}")
         bedrockmodel = BedrockModel(
@@ -137,16 +137,16 @@ class AgentSession:
             streaming=True,
         )
 
-        # Create MCP client
+        # MCP 클라이언트 생성
         self.mcp_client = MCPClient(lambda: create_streamable_http_transport(self.gateway_url, self.access_token))
 
-        # Enter MCP client context
+        # MCP 클라이언트 컨텍스트 진입
         self.mcp_client.__enter__()
 
-        # Get tools from MCP client
+        # MCP 클라이언트에서 도구 가져오기
         tools = self.mcp_client.list_tools_sync()
 
-        # Create agent with system prompt
+        # 시스템 프롬프트를 사용하는 에이전트 생성
         system_prompt = """You are a helpful AI assistant for insurance underwriting operations.
 
 You have access to tools from the gateway. The gateway is configured with policies which restrict 
@@ -163,7 +163,7 @@ If a tool call fails, explain the error clearly to the user."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Cleanup the agent session"""
+        """에이전트 세션을 정리합니다."""
         if self.mcp_client:
             try:
                 self.mcp_client.__exit__(exc_type, exc_val, exc_tb)
@@ -175,14 +175,14 @@ If a tool call fails, explain the error clearly to the user."""
 
     def invoke(self, prompt, verbose=None):
         """
-        Invoke the agent with a prompt.
+        프롬프트로 에이전트를 호출합니다.
 
-        Args:
-            prompt: The user prompt/question
-            verbose: Whether to print the prompt (default: use session verbose setting)
+        인수:
+            prompt: 사용자 프롬프트/질문
+            verbose: 프롬프트 출력 여부(기본값: 세션의 verbose 설정 사용)
 
-        Returns:
-            str: The agent's response
+        반환값:
+            str: 에이전트의 응답
         """
         if verbose is None:
             verbose = self.verbose
@@ -194,7 +194,7 @@ If a tool call fails, explain the error clearly to the user."""
         try:
             response = self.agent(prompt)
 
-            # Extract response content
+            # 응답 콘텐츠 추출
             if hasattr(response, "message"):
                 content = response.message.get("content", str(response))
             else:
@@ -212,17 +212,17 @@ If a tool call fails, explain the error clearly to the user."""
             return error_msg
 
 
-# Example usage function
+# 사용 예시 함수
 def example_usage():
-    """Example of how to use this module"""
+    """이 모듈의 사용 예시를 보여 줍니다."""
     print("=" * 70)
     print("🚀 Insurance Underwriting Agent Example")
     print("=" * 70)
     print()
 
-    # Use the agent session context manager
+    # 에이전트 세션 컨텍스트 관리자 사용
     with AgentSession() as session:
-        # Example prompts
+        # 프롬프트 예시
         prompts = [
             "What tools do you have access to?",
             "Create an application for US region with $50000 coverage",

@@ -14,26 +14,26 @@ export class CdkEntraIdStack extends cdk.Stack {
     super(scope, id, props);
 
     // =========================================================================
-    // All EntraID + OAuth config comes from CDK context (set by setup script
-    // or -c flags). This allows multiple independent deployments.
+    // 모든 EntraID + OAuth 구성은 CDK context에서 가져옴
+    // (설정 스크립트 또는 -c 플래그로 지정). 여러 독립 배포를 지원함
     // =========================================================================
     const entraConfig = {
       tenantId: this.requireContext("entra:tenantId"),
       appAClientId: this.requireContext("entra:appAClientId"),
       appBClientId: this.requireContext("entra:appBClientId"),
-      // "ciam" or "standard" — determines discovery/authority URLs
+      // "ciam" 또는 "standard" - discovery/authority URL 결정
       tenantType: (this.node.tryGetContext("entra:tenantType") as string) || "standard",
-      // Only needed for CIAM tenants (e.g. "your-domain")
+      // CIAM tenant에만 필요(예: "your-domain")
       ciamDomain: (this.node.tryGetContext("entra:ciamDomain") as string) || "",
-      // Pre-created via CLI
+      // CLI를 통해 사전 생성
       oauthProviderArn: this.requireContext("oauth:providerArn"),
       oauthSecretArn: this.requireContext("oauth:secretArn"),
       oauthCallbackUrl: this.requireContext("oauth:callbackUrl"),
-      // Credential provider name (for display in SPA)
+      // Credential provider 이름(SPA 표시용)
       oauthProviderName: (this.node.tryGetContext("oauth:providerName") as string) || "entraid-weather-3lo",
     };
 
-    // Derive URLs based on tenant type
+    // tenant 유형에 따라 URL 파생
     const isCiam = entraConfig.tenantType === "ciam";
     const authorityHost = isCiam
       ? `${entraConfig.ciamDomain}.ciamlogin.com`
@@ -47,15 +47,15 @@ export class CdkEntraIdStack extends cdk.Stack {
     const authority = `https://${authorityHost}/${entraConfig.tenantId}`;
     const issuer = `https://${issuerHost}/${entraConfig.tenantId}/v2.0`;
 
-    // Unique suffix for resource names (avoids collisions between deployments)
+    // 리소스 이름의 고유 접미사(배포 간 충돌 방지)
     const suffix = (this.node.tryGetContext("resourceSuffix") as string) || "";
     const nameSuffix = suffix ? `-${suffix}` : "";
 
     // =========================================================================
-    // IAM OIDC IDENTITY PROVIDER (EntraID → STS AssumeRoleWithWebIdentity)
+    // IAM OIDC IDENTITY PROVIDER(EntraID → STS AssumeRoleWithWebIdentity)
     // =========================================================================
-    // IAM OIDC providers are unique per issuer URL per account. If deploying
-    // multiple stacks for the same tenant, pass the existing provider ARN.
+    // IAM OIDC provider는 계정 내 issuer URL별로 고유함
+    // 같은 tenant에 여러 스택을 배포할 경우 기존 provider ARN을 전달
     const existingOidcArn = this.node.tryGetContext("oidc:providerArn") as string;
     const oidcProvider = existingOidcArn
       ? iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(
@@ -113,7 +113,7 @@ export class CdkEntraIdStack extends cdk.Stack {
     });
 
     // =========================================================================
-    // LAMBDA FUNCTIONS
+    // LAMBDA 함수
     // =========================================================================
     const lambdaRole = new iam.Role(this, "McpProxyLambdaRole", {
       roleName: `mcp-proxy-entraid-lambda-role${nameSuffix}`,
@@ -129,9 +129,9 @@ export class CdkEntraIdStack extends cdk.Stack {
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ["bedrock-agentcore:InvokeGateway"],
-        // Scoped to all gateways in this account/region. The gateway ARN is not
-        // available at this point in the stack — it's created later. For production,
-        // use a Lazy value or addToPolicy after gateway creation.
+        // 이 계정/리전의 모든 gateway로 범위 지정. 이 시점에는 gateway가 나중에
+        // 생성되므로 스택에서 gateway ARN을 사용할 수 없음. 프로덕션에서는 Lazy 값을
+        // 사용하거나 gateway 생성 후 addToPolicy를 사용
         resources: [
           `arn:aws:bedrock-agentcore:${this.region}:${this.account}:gateway/*`,
         ],
@@ -146,7 +146,7 @@ export class CdkEntraIdStack extends cdk.Stack {
       })
     );
 
-    // Elicitation interceptor Lambda
+    // Elicitation 인터셉터 Lambda
     const elicitationInterceptorLambda = new lambda.Function(
       this,
       "ElicitationInterceptor",
@@ -182,12 +182,12 @@ export class CdkEntraIdStack extends cdk.Stack {
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
-          AUTH_ONBOARDING_URL: "", // set after API Gateway creation
+          AUTH_ONBOARDING_URL: "", // API Gateway 생성 후 설정
         },
       }
     );
 
-    // Proxy Lambda
+    // 프록시 Lambda
     const proxyLambda = new lambda.Function(this, "McpProxyLambda", {
       runtime: lambda.Runtime.PYTHON_3_12,
       handler: "lambda_function.lambda_handler",
@@ -228,14 +228,14 @@ export class CdkEntraIdStack extends cdk.Stack {
         AUTH_ONBOARDING_ROLE_ARN: authOnboardingRole.roleArn,
         OAUTH_CREDENTIAL_PROVIDER_NAME: entraConfig.oauthProviderName,
         ENTRA_WEATHER_SCOPE: weatherScope,
-        // Authority URLs — Lambda uses these for authorize/token endpoints
+        // Authority URL - Lambda가 authorize/token 엔드포인트에 사용
         ENTRA_AUTHORITY: authority,
         ENTRA_AUTHORITY_HOST: authorityHost,
         ENTRA_TENANT_TYPE: entraConfig.tenantType,
       },
     });
 
-    // Weather REST API Lambda (only needs basic execution role — no AWS API calls)
+    // Weather REST API Lambda(기본 실행 역할만 필요하며 AWS API를 호출하지 않음)
     const weatherApiLambda = new lambda.Function(this, "WeatherApiLambda", {
       runtime: lambda.Runtime.PYTHON_3_12,
       handler: "lambda_function.lambda_handler",
@@ -367,8 +367,8 @@ export class CdkEntraIdStack extends cdk.Stack {
         ],
       }),
       role: gatewayRole,
-      // DEBUG exception level aids troubleshooting during development.
-      // For production, use GatewayExceptionLevel.NONE or GatewayExceptionLevel.ERROR.
+      // DEBUG exception 수준은 개발 중 문제 해결에 도움이 됨
+      // 프로덕션에서는 GatewayExceptionLevel.NONE 또는 GatewayExceptionLevel.ERROR 사용
       exceptionLevel: agentcore.GatewayExceptionLevel.DEBUG,
       authorizerConfiguration: agentcore.GatewayAuthorizer.usingCustomJwt({
         discoveryUrl: discoveryUrl,
@@ -380,9 +380,9 @@ export class CdkEntraIdStack extends cdk.Stack {
     });
 
     // =========================================================================
-    // OPENAPI TARGET with OAuth 3LO
+    // OAuth 3LO를 사용하는 OPENAPI TARGET
     // =========================================================================
-    // OpenAPI spec — use deployment-specific file if provided, else default
+    // OpenAPI spec - 제공되면 배포별 파일을 사용하고, 아니면 기본값 사용
     const openapiPath = (this.node.tryGetContext("openapi:path") as string)
       || path.join(__dirname, "../openapi/weather-api.json");
     const weatherApiSchema = agentcore.ApiSchema.fromLocalAsset(openapiPath);
@@ -400,7 +400,7 @@ export class CdkEntraIdStack extends cdk.Stack {
       ],
     });
 
-    // Escape hatch: inject grantType and defaultReturnUrl
+    // Escape hatch: grantType 및 defaultReturnUrl 삽입
     const cfnTarget = weatherTarget.node.defaultChild as cdk.CfnResource;
     cfnTarget.addPropertyOverride(
       "CredentialProviderConfigurations.0.CredentialProvider.OauthCredentialProvider.GrantType",
@@ -419,7 +419,7 @@ export class CdkEntraIdStack extends cdk.Stack {
     proxyLambda.addEnvironment("GATEWAY_URL", gateway.gatewayUrl ?? "");
 
     // =========================================================================
-    // OUTPUTS
+    // 출력
     // =========================================================================
     new cdk.CfnOutput(this, "ApiEndpoint", {
       value: apiEndpoint,
@@ -454,7 +454,7 @@ export class CdkEntraIdStack extends cdk.Stack {
     });
   }
 
-  /** Read a required CDK context value or throw. */
+  /** 필수 CDK context 값을 읽고, 없으면 오류를 발생시킵니다. */
   private requireContext(key: string): string {
     const value = this.node.tryGetContext(key) as string;
     if (!value) {

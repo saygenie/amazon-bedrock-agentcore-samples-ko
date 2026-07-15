@@ -1,23 +1,23 @@
 """
-Lambda triggered by EventBridge UpdateAgentRuntime CloudTrail events.
+EventBridge UpdateAgentRuntime CloudTrail 이벤트로 트리거되는 Lambda입니다.
 
-Flow:
-  1. CloudTrail event arrives via EventBridge (same-account or cross-account)
-  2. Extract runtime ARN → build MCP URL → identify source account
-  3. Get OAuth token via AgentCore Identity credential provider
-  4. Call MCP server: initialize → tools/list
-  5. Find matching AWS Agent Registry record by runtime ARN in server schema
-  6. Compare MCP tools with registry tools — update only if changed
+흐름:
+  1. EventBridge를 통해 CloudTrail 이벤트 수신(동일 계정 또는 교차 계정)
+  2. Runtime ARN 추출 → MCP URL 생성 → 소스 계정 식별
+  3. AgentCore Identity 자격 증명 공급자를 통해 OAuth 토큰 가져오기
+  4. MCP 서버 호출: initialize → tools/list
+  5. 서버 스키마의 Runtime ARN으로 일치하는 AWS Agent Registry 레코드 찾기
+  6. MCP 도구와 레지스트리 도구 비교 - 변경된 경우에만 업데이트
 
-Supports multi-account: credential providers are looked up by account ID.
+다중 계정을 지원하며, 계정 ID로 자격 증명 공급자를 조회합니다.
 
-Env vars per account (replace {ACCT} with the 12-digit account ID):
-  CREDENTIAL_PROVIDER_{ACCT} — AgentCore Identity OAuth2 credential provider name
-  CREDENTIAL_SCOPE_{ACCT}    — OAuth scope for the MCP server (optional)
+계정별 환경 변수({ACCT}를 12자리 계정 ID로 대체):
+  CREDENTIAL_PROVIDER_{ACCT} - AgentCore Identity OAuth2 자격 증명 공급자 이름
+  CREDENTIAL_SCOPE_{ACCT}    - MCP 서버의 OAuth 범위(선택 사항)
 
-Global env vars:
-  REGISTRY_ID             — Registry ID to search and update records in
-  WORKLOAD_IDENTITY_NAME  — AgentCore workload identity name for this Lambda
+전역 환경 변수:
+  REGISTRY_ID             - 레코드를 검색하고 업데이트할 Registry ID
+  WORKLOAD_IDENTITY_NAME  - 이 Lambda의 AgentCore 워크로드 자격 증명 이름
 """
 
 import json
@@ -28,14 +28,14 @@ import boto3
 
 
 def get_bearer_token(account_id=None):
-    """Get OAuth bearer token via AgentCore Identity credential provider.
+    """AgentCore Identity 자격 증명 공급자를 통해 OAuth Bearer 토큰을 가져옵니다.
 
-    Two-step process:
-      1. Get a workload access token from AgentCore Identity (identifies this Lambda)
-      2. Use it to fetch an OAuth token from the credential provider (M2M flow)
+    2단계 프로세스:
+      1. AgentCore Identity에서 워크로드 액세스 토큰 가져오기(이 Lambda 식별)
+      2. 이 토큰을 사용하여 자격 증명 공급자에서 OAuth 토큰 가져오기(M2M 흐름)
 
-    The credential provider stores the Cognito/OAuth config securely in AgentCore
-    Identity, so no client secrets are needed in Lambda env vars.
+    자격 증명 공급자는 Cognito/OAuth 설정을 AgentCore Identity에 안전하게
+    저장하므로 Lambda 환경 변수에 클라이언트 보안 암호가 필요하지 않습니다.
     """
     acct = account_id or ""
     provider_name = os.environ.get(f"CREDENTIAL_PROVIDER_{acct}") or os.environ.get("CREDENTIAL_PROVIDER", "")
@@ -51,7 +51,7 @@ def get_bearer_token(account_id=None):
     region = os.environ.get("AWS_REGION", "us-west-2")
     client = boto3.client("bedrock-agentcore", region_name=region)
 
-    # Step 1: Get workload access token (identifies this Lambda as a trusted workload)
+    # 1단계: 워크로드 액세스 토큰 가져오기(이 Lambda를 신뢰할 수 있는 워크로드로 식별)
     wat_response = client.get_workload_access_token(
         workloadName=workload_name,
     )
@@ -60,7 +60,7 @@ def get_bearer_token(account_id=None):
     if not workload_token:
         raise ValueError(f"No access token in workload response: {list(wat_response.keys())}")
 
-    # Step 2: Use workload token to get OAuth token from the credential provider
+    # 2단계: 워크로드 토큰을 사용하여 자격 증명 공급자에서 OAuth 토큰 가져오기
     response = client.get_resource_oauth2_token(
         workloadIdentityToken=workload_token,
         resourceCredentialProviderName=provider_name,
@@ -71,13 +71,13 @@ def get_bearer_token(account_id=None):
 
 
 def _parse_sse_json(body):
-    """Extract JSON from an SSE or plain JSON response body."""
+    """SSE 또는 일반 JSON 응답 본문에서 JSON을 추출합니다."""
     text = body if isinstance(body, str) else body.decode("utf-8")
     text = text.strip()
-    # If it's plain JSON, parse directly
+    # 일반 JSON이면 직접 파싱
     if text.startswith("{") or text.startswith("["):
         return json.loads(text)
-    # SSE format: lines like "event: message\ndata: {...}\n\n"
+    # SSE 형식: "event: message\ndata: {...}\n\n" 형태의 줄
     for line in text.splitlines():
         if line.startswith("data:"):
             return json.loads(line[len("data:") :].strip())
@@ -85,7 +85,7 @@ def _parse_sse_json(body):
 
 
 def _mcp_headers(token, session_id=None):
-    """Build HTTP headers for MCP JSON-RPC requests (streamable-http transport)."""
+    """MCP JSON-RPC 요청용 HTTP 헤더를 생성합니다(streamable-http 전송)."""
     h = {
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
@@ -97,16 +97,16 @@ def _mcp_headers(token, session_id=None):
 
 
 def call_tools_list(mcp_url, token):
-    """Call the MCP server's initialize + tools/list methods and return the result.
+    """MCP 서버의 initialize 및 tools/list 메서드를 호출하고 결과를 반환합니다.
 
-    MCP streamable-http requires initialize before tools/list.
-    The session_id from initialize is passed to tools/list if the server uses sessions.
+    MCP streamable-http에서는 tools/list보다 먼저 initialize를 호출해야 합니다.
+    서버에서 세션을 사용하는 경우 initialize의 session_id를 tools/list에 전달합니다.
     """
-    # Validate URL scheme to prevent file:// or custom scheme access
+    # file:// 또는 사용자 지정 스킴 접근을 방지하도록 URL 스킴 검증
     if not mcp_url.startswith("https://"):
         raise ValueError(f"Only HTTPS URLs are allowed, got: {mcp_url[:50]}")
 
-    # Step 1: Initialize MCP session
+    # 1단계: MCP 세션 초기화
     init_payload = {
         "jsonrpc": "2.0",
         "id": "init-1",
@@ -126,10 +126,10 @@ def call_tools_list(mcp_url, token):
     )
     init_resp.raise_for_status()
     session_id = init_resp.headers.get("Mcp-Session-Id")
-    init_result = _parse_sse_json(init_resp.text)  # noqa: F841 — parsed to validate response
+    init_result = _parse_sse_json(init_resp.text)  # noqa: F841 - 응답 검증을 위해 파싱
     print(f"MCP session initialized, session_id={session_id}")
 
-    # Step 2: Call tools/list
+    # 2단계: tools/list 호출
     list_payload = {
         "jsonrpc": "2.0",
         "id": "list-1",
@@ -148,17 +148,17 @@ def call_tools_list(mcp_url, token):
 
 
 def _extract_mcp_url(event):
-    """Extract MCP URL and account ID from a CloudTrail UpdateAgentRuntime event.
+    """CloudTrail UpdateAgentRuntime 이벤트에서 MCP URL과 계정 ID를 추출합니다.
 
-    Returns:
-        (mcp_url, account_id) tuple. Both None if extraction fails.
+    반환값:
+        (mcp_url, account_id) 튜플. 추출에 실패하면 둘 다 None입니다.
     """
     detail = event.get("detail", {})
     runtime_arn = detail.get("responseElements", {}).get("agentRuntimeArn", "")
     if not runtime_arn:
         return None, None
 
-    # Extract account ID from ARN: arn:aws:bedrock-agentcore:region:ACCOUNT:runtime/id
+    # ARN에서 계정 ID 추출: arn:aws:bedrock-agentcore:region:ACCOUNT:runtime/id
     arn_parts = runtime_arn.split(":")
     account_id = arn_parts[4] if len(arn_parts) > 4 else None
 
@@ -169,22 +169,22 @@ def _extract_mcp_url(event):
 
 
 def _find_record_by_mcp_url(client, registry_id, mcp_url):
-    """Search registry records to find one whose server schema contains the runtime ARN.
+    """서버 스키마에 Runtime ARN이 포함된 레지스트리 레코드를 검색합니다.
 
-    Tries three matching strategies:
-      1. Decoded ARN (e.g. arn:aws:bedrock-agentcore:...:runtime/TrimMCP-xxx)
-      2. URL-encoded ARN (e.g. arn%3Aaws%3Abedrock-agentcore%3A...%2FTrimMCP-xxx)
-      3. Full MCP URL match
+    다음 세 가지 일치 전략을 시도합니다.
+      1. 디코딩된 ARN(예: arn:aws:bedrock-agentcore:...:runtime/TrimMCP-xxx)
+      2. URL 인코딩된 ARN(예: arn%3Aaws%3Abedrock-agentcore%3A...%2FTrimMCP-xxx)
+      3. 전체 MCP URL 일치
 
-    Returns:
-        (record_id, full_record) tuple. Both None if no match found.
+    반환값:
+        (record_id, full_record) 튜플. 일치 항목이 없으면 둘 다 None입니다.
     """
-    # Extract the runtime ARN from the MCP URL for matching
-    # URL format: .../runtimes/arn%3A...%2Fruntime%2F<id>/invocations...
-    # Decode to get: arn:aws:bedrock-agentcore:region:account:runtime/id
+    # 일치 여부를 확인할 수 있도록 MCP URL에서 Runtime ARN 추출
+    # URL 형식: .../runtimes/arn%3A...%2Fruntime%2F<id>/invocations...
+    # 디코딩 결과: arn:aws:bedrock-agentcore:region:account:runtime/id
     try:
         decoded_url = urllib.parse.unquote(mcp_url)
-        # Extract just the runtime path: arn:aws:bedrock-agentcore:...:runtime/xxx
+        # Runtime 경로만 추출: arn:aws:bedrock-agentcore:...:runtime/xxx
         runtime_marker = "/runtimes/"
         idx = decoded_url.find(runtime_marker)
         if idx >= 0:
@@ -218,11 +218,11 @@ def _find_record_by_mcp_url(client, registry_id, mcp_url):
             server_schema = mcp_desc.get("server", {})
             inline = server_schema.get("inlineContent", "")
 
-            # Match on runtime ARN (decoded or encoded) in the server schema
+            # 서버 스키마에서 Runtime ARN(디코딩 또는 인코딩) 일치 여부 확인
             if runtime_arn and runtime_arn in inline:
                 print(f"Found matching record (by ARN): {record_id} ({rec.get('name', '?')})")
                 return record_id, full
-            # Also check URL-encoded ARN
+            # URL 인코딩된 ARN도 확인
             encoded_arn = runtime_arn.replace(":", "%3A").replace("/", "%2F") if runtime_arn else None
             if encoded_arn and encoded_arn in inline:
                 print(f"Found matching record (by encoded ARN): {record_id} ({rec.get('name', '?')})")
@@ -241,16 +241,16 @@ def _find_record_by_mcp_url(client, registry_id, mcp_url):
 
 
 def _get_registry_client():
-    """Create a boto3 client for the AWS Agent Registry control plane.
+    """AWS Agent Registry 컨트롤 플레인용 boto3 클라이언트를 생성합니다.
 
-    Uses the bedrock-agentcore-control service model included in boto3 >= 1.42.87.
+    boto3 >= 1.42.87에 포함된 bedrock-agentcore-control 서비스 모델을 사용합니다.
     """
     region = os.environ.get("AWS_REGION", "us-west-2")
     return boto3.client("bedrock-agentcore-control", region_name=region)
 
 
 def _normalize_tools(tools):
-    """Normalize tool list for comparison — extract name, description, inputSchema."""
+    """비교할 도구 목록을 정규화하여 name, description, inputSchema를 추출합니다."""
     normalized = []
     for t in sorted(tools, key=lambda x: x.get("name", "")):
         normalized.append(
@@ -264,7 +264,7 @@ def _normalize_tools(tools):
 
 
 def _get_registry_tools_from_record(full_record):
-    """Get the current tools from an AWS Agent Registry record's tools definition."""
+    """AWS Agent Registry 레코드의 도구 정의에서 현재 도구를 가져옵니다."""
     descriptors = full_record.get("descriptors", {})
     mcp_desc = descriptors.get("mcp", {})
     tools_def = mcp_desc.get("tools", {})
@@ -278,31 +278,31 @@ def _get_registry_tools_from_record(full_record):
 
 
 def sync_registry_if_changed(mcp_tools, mcp_url):
-    """Compare MCP server tools with AWS Agent Registry record tools. Update only if different.
+    """MCP 서버 도구와 AWS Agent Registry 레코드 도구를 비교하고 다를 때만 업데이트합니다.
 
-    Steps:
-      1. Find the AWS Agent Registry record matching this MCP server's URL
-      2. Extract existing tools from the record's tools.inlineContent
-      3. Normalize both tool lists (sort by name, compare name/description/inputSchema)
-      4. If identical → skip update
-      5. If different → log the diff and update the registry record
+    단계:
+      1. 이 MCP 서버의 URL과 일치하는 AWS Agent Registry 레코드 찾기
+      2. 레코드의 tools.inlineContent에서 기존 도구 추출
+      3. 두 도구 목록 정규화(이름순 정렬 후 name/description/inputSchema 비교)
+      4. 동일하면 업데이트 건너뛰기
+      5. 다르면 차이를 기록하고 레지스트리 레코드 업데이트
 
-    Returns:
-        dict with 'action' key: 'no_change', 'updated', or 'skipped'
+    반환값:
+        'action' 키가 포함된 딕셔너리: 'no_change', 'updated' 또는 'skipped'
     """
     registry_id = os.environ["REGISTRY_ID"]
     client = _get_registry_client()
 
-    # Find the matching record
+    # 일치하는 레코드 찾기
     record_id, full_record = _find_record_by_mcp_url(client, registry_id, mcp_url)
     if not record_id:
         print(f"No matching registry record found for {mcp_url}")
         return {"action": "skipped", "reason": "no matching record"}
 
-    # Get current tools from registry
+    # 레지스트리에서 현재 도구 가져오기
     registry_tools = _get_registry_tools_from_record(full_record)
 
-    # Compare normalized tool lists
+    # 정규화된 도구 목록 비교
     mcp_normalized = _normalize_tools(mcp_tools)
     registry_normalized = _normalize_tools(registry_tools)
 
@@ -314,10 +314,10 @@ def sync_registry_if_changed(mcp_tools, mcp_url):
             "tool_count": len(registry_tools),
         }
 
-    # Tools differ — update the registry
+    # 도구가 다르면 레지스트리 업데이트
     print(f"Change detected! Registry has {len(registry_tools)} tools, MCP server has {len(mcp_tools)} tools.")
 
-    # Log the diff
+    # 차이 기록
     mcp_names = {t["name"] for t in mcp_normalized}
     reg_names = {t["name"] for t in registry_normalized}
     added = mcp_names - reg_names
@@ -358,7 +358,7 @@ def sync_registry_if_changed(mcp_tools, mcp_url):
 
 
 def handler(event, context):
-    """Lambda entry point. Triggered by EventBridge on UpdateAgentRuntime events."""
+    """Lambda 진입점입니다. EventBridge의 UpdateAgentRuntime 이벤트로 트리거됩니다."""
     mcp_url, account_id = _extract_mcp_url(event)
     if not mcp_url:
         print(f"Could not extract mcp_url from event: {json.dumps(event, default=str)[:500]}")
@@ -373,7 +373,7 @@ def handler(event, context):
     for t in tools:
         print(f"  - {t['name']}: {t.get('description', '')}")
 
-    # Compare with registry and update only if changed
+    # 레지스트리와 비교하여 변경된 경우에만 업데이트
     sync_result = sync_registry_if_changed(tools, mcp_url)
 
     return {

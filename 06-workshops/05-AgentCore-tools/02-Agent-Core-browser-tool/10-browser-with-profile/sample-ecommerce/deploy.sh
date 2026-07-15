@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# Configuration
+# 구성
 STACK_NAME="sample-ecommerce-stack"
 BUCKET_NAME="sample-ecommerce-static-site-$(date +%s)"
 REGION="${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null || echo us-east-1)}"
 
 echo "Creating S3 bucket if it doesn't exist..."
 
-# Create bucket (ignore error if already exists)
+# 버킷 생성(이미 존재하면 오류 무시)
 aws s3 mb s3://$BUCKET_NAME --region $REGION 2>/dev/null || echo "Bucket already exists or using existing bucket"
 
-# Enable versioning and block public access
+# 버전 관리 활성화 및 퍼블릭 액세스 차단
 aws s3api put-public-access-block \
   --bucket $BUCKET_NAME \
   --public-access-block-configuration \
@@ -19,7 +19,7 @@ aws s3api put-public-access-block \
 
 echo "Deploying CloudFormation stack..."
 
-# Deploy CloudFormation stack
+# CloudFormation 스택 배포
 aws cloudformation deploy \
   --template-file cloudformation.yaml \
   --stack-name $STACK_NAME \
@@ -27,7 +27,7 @@ aws cloudformation deploy \
   --region $REGION \
   --no-fail-on-empty-changeset
 
-# Get bucket name from stack
+# 스택에서 버킷 이름 가져오기
 BUCKET=$(aws cloudformation describe-stacks \
   --stack-name $STACK_NAME \
   --region $REGION \
@@ -36,7 +36,7 @@ BUCKET=$(aws cloudformation describe-stacks \
 
 echo "Uploading website files to S3..."
 
-# Upload files to S3
+# S3에 파일 업로드
 aws s3 sync . s3://$BUCKET/ \
   --exclude "*.yaml" \
   --exclude "*.sh" \
@@ -44,7 +44,7 @@ aws s3 sync . s3://$BUCKET/ \
   --exclude ".git/*" \
   --region $REGION
 
-# Get CloudFront distribution ID
+# CloudFront 배포 ID 가져오기
 DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
   --stack-name $STACK_NAME \
   --region $REGION \
@@ -53,13 +53,13 @@ DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
 
 echo "Creating CloudFront invalidation..."
 
-# Invalidate CloudFront cache
+# CloudFront 캐시 무효화
 aws cloudfront create-invalidation \
   --distribution-id $DISTRIBUTION_ID \
   --paths "/*" \
   --region $REGION
 
-# Get CloudFront URL
+# CloudFront URL 가져오기
 CLOUDFRONT_URL=$(aws cloudformation describe-stacks \
   --stack-name $STACK_NAME \
   --region $REGION \

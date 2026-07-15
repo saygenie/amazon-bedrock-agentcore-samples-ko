@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Deploy the Pay for API buyer agent to AgentCore Runtime via AWS CDK.
+# AWS CDK를 통해 Pay for API buyer agent를 AgentCore Runtime에 배포합니다.
 #
-# The agent container image is built in AWS CodeBuild (not on this
-# machine) so no Docker install is required. `cdk deploy` uploads
-# agent/container/ as an S3 asset, CodeBuild pulls it, builds + pushes
-# to ECR, and the Runtime resource pulls from there on invoke.
+# Agent 컨테이너 image는 로컬 장비가 아닌 AWS CodeBuild에서 build하므로 Docker를
+# 설치할 필요가 없습니다. `cdk deploy`가 agent/container/를 S3 asset으로
+# 업로드하면 CodeBuild가 이를 가져와 build한 뒤 ECR로 push하고, Runtime
+# resource가 호출 시 ECR에서 가져옵니다.
 #
-# Prerequisites:
+# 사전 요구 사항:
 #   - AWS CLI v2 configured (aws configure)
 #   - AWS CDK v2 installed (npm install -g aws-cdk)
 #   - Python 3.10+ with pip (for the CDK Python dependencies)
 #
-# Usage (from anywhere):
+# 사용법(어느 경로에서나 실행 가능):
 #   bash test/integration/deploy-agent.sh
 #
-# Writes outputs to agent/cdk/outputs.json. The notebook's §8 reads that
-# file to pick up the Runtime ARN.
+# 출력을 agent/cdk/outputs.json에 기록합니다. Notebook 8절은 이 파일에서
+# Runtime ARN을 읽습니다.
 
 set -euo pipefail
 
@@ -24,9 +24,9 @@ USE_CASE_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 CDK_DIR="${USE_CASE_ROOT}/agent/cdk"
 CONTAINER_DIR="${USE_CASE_ROOT}/agent/container"
 
-# Pull region from .env so it matches whatever the notebook provisioned.
+# Notebook에서 provisioning한 값과 일치하도록 .env에서 region을 가져옵니다.
 if [ -f "${USE_CASE_ROOT}/.env" ]; then
-    # Guard against unreplaced placeholders from env-sample.txt.
+    # env-sample.txt에서 교체되지 않은 placeholder가 있는지 확인합니다.
     if grep -q "<ACCOUNT_ID>" "${USE_CASE_ROOT}/.env"; then
         echo "❌ ${USE_CASE_ROOT}/.env still contains <ACCOUNT_ID> placeholders." >&2
         echo "   Run:  bash test/integration/setup-roles.sh" >&2
@@ -63,7 +63,7 @@ echo "Installing CDK Python dependencies..."
 pip install --quiet --upgrade pip
 pip install --quiet -r "${CDK_DIR}/requirements.txt"
 
-# ── 2. Bootstrap (idempotent) ──
+# ── 2. Bootstrap(멱등) ──
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 if ! aws cloudformation describe-stacks --stack-name CDKToolkit --region "${REGION}" >/dev/null 2>&1; then
     echo ""
@@ -73,7 +73,7 @@ else
     echo "CDK already bootstrapped for ${ACCOUNT_ID}/${REGION}."
 fi
 
-# ── 3. Deploy ──
+# ── 3. 배포 ──
 echo ""
 echo "Deploying AgentCorePaymentsBuyerAgentStack..."
 echo "(CDK synth + asset upload + CodeBuild run — typically 5–8 min on the"

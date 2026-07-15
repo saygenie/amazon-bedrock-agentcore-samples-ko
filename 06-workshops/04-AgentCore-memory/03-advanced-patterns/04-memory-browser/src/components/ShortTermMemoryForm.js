@@ -13,7 +13,7 @@ const ShortTermMemoryForm = ({ onMemoryFetch, memoryConfig }) => {
   const [showActorHistory, setShowActorHistory] = useState(false);
   const [showSessionHistory, setShowSessionHistory] = useState(false);
 
-  // Load search history from localStorage on component mount
+  // component를 mount할 때 localStorage에서 검색 기록 로드
   useEffect(() => {
     const savedHistory = localStorage.getItem('agentcore-search-history');
     if (savedHistory) {
@@ -25,9 +25,9 @@ const ShortTermMemoryForm = ({ onMemoryFetch, memoryConfig }) => {
     }
   }, []);
 
-  // No need for useEffect since we get memoryConfig as prop
+  // memoryConfig를 prop으로 받으므로 useEffect가 필요하지 않음
 
-  // Save search to history
+  // 검색 내용을 기록에 저장
   const saveToHistory = (actorId, sessionId) => {
     const newEntry = {
       actor_id: actorId,
@@ -41,7 +41,7 @@ const ShortTermMemoryForm = ({ onMemoryFetch, memoryConfig }) => {
       ...searchHistory.filter(item => 
         !(item.actor_id === actorId && item.session_id === sessionId)
       )
-    ].slice(0, 10); // Keep only last 10 searches
+    ].slice(0, 10); // 최근 검색 10개만 유지
 
     setSearchHistory(updatedHistory);
     localStorage.setItem('agentcore-search-history', JSON.stringify(updatedHistory));
@@ -111,22 +111,22 @@ const ShortTermMemoryForm = ({ onMemoryFetch, memoryConfig }) => {
         throw new Error(errorMessage);
       }
 
-      // data is already parsed above
+      // data는 위에서 이미 파싱됨
       
       if (data.memories && data.memories.length > 0) {
         setSuccess(`Found ${data.memories.length} short-term memory entries!`);
         onMemoryFetch(data.memories);
-        // Save successful search to history
+        // 성공한 검색을 기록에 저장
         saveToHistory(formData.actor_id, formData.session_id);
       } else {
         setSuccess('Query completed successfully.');
-        onMemoryFetch([]); // Pass empty array to show empty state in main area
+        onMemoryFetch([]); // 기본 영역에 빈 상태를 표시하도록 빈 배열 전달
       }
 
     } catch (err) {
       console.error('❌ Short-term memory fetch error:', err);
       
-      // Parse specific error messages from backend
+      // 백엔드에서 구체적인 오류 메시지 파싱
       let errorMessage = 'Failed to fetch short-term memory';
       
       if (err.response?.status === 404) {
@@ -212,7 +212,7 @@ const ShortTermMemoryForm = ({ onMemoryFetch, memoryConfig }) => {
           </div>
         </div>
 
-        {/* Status Messages */}
+        {/* 상태 메시지 */}
         {error && (
           <div className="status-message error">
             <AlertCircle size={16} />

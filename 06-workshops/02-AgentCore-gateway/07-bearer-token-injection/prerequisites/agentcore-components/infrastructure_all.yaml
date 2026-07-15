@@ -18,9 +18,9 @@ Parameters:
     Description: "Name of the Cognito User Pool Web Application Client"
 
 Resources:
-  # ===== API GATEWAY AND LAMBDA SECTION =====
+  # ===== API GATEWAY 및 LAMBDA 섹션 =====
 
-  # Lambda Execution Role for API
+  # API용 Lambda 실행 역할
   AsanaIntegrationLambdaRole:
     Type: AWS::IAM::Role
     Metadata:
@@ -67,15 +67,15 @@ Resources:
                   - sqs:SendMessage
                 Resource: !GetAtt AsanaIntegrationLambdaDLQ.Arn
 
-  # Dead Letter Queue for Lambda function
+  # Lambda 함수용 Dead Letter Queue
   AsanaIntegrationLambdaDLQ:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub "AsanaIntegrationLambda-DLQ-${AWS::StackName}"
-      MessageRetentionPeriod: 1209600 # 14 days
+      MessageRetentionPeriod: 1209600 # 14일
       KmsMasterKeyId: alias/aws/sqs
 
-  # Lambda Function for API
+  # API용 Lambda 함수
   AsanaIntegrationApiLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -85,7 +85,7 @@ Resources:
       Role: !GetAtt AsanaIntegrationLambdaRole.Arn
       Timeout: 30
       MemorySize: 128
-      ReservedConcurrentExecutions: 10 # Limit concurrent executions
+      ReservedConcurrentExecutions: 10 # 동시 실행 수 제한
       DeadLetterConfig:
         TargetArn: !GetAtt AsanaIntegrationLambdaDLQ.Arn
       Environment:
@@ -265,7 +265,7 @@ Resources:
         Types:
           - REGIONAL
 
-  # API Gateway Resource
+  # API Gateway 리소스
   AsanaResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -273,9 +273,9 @@ Resources:
       ParentId: !GetAtt AsanaIntegrationApiGateway.RootResourceId
       PathPart: asana
 
-  # Note: Custom authorizer removed - AgentCore handles authentication
+  # 참고: AgentCore가 인증을 처리하므로 Custom authorizer 제거
 
-  # GET Method - No Authorization (AgentCore handles auth)
+  # GET 메서드 - Authorization 없음(AgentCore가 인증 처리)
   AsanaGetMethod:
     Type: AWS::ApiGateway::Method
     Metadata:
@@ -295,7 +295,7 @@ Resources:
         IntegrationHttpMethod: POST
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AsanaIntegrationApiLambdaFunction.Arn}/invocations"
 
-  # POST Method - No Authorization (AgentCore handles auth)
+  # POST 메서드 - Authorization 없음(AgentCore가 인증 처리)
   AsanaPostMethod:
     Type: AWS::ApiGateway::Method
     Metadata:
@@ -315,7 +315,7 @@ Resources:
         IntegrationHttpMethod: POST
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AsanaIntegrationApiLambdaFunction.Arn}/invocations"
 
-  # Lambda Permission for API Gateway
+  # API Gateway용 Lambda 권한
   AsanaLambdaApiGatewayPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -332,16 +332,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AsanaIntegrationApiGateway}/*/POST/asana"
 
-  # Note: Authorizer Lambda permission removed - no longer needed
+  # 참고: 더 이상 필요하지 않은 Authorizer Lambda 권한 제거
 
-  # CloudWatch Log Group for API Gateway Access Logs
+  # API Gateway 접근 로그용 CloudWatch Log Group
   AsanaApiGatewayLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub "/aws/apigateway/${AsanaIntegrationApiGateway}"
       RetentionInDays: 30
 
-  # API Gateway Deployment
+  # API Gateway 배포
   AsanaApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
@@ -364,7 +364,7 @@ Resources:
             ThrottlingRateLimit: 100
             ThrottlingBurstLimit: 200
 
-  # API Key for AsanaIntegrationApiGateway
+  # AsanaIntegrationApiGateway용 API Key
   AsanaIntegrationApiKey:
     Type: AWS::ApiGateway::ApiKey
     Properties:
@@ -372,7 +372,7 @@ Resources:
       Description: API Key for Asana Integration Demo API Gateway
       Enabled: true
 
-  # Usage Plan for API Key
+  # API Key용 Usage Plan
   AsanaIntegrationUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
     DependsOn: AsanaApiDeployment
@@ -383,13 +383,13 @@ Resources:
         - ApiId: !Ref AsanaIntegrationApiGateway
           Stage: Prod
       Throttle:
-        RateLimit: 100 # Reduced from 1000 for better security
-        BurstLimit: 200 # Reduced from 2000 for better security
+        RateLimit: 100 # 보안 강화를 위해 1,000에서 축소
+        BurstLimit: 200 # 보안 강화를 위해 2,000에서 축소
       Quota:
-        Limit: 1000 # Reduced from 10000 for better security
+        Limit: 1000 # 보안 강화를 위해 10,000에서 축소
         Period: DAY
 
-  # Link API Key to Usage Plan
+  # API Key를 Usage Plan에 연결
   AsanaIntegrationUsagePlanKey:
     Type: AWS::ApiGateway::UsagePlanKey
     Properties:
@@ -397,9 +397,9 @@ Resources:
       KeyType: API_KEY
       UsagePlanId: !Ref AsanaIntegrationUsagePlan
 
-  # ===== AGENTCORE IAM ROLES SECTION =====
+  # ===== AGENTCORE IAM ROLE 섹션 =====
 
-  # Gateway AgentCore Role
+  # AgentCore Gateway 역할
   GatewayAgentCoreRole:
     Type: AWS::IAM::Role
     Properties:
@@ -473,7 +473,7 @@ Resources:
                   - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:AgentCoreAPIGatewayAPIKey*
                   - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:bedrock-agentcore*
 
-  # Runtime AgentCore Role
+  # AgentCore Runtime 역할
   RuntimeAgentCoreRole:
     Type: AWS::IAM::Role
     Properties:
@@ -502,7 +502,7 @@ Resources:
                 Resource:
                   - !GetAtt AsanaIntegrationApiLambdaFunction.Arn
 
-  # ===== SSM PARAMETERS SECTION =====
+  # ===== SSM 파라미터 섹션 =====
   GatewayAgentcoreIAMRoleParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -554,7 +554,7 @@ Resources:
         Application: AsanaIntegrationDemo
 
 Outputs:
-  # API Gateway Outputs
+  # API Gateway 출력
   AsanaIntegrationApiUrl:
     Description: "API Gateway endpoint URL for Asana Integration function"
     Value: !Sub "https://${AsanaIntegrationApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod"
@@ -567,7 +567,7 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-AsanaIntegrationApiLambdaFunctionArn"
 
-  # IAM Role Outputs
+  # IAM Role 출력
   GatewayAgentCoreRoleArn:
     Description: "Gateway AgentCore IAM Role ARN"
     Value: !GetAtt GatewayAgentCoreRole.Arn

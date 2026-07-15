@@ -33,7 +33,7 @@ export class AgentCoreGatewayStack extends cdk.Stack {
 
     const region = cdk.Stack.of(this).region;
 
-    // AgentCore permissions (workload identity, token vault, gateway, secrets)
+    // AgentCore 권한(Workload Identity, Token Vault, Gateway, 보안 암호)
     this.gateway.role!.addToPrincipalPolicy(
       new iam.PolicyStatement({
         actions: [
@@ -47,7 +47,7 @@ export class AgentCoreGatewayStack extends cdk.Stack {
       }),
     );
 
-    // Secrets Manager access (for credential providers)
+    // Secrets Manager 접근(Credential Provider용)
     this.gateway.role!.addToPrincipalPolicy(
       new iam.PolicyStatement({
         actions: ["secretsmanager:GetSecretValue"],
@@ -55,7 +55,7 @@ export class AgentCoreGatewayStack extends cdk.Stack {
       }),
     );
 
-    // EC2 permissions for managed VPC resource (Resource Gateway ENI provisioning)
+    // 관리형 VPC 리소스용 EC2 권한(Resource Gateway ENI 프로비저닝)
     this.gateway.role!.addToPrincipalPolicy(
       new iam.PolicyStatement({
         actions: [

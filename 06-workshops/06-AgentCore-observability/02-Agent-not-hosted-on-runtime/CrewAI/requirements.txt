@@ -1,4 +1,4 @@
-# CrewAI and instrumentation
+# CrewAI 및 계측
 crewai
 crewai-tools
 aws-opentelemetry-distro~=0.12.1

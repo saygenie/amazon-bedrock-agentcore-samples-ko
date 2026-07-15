@@ -1,11 +1,11 @@
-"""MCP server for the streaming notebook (04-streaming.ipynb).
+"""streaming Notebook(04-streaming.ipynb)용 MCP 서버입니다.
 
-Tools:
-  - streaming_demo  — server-emitted progress notifications over SSE
-  - failing_demo    — mid-stream tool exception
-  - logging_demo    — server-emitted `notifications/message` events
-  - keepalive_demo  — long-running keep-alive via periodic progress
-  - getOrder        — trivial sync sanity tool
+도구:
+  - streaming_demo  - 서버가 SSE를 통해 내보내는 progress notification
+  - failing_demo    - stream 중간 도구 예외
+  - logging_demo    - 서버가 내보내는 `notifications/message` 이벤트
+  - keepalive_demo  - 주기적인 progress를 통한 장기 실행 keep-alive
+  - getOrder        - 단순 동기화 sanity 도구
 """
 
 import asyncio
@@ -92,4 +92,4 @@ if __name__ == "__main__":
         transport="streamable-http",
         host="0.0.0.0",
         stateless_http=True,  # nosec B104
-    )  # nosec B104 - AgentCore Runtime container requires bind to all interfaces
+    )  # nosec B104 - AgentCore Runtime 컨테이너는 모든 인터페이스에 바인딩해야 함

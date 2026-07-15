@@ -182,7 +182,7 @@ Resources:
                 Resource:
                   - !GetAtt CustomerSupportLambda.Arn
 
-  # DynamoDB Table for Warranty Information
+  # 보증 정보용 DynamoDB table
   WarrantyTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -210,7 +210,7 @@ Resources:
         - Key: CostCenter
           Value: CustomerSupport
 
-  # DynamoDB Table for Customer Profiles
+  # 고객 profile용 DynamoDB table
   CustomerProfileTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -246,7 +246,7 @@ Resources:
         - Key: CostCenter
           Value: CustomerSupport
 
-  # Lambda function to populate synthetic data
+  # 합성 데이터를 채우는 Lambda function
   PopulateDataFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -274,7 +274,7 @@ Resources:
                       warranty_table = dynamodb.Table(warranty_table_name)
                       customer_table = dynamodb.Table(customer_table_name)
                       
-                      # Customer profile data
+                      # 고객 profile 데이터
                       customer_data = [
                           {
                               'customer_id': 'CUST001',
@@ -408,7 +408,7 @@ Resources:
                           }
                       ]
                       
-                      # Warranty data with customer_id references
+                      # customer_id reference가 포함된 보증 데이터
                       warranty_data = [
                           {
                               'serial_number': 'ABC12345678',
@@ -500,13 +500,13 @@ Resources:
                           }
                       ]
                       
-                      # Insert customer data
+                      # 고객 데이터 삽입
                       with customer_table.batch_writer() as batch:
                           for item in customer_data:
                               item = json.loads(json.dumps(item), parse_float=Decimal)
                               batch.put_item(Item=item)
                       
-                      # Insert warranty data
+                      # 보증 데이터 삽입
                       with warranty_table.batch_writer() as batch:
                           for item in warranty_data:
                               item = json.loads(json.dumps(item), parse_float=Decimal)
@@ -523,7 +523,7 @@ Resources:
                   print(f"Error: {str(e)}")
                   cfnresponse.send(event, context, cfnresponse.FAILED, {})
 
-  # IAM Role for Lambda function
+  # Lambda function용 IAM role
   PopulateDataRole:
     Type: AWS::IAM::Role
     Properties:
@@ -557,7 +557,7 @@ Resources:
                   - logs:PutLogEvents
                   - logs:PutDeliverySource
                 Resource: arn:aws:logs:*:*:*
-  # Custom resource to trigger Lambda function
+  # Lambda function을 trigger하는 custom resource
   PopulateData:
     Type: AWS::CloudFormation::CustomResource
     Properties:
@@ -568,7 +568,7 @@ Resources:
       - WarrantyTable
       - CustomerProfileTable
   
-  # Lambda target
+  # Lambda 대상
   CustomerSupportLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -690,7 +690,7 @@ Resources:
           PYTHONPATH: /opt/python
 
   
-# SSM Parameter to store warranty table name
+# 보증 table 이름을 저장할 SSM Parameter
   WarrantyTableNameParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -701,7 +701,7 @@ Resources:
       Tags:
         Application: CustomerSupport
 
-  # SSM Parameter to store customer profile table name
+  # 고객 profile table 이름을 저장할 SSM Parameter
   CustomerProfileTableNameParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -742,7 +742,7 @@ Resources:
       Tags:
         Application: CustomerSupport
 
-  # S3 Bucket for knowledge base documents
+  # Knowledge Base 문서용 S3 bucket
   BedrockKnowledgeBaseDataBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -753,7 +753,7 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
-  # Lambda Layer with latest boto3
+  # 최신 boto3가 포함된 Lambda layer
   Boto3Layer:
     Type: AWS::CloudFormation::CustomResource
     Properties:
@@ -846,7 +846,7 @@ Resources:
                   - lambda:DeleteLayerVersion
                 Resource: '*'
 
-  # IAM Role for Bedrock service
+  # Amazon Bedrock service용 IAM role
   BedrockServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -891,7 +891,7 @@ Resources:
                   - s3vectors:GetVectorBucketPolicy
                 Resource: '*'
 
-  # Lambda function with technical documentation content
+  # 기술 문서 콘텐츠를 포함한 Lambda function
   KnowledgeBaseSetupFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -935,7 +935,7 @@ Resources:
                   
                   print(f"Starting setup with bucket: {data_bucket_name}")
                   
-                  # Create documentation content
+                  # 문서 콘텐츠 생성
                   docs = {}
                   docs['troubleshooting-guide.txt'] = """Common Electronics Troubleshooting Guide
 
@@ -1381,7 +1381,7 @@ Resources:
                   - ssm:GetParameter
                 Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
 
-  # Trigger the setup
+  # 설정 실행
   KnowledgeBaseSetup:
     Type: AWS::CloudFormation::CustomResource
     Properties:

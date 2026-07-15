@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 """
-Complete Browser Example with Recording and Replay
+녹화 및 재생 기능을 포함한 전체 브라우저 예제
 
-This example demonstrates a full Bedrock AgentCore browser workflow:
-1. Create browser with recording enabled
-2. Start browser session
-3. View live with take/release control
-4. Recordings automatically saved to S3
-5. View recordings with session replay viewer
+이 예제는 전체 Amazon Bedrock AgentCore Browser 워크플로를 보여준다.
+1. 녹화가 활성화된 브라우저 생성
+2. 브라우저 세션 시작
+3. 제어권 획득/해제 기능을 사용해 실시간 보기
+4. 녹화를 S3에 자동 저장
+5. 세션 재생 뷰어로 녹화 보기
 
-Environment Variables:
-    AWS_REGION          - AWS region (default: us-west-2)
-    BEDROCK_AGENTCORE_ROLE_ARN    - IAM role ARN for Bedrock AgentCore execution (will use default pattern if not set)
-    RECORDING_BUCKET    - S3 bucket for recordings (default: session-record-test-{account_id})
-    RECORDING_PREFIX    - S3 prefix for recordings (default: replay-data)
-    BEDROCK_AGENTCORE_STAGE       - Bedrock AgentCore stage (default: prod)
+환경 변수:
+    AWS_REGION          - AWS 리전(기본값: us-west-2)
+    BEDROCK_AGENTCORE_ROLE_ARN    - Bedrock AgentCore 실행용 IAM 역할 ARN(설정하지 않으면 기본 패턴 사용)
+    RECORDING_BUCKET    - 녹화용 S3 버킷(기본값: session-record-test-{account_id})
+    RECORDING_PREFIX    - 녹화용 S3 접두사(기본값: replay-data)
+    BEDROCK_AGENTCORE_STAGE       - Bedrock AgentCore 스테이지(기본값: prod)
 
-Requirements:
-    - AWS credentials with permission to create/manage Bedrock AgentCore browsers
-    - Execution role with permissions for S3 and browser operations
-    - S3 bucket with appropriate permissions
+요구 사항:
+    - Amazon Bedrock AgentCore Browser 생성 및 관리 권한이 있는 AWS 자격 증명
+    - S3 및 브라우저 작업 권한이 있는 실행 역할
+    - 적절한 권한이 있는 S3 버킷
 """
 
 import os
@@ -47,20 +47,20 @@ from botocore.awsrequest import AWSRequest
 from rich.console import Console
 from rich.panel import Panel
 
-# Import tools
+# 도구 가져오기
 from bedrock_agentcore.tools.browser_client import BrowserClient
 from bedrock_agentcore._utils.endpoints import get_control_plane_endpoint
 from .browser_viewer_replay import BrowserViewerServer
 from .session_replay_viewer import SessionReplayViewer, SessionReplayHandler
 
-# Initialize console
+# 콘솔 초기화
 console = Console()
 
-# Configuration from environment variables with defaults
+# 기본값이 있는 환경 변수 구성
 REGION = os.environ.get("AWS_REGION", "us-west-2")
 BEDROCK_AGENTCORE_STAGE = os.environ.get("BEDROCK_AGENTCORE_STAGE", "prod")
 
-# Get account ID from STS if not provided
+# 계정 ID가 제공되지 않았으면 STS에서 가져오기
 try:
     sts_client = boto3.client("sts")
     ACCOUNT_ID = sts_client.get_caller_identity()["Account"]
@@ -68,9 +68,9 @@ try:
 except Exception as e:
     console.print(f"[yellow]Warning: Could not determine AWS Account ID: {e}[/yellow]")
     console.print("[yellow]Please set BEDROCK_AGENTCORE_ROLE_ARN environment variable manually.[/yellow]")
-    ACCOUNT_ID = "YOUR_ACCOUNT_ID"  # This will be used only if BEDROCK_AGENTCORE_ROLE_ARN is not set
+    ACCOUNT_ID = "YOUR_ACCOUNT_ID"  # BEDROCK_AGENTCORE_ROLE_ARN이 설정되지 않은 경우에만 사용
 
-# Set up role ARN and bucket name
+# 역할 ARN 및 버킷 이름 설정
 ROLE_ARN = os.environ.get(
     "BEDROCK_AGENTCORE_ROLE_ARN",
     f"arn:aws:iam::{ACCOUNT_ID}:role/BedrockAgentCoreAdmin",
@@ -81,19 +81,19 @@ S3_PREFIX = os.environ.get("RECORDING_PREFIX", "replay-data")
 
 
 def create_browser_with_recording():
-    """Create a browser with recording enabled using Control Plane API"""
+    """Control Plane API를 사용하여 녹화가 활성화된 브라우저를 생성한다."""
 
-    # Step 1: Get Control Plane endpoint and create client
+    # 1단계: Control Plane 엔드포인트를 가져오고 클라이언트 생성
     control_plane_url = get_control_plane_endpoint(REGION)
     console.print(f"Using Control Plane URL: [dim]{control_plane_url}[/dim]")
 
     control_client = boto3.client("bedrock-agentcore-control", region_name=REGION, endpoint_url=control_plane_url)
 
-    # Generate a unique browser name and client token
+    # 고유한 브라우저 이름과 클라이언트 토큰 생성
     browser_name = f"Browser_{uuid.uuid4().hex[:8]}"
     client_token = str(uuid.uuid4())
 
-    # Create browser with recording configuration
+    # 녹화 구성으로 브라우저 생성
     console.print("\n🔍 Creating browser with recording enabled")
     console.print(f"  - Name: {browser_name}")
     console.print(f"  - Role ARN: {ROLE_ARN}")
@@ -119,32 +119,32 @@ def create_browser_with_recording():
         console.print(f"  ARN: [dim]{browser_arn}[/dim]")
         console.print(f"  Status: {status}")
 
-        # Print recording config for debugging
+        # 디버깅을 위해 녹화 구성 출력
         if "recording" in create_response:
             console.print(f"📹 Recording config: {create_response['recording']}")
         else:
             console.print("⚠️ No recording config in response!")
 
-        # Step 2: Create Data Plane client and start a browser session
+        # 2단계: Data Plane 클라이언트를 생성하고 브라우저 세션 시작
         console.print("\n📱 Starting browser session with the new browser...")
 
-        # Create the Data Plane client
+        # Data Plane 클라이언트 생성
         data_plane_url = f"https://bedrock-agentcore.{REGION}.amazonaws.com"
         console.print(f"Using Data Plane URL: [dim]{data_plane_url}[/dim]")
 
         data_client = boto3.client("bedrock-agentcore", region_name=REGION, endpoint_url=data_plane_url)
 
-        # Start browser session using the browser_id
+        # browser_id를 사용하여 브라우저 세션 시작
         session_response = data_client.start_browser_session(
             browserIdentifier=browser_id,
             name=f"Session-{uuid.uuid4().hex[:8]}",
-            sessionTimeoutSeconds=3600,  # 1 hour
+            sessionTimeoutSeconds=3600,  # 1시간
         )
 
         session_id = session_response["sessionId"]
         console.print(f"✅ Started session: {session_id}")
 
-        # Extract automation stream information
+        # 자동화 스트림 정보 추출
         streams = session_response.get("streams", {})
         automation_stream = streams.get("automationStream")
 
@@ -153,12 +153,12 @@ def create_browser_with_recording():
         else:
             console.print("⚠️ No automation stream found in response")
 
-        # Now create a BrowserClient and set its properties
+        # BrowserClient를 생성하고 속성 설정
         browser_client = BrowserClient(region=REGION)
         browser_client.identifier = browser_id
         browser_client.session_id = session_id
 
-        # Wait for browser to be fully provisioned
+        # 브라우저 프로비저닝이 완료될 때까지 대기
         console.print("⏳ Waiting for browser to become available...")
         time.sleep(5)
 
@@ -179,33 +179,33 @@ def create_browser_with_recording():
 
 
 def get_sigv4_headers(region: str, session_id: str) -> Dict[str, str]:
-    """Generate SigV4 authentication headers for WebSocket connection"""
-    # Host for WebSocket connection
+    """WebSocket 연결용 SigV4 인증 헤더를 생성한다."""
+    # WebSocket 연결용 호스트
     host = f"https://bedrock-agentcore-control.{REGION}.amazonaws.com"
     path = f"/browser-streams/aws.browser.v1/sessions/{session_id}/live-view"
 
-    # Get AWS credentials for SigV4 signing
+    # SigV4 서명용 AWS 자격 증명 가져오기
     boto_session = boto3.Session()
     credentials = boto_session.get_credentials().get_frozen_credentials()
 
-    # Generate timestamp for request
+    # 요청 타임스탬프 생성
     timestamp = datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
-    # Create AWS request for signing
+    # 서명용 AWS 요청 생성
     request = AWSRequest(
         method="GET",
         url=f"https://{host}{path}",
         headers={"host": host, "x-amz-date": timestamp},
     )
 
-    # Sign the request with SigV4
+    # SigV4로 요청 서명
     auth = SigV4Auth(credentials, "bedrock-agentcore", region)
     auth.add_auth(request)
 
-    # Generate random WebSocket key
+    # 임의의 WebSocket 키 생성
     ws_key = base64.b64encode(secrets.token_bytes(16)).decode()
 
-    # Build WebSocket headers
+    # WebSocket 헤더 구성
     headers = {
         "Host": host,
         "X-Amz-Date": timestamp,
@@ -217,7 +217,7 @@ def get_sigv4_headers(region: str, session_id: str) -> Dict[str, str]:
         "User-Agent": "Bedrock-AgentCore-BrowserViewer/1.0",
     }
 
-    # Add security token if present
+    # 보안 토큰이 있으면 추가
     if credentials.token:
         headers["X-Amz-Security-Token"] = credentials.token
 
@@ -225,7 +225,7 @@ def get_sigv4_headers(region: str, session_id: str) -> Dict[str, str]:
 
 
 def run_live_viewer_with_control(browser_client):
-    """Run the live viewer with take/release control"""
+    """제어권 획득/해제 기능이 있는 라이브 뷰어를 실행한다."""
 
     print("\n🖥️  Starting Live Viewer...")
     print("Features available:")
@@ -233,7 +233,7 @@ def run_live_viewer_with_control(browser_client):
     print("  - 🚫 Release Control: Return control to automation")
     print("  - 📐 Resize display: 720p, 900p, 1080p, 1440p")
 
-    # Start the viewer
+    # 뷰어 시작
     viewer = BrowserViewerServer(browser_client, port=8000)
     viewer_url = viewer.start(open_browser=True)
 
@@ -245,7 +245,7 @@ def run_live_viewer_with_control(browser_client):
     print("\nPress Ctrl+C when done to view recordings")
 
     try:
-        # KeeKeep running until user stops
+        # 사용자가 중지할 때까지 실행 상태 유지
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
@@ -253,35 +253,35 @@ def run_live_viewer_with_control(browser_client):
 
 
 def view_recordings(s3_location):
-    """View the recorded sessions directly with custom SessionReplayViewer"""
+    """사용자 지정 SessionReplayViewer로 녹화된 세션을 직접 본다."""
 
     print("\n📼 Checking for recordings in S3...")
     print(f"Location: s3://{s3_location['bucket']}/{s3_location['prefix']}/")
 
-    # Create S3 client
+    # S3 클라이언트 생성
     s3 = boto3.client("s3")
 
-    # Wait a bit longer for recordings to be uploaded
+    # 녹화가 업로드되도록 잠시 더 대기
     print("⏳ Waiting for recordings to be uploaded to S3 (30 seconds)...")
     time.sleep(30)
 
     try:
-        # First, get a flat list of all objects to find session directories
+        # 먼저 모든 객체의 단일 목록을 가져와 세션 디렉터리 찾기
         response = s3.list_objects_v2(Bucket=s3_location["bucket"], Prefix=s3_location["prefix"])
 
         if "Contents" not in response:
             print("No objects found in S3 location")
             return
 
-        # Get all unique directory names that contain metadata.json
+        # metadata.json을 포함하는 고유한 디렉터리 이름 모두 가져오기
         session_dirs = set()
         metadata_files = []
 
         for obj in response["Contents"]:
             key = obj["Key"]
             if "metadata.json" in key:
-                # Extract the session directory from the path
-                # Example: replay-data/01JZV5RW9FEV3GC5RPG8PYGXFR/metadata.json
+                # 경로에서 세션 디렉터리 추출
+                # 예: replay-data/01JZV5RW9FEV3GC5RPG8PYGXFR/metadata.json
                 session_dir = key.split("/")[-2]
                 session_dirs.add(session_dir)
                 metadata_files.append(key)
@@ -291,15 +291,15 @@ def view_recordings(s3_location):
             print("No session directories with metadata.json found")
             return
 
-        # Sort the session directories to find the latest one
-        # Assuming the session IDs are time-ordered (which they appear to be)
+        # 최신 세션을 찾도록 세션 디렉터리 정렬
+        # 세션 ID가 시간순으로 정렬된다고 가정
         session_dirs = sorted(list(session_dirs))
         latest_session = session_dirs[-1]
         print(f"Using latest session: {latest_session}")
 
-        # Define the custom S3 data source class first, before using it
+        # 사용하기 전에 사용자 지정 S3 데이터 소스 클래스를 먼저 정의
         class CustomS3DataSource:
-            """Custom data source for S3 recordings with known structure"""
+            """구조가 알려진 S3 녹화용 사용자 지정 데이터 소스"""
 
             def __init__(self, bucket, prefix, session_id):
                 self.s3_client = boto3.client("s3")
@@ -310,15 +310,15 @@ def view_recordings(s3_location):
                 self.temp_dir = Path(tempfile.mkdtemp(prefix="bedrock_agentcore_replay_"))
 
             def cleanup(self):
-                """Clean up temp files"""
+                """임시 파일을 정리한다."""
                 if self.temp_dir.exists():
                     shutil.rmtree(self.temp_dir)
 
             def list_recordings(self):
-                """List recordings directly"""
+                """녹화 목록을 직접 반환한다."""
                 recordings = []
 
-                # Fetch metadata to get details about the recording
+                # 녹화 세부 정보를 얻기 위해 메타데이터 가져오기
                 metadata = {}
                 try:
                     metadata_key = f"{self.session_prefix}/metadata.json"
@@ -329,7 +329,7 @@ def view_recordings(s3_location):
                 except Exception as e:
                     print(f"⚠️ Could not get metadata: {e}")
 
-                # List batch files to count events
+                # 이벤트 수를 계산하기 위해 배치 파일 나열
                 batch_files = []
                 response = self.s3_client.list_objects_v2(Bucket=self.bucket, Prefix=f"{self.session_prefix}/batch-")
 
@@ -337,15 +337,15 @@ def view_recordings(s3_location):
                     batch_files = [obj["Key"] for obj in response["Contents"]]
                     print(f"✅ Found {len(batch_files)} batch files")
 
-                # Create a recording entry
-                timestamp = int(time.time() * 1000)  # Default to now
+                # 녹화 항목 생성
+                timestamp = int(time.time() * 1000)  # 현재 시각을 기본값으로 사용
                 duration = 0
                 event_count = 0
 
-                # Parse the timestamp correctly
+                # 타임스탬프를 올바르게 파싱
                 if "startTime" in metadata:
                     try:
-                        # Handle ISO format
+                        # ISO 형식 처리
                         if isinstance(metadata["startTime"], str):
                             dt = datetime.fromisoformat(metadata["startTime"].replace("Z", "+00:00"))
                             timestamp = int(dt.timestamp() * 1000)
@@ -354,19 +354,19 @@ def view_recordings(s3_location):
                     except Exception as e:
                         print(f"⚠️ Error parsing startTime: {e}")
 
-                # Try different duration fields
+                # 여러 재생 시간 필드 시도
                 if "duration" in metadata:
                     duration = metadata["duration"]
                 elif "durationMs" in metadata:
                     duration = metadata["durationMs"]
 
-                # Try different event count fields
+                # 여러 이벤트 수 필드 시도
                 if "eventCount" in metadata:
                     event_count = metadata["eventCount"]
                 elif "totalEvents" in metadata:
                     event_count = metadata["totalEvents"]
 
-                # Use correct datetime formatting
+                # 올바른 날짜 및 시간 형식 사용
                 date_string = datetime.fromtimestamp(timestamp / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
                 recordings.append(
@@ -383,14 +383,14 @@ def view_recordings(s3_location):
                 return recordings
 
             def download_recording(self, recording_id):
-                """Download recording from S3"""
+                """S3에서 녹화를 다운로드한다."""
                 print(f"Downloading recording: {recording_id}")
 
                 recording_dir = self.temp_dir / recording_id
                 recording_dir.mkdir(exist_ok=True)
 
                 try:
-                    # Get metadata
+                    # 메타데이터 가져오기
                     metadata = {}
                     try:
                         metadata_key = f"{self.session_prefix}/metadata.json"
@@ -400,14 +400,14 @@ def view_recordings(s3_location):
                     except Exception as e:
                         print(f"⚠️ No metadata found: {e}")
 
-                    # Get batch files from metadata ta if possible
+                    # 가능하면 메타데이터에서 배치 파일 가져오기
                     batch_files = []
                     if "batches" in metadata and isinstance(metadata["batches"], list):
                         for batch in metadata["batches"]:
                             if "file" in batch:
                                 batch_files.append(f"{self.session_prefix}/{batch['file']}")
 
-                    # If no batch files found in metadata, look for them directly
+                    # 메타데이터에 배치 파일이 없으면 직접 찾기
                     if not batch_files:
                         response = self.s3_client.list_objects_v2(
                             Bucket=self.bucket, Prefix=f"{self.session_prefix}/batch-"
@@ -424,17 +424,17 @@ def view_recordings(s3_location):
                             print(f"Downloading batch file: {key}")
                             response = self.s3_client.get_object(Bucket=self.bucket, Key=key)
 
-                            # Try to read as gzipped JSON lines
+                            # gzip으로 압축된 JSON Lines로 읽기 시도
                             with gzip.GzipFile(fileobj=io.BytesIO(response["Body"].read())) as gz:
                                 content = gz.read().decode("utf-8")
                                 print(f"Read {len(content)} bytes of content")
 
-                                # Process each line as a JSON event
+                                # 각 줄을 JSON 이벤트로 처리
                                 for line in content.splitlines():
                                     if line.strip():
                                         try:
                                             event = json.loads(line)
-                                            # Validate event
+                                            # 이벤트 검증
                                             if "type" in event and "timestamp" in event:
                                                 all_events.append(event)
                                             else:
@@ -452,7 +452,7 @@ def view_recordings(s3_location):
 
                     print(f"✅ Loaded {len(all_events)} events")
 
-                    # If no events were loaded, create sample events
+                    # 로드된 이벤트가 없으면 샘플 이벤트 생성
                     if len(all_events) < 2:
                         print("⚠️ Insufficient events, creating sample events for testing")
                         all_events = [
@@ -471,7 +471,7 @@ def view_recordings(s3_location):
                                 1000,
                             )
                         ]
-                        # Add a minimal DOM snapshot event
+                        # 최소 DOM 스냅샷 이벤트 추가
                         all_events.append(
                             {
                                 "type": 4,
@@ -504,7 +504,7 @@ def view_recordings(s3_location):
                             }
                         )
 
-                    # Return the parsed recording
+                    # 파싱된 녹화 반환
                     return {"metadata": metadata, "events": all_events}
 
                 except Exception as e:
@@ -514,30 +514,30 @@ def view_recordings(s3_location):
                     traceback.print_exc()
                     return None
 
-        # Create a custom HTTP handler that fixes the JSON response issue
+        # JSON 응답 문제를 수정하는 사용자 지정 HTTP 핸들러 생성
         class CustomSessionReplayHandler(SessionReplayHandler):
-            """Custom HTTP request handler for session replay viewer"""
+            """세션 재생 뷰어용 사용자 지정 HTTP 요청 핸들러"""
 
             def serve_recordings_list(self):
-                """Return list of recordings - FIX FOR HTML RESPONSE ISSUE"""
+                """녹화 목록을 반환한다. HTML 응답 문제 수정용."""
                 try:
                     recordings = self.data_source.list_recordings()
                     response = json.dumps(recordings)
 
-                    # Debug output to see what we're returning
+                    # 반환 내용을 확인하기 위한 디버그 출력
                     print(f"Serving recordings list: {response[:100]}...")
 
-                    # Ensure proper content type and headers
+                    # 올바른 콘텐츠 유형과 헤더 설정
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Content-Length", str(len(response)))
-                    # Add CORS headers to prevent issues
+                    # 문제 방지를 위한 CORS 헤더 추가
                     self.send_header("Access-Control-Allow-Origin", "*")
                     self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
                     self.send_header("Access-Control-Allow-Headers", "*")
                     self.end_headers()
 
-                    # Write the response as bytes
+                    # 응답을 바이트로 작성
                     self.wfile.write(response.encode("utf-8"))
 
                 except Exception as e:
@@ -546,9 +546,9 @@ def view_recordings(s3_location):
 
                     traceback.print_exc()
 
-                    # Return a proper error response as JSON with empty recordings array
+                    # 빈 녹화 배열이 포함된 올바른 JSON 오류 응답 반환
                     error_response = json.dumps({"error": str(e), "recordings": []})
-                    self.send_response(200)  # Use 200 so client can process the error
+                    self.send_response(200)  # 클라이언트가 오류를 처리할 수 있도록 200 사용
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Content-Length", str(len(error_response)))
                     self.send_header("Access-Control-Allow-Origin", "*")
@@ -556,7 +556,7 @@ def view_recordings(s3_location):
                     self.wfile.write(error_response.encode("utf-8"))
 
             def download_and_serve_recording(self, recording_id):
-                """Download recording and serve it - FIX FOR HTML RESPONSE ISSUE"""
+                """녹화를 다운로드해 제공한다. HTML 응답 문제 수정용."""
                 try:
                     recording_data = self.data_source.download_recording(recording_id)
 
@@ -593,31 +593,31 @@ def view_recordings(s3_location):
                     self.wfile.write(error_response.encode("utf-8"))
 
             def do_OPTIONS(self):
-                """Handle OPTIONS requests for CORS preflight"""
+                """CORS 프리플라이트용 OPTIONS 요청을 처리한다."""
                 self.send_response(200)
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
                 self.send_header("Access-Control-Allow-Headers", "*")
                 self.end_headers()
 
-        # Create custom viewer with our fixed handler
+        # 수정된 핸들러를 사용하는 사용자 지정 뷰어 생성
         class CustomSessionReplayViewer(SessionReplayViewer):
             def start(self):
-                """Start the replay viewer server with custom handler"""
-                # Ensure viewer directory exists
+                """사용자 지정 핸들러로 재생 뷰어 서버를 시작한다."""
+                # 뷰어 디렉터리가 있는지 확인
                 self.viewer_path.mkdir(parents=True, exist_ok=True)
 
-                # Find available port
+                # 사용 가능한 포트 찾기
                 port = self.find_available_port()
 
-                # Create request handler
+                # 요청 핸들러 생성
                 def handler_factory(*args, **kwargs):
                     return CustomSessionReplayHandler(self.data_source, self.viewer_path, *args, **kwargs)
 
-                # Start server
+                # 서버 시작
                 self.server = HTTPServer(("", port), handler_factory)
 
-                # Start in thread
+                # 스레드에서 시작
                 server_thread = threading.Thread(target=self.server.serve_forever)
                 server_thread.daemon = True
                 server_thread.start()
@@ -634,10 +634,10 @@ def view_recordings(s3_location):
                     )
                 )
 
-                # Open browser
+                # 브라우저 열기
                 webbrowser.open(url)
 
-                # Handle shutdown
+                # 종료 처리
                 def signal_handler(sig, frame):
                     console.print("\n[yellow]Shutting down...[/yellow]")
                     self.server.shutdown()
@@ -647,14 +647,14 @@ def view_recordings(s3_location):
 
                 signal.signal(signal.SIGINT, signal_handler)
 
-                # Keep running
+                # 실행 상태 유지
                 try:
                     while True:
                         time.sleep(1)
                 except KeyboardInterrupt:
                     pass
 
-        # Create data source
+        # 데이터 소스 생성
         data_source = CustomS3DataSource(
             bucket=s3_location["bucket"],
             prefix=s3_location["prefix"],
@@ -663,7 +663,7 @@ def view_recordings(s3_location):
 
         print(f"🎬 Starting session replay viewer for: {latest_session}")
         viewer = CustomSessionReplayViewer(data_source=data_source, port=8002)
-        viewer.start()  # This will block until Ctrl+C
+        viewer.start()  # Ctrl+C를 누를 때까지 차단됨
 
     except Exception as e:
         print(f"❌ Error: {e}")
@@ -673,7 +673,7 @@ def view_recordings(s3_location):
 
 
 def main():
-    """Main flow"""
+    """기본 흐름"""
 
     console.print("🚀 Bedrock AgentCore Browser Complete Example")
     console.print("=" * 50)
@@ -681,20 +681,20 @@ def main():
     browser_client = None
 
     try:
-        # Step 1: Create browser with recording
+        # 1단계: 녹화 기능이 있는 브라우저 생성
         console.print("\n📝 Step 1: Creating browser with recording enabled...")
         browser_client, s3_location = create_browser_with_recording()
 
-        # Step 2: Live viewer with control
+        # 2단계: 제어 기능이 있는 라이브 뷰어
         console.print("\n👁️  Step 2: Starting live viewer...")
         run_live_viewer_with_control(browser_client)
 
-        # Step 3: Make sure session is properly stopped to ensure recordings are uploaded
+        # 3단계: 녹화가 업로드되도록 세션을 올바르게 중지
         console.print("\n⏹️  Stopping browser session...")
         browser_client.stop()
         console.print("✅ Browser session stopped")
 
-        # Step 4: View recordings
+        # 4단계: 녹화 보기
         console.print("\n🎬 Step 3: Viewing recordings...")
         view_recordings(s3_location)
 
@@ -705,7 +705,7 @@ def main():
         traceback.print_exc()
 
     finally:
-        # Cleanup
+        # 정리
         if browser_client:
             try:
                 browser_client.stop()

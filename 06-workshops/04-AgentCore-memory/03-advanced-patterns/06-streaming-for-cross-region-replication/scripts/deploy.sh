@@ -15,7 +15,7 @@ echo "Primary:   ${PRIMARY_REGION}"
 echo "Secondary: ${SECONDARY_REGION}"
 echo "Account:   ${ACCOUNT_ID}"
 
-# --- Step 1: Package Lambda ---
+# --- 1단계: Lambda 패키징 ---
 echo ">>> Packaging Lambda..."
 PACKAGE_DIR=$(mktemp -d)
 ZIP_PATH="${SCRIPT_DIR}/handler.zip"
@@ -31,7 +31,7 @@ for REGION in "${PRIMARY_REGION}" "${SECONDARY_REGION}"; do
 done
 rm -f "${ZIP_PATH}"
 
-# --- Step 2: Deploy Global Stack ---
+# --- 2단계: Global Stack 배포 ---
 echo ">>> Deploying global stack in ${PRIMARY_REGION}..."
 aws cloudformation deploy \
   --region "${PRIMARY_REGION}" \
@@ -45,7 +45,7 @@ aws cloudformation deploy \
 echo ">>> Waiting for DynamoDB Global Table replication..."
 sleep 30
 
-# --- Step 3: Deploy Regional Stacks ---
+# --- 3단계: Regional Stack 배포 ---
 for REGION in "${PRIMARY_REGION}" "${SECONDARY_REGION}"; do
   if [ "${REGION}" = "${PRIMARY_REGION}" ]; then
     ENV="primary"; REMOTE="${SECONDARY_REGION}"
@@ -69,7 +69,7 @@ for REGION in "${PRIMARY_REGION}" "${SECONDARY_REGION}"; do
     --no-fail-on-empty-changeset
 done
 
-# --- Step 4: Create AgentCore Memory ---
+# --- 4단계: AgentCore Memory 생성 ---
 for REGION in "${PRIMARY_REGION}" "${SECONDARY_REGION}"; do
   STREAM_ARN="arn:aws:kinesis:${REGION}:${ACCOUNT_ID}:stream/${STREAM_NAME}"
 
@@ -97,7 +97,7 @@ for REGION in "${PRIMARY_REGION}" "${SECONDARY_REGION}"; do
       --stream-delivery-resources "${STREAM_CONFIG}" \
       --query 'memory.id' --output text)
   else
-    # Secondary: create WITHOUT streaming (will be enabled during failover)
+    # 보조 리전: streaming 없이 생성(장애 조치 중 활성화)
     MEMORY_ID=$(aws bedrock-agentcore-control create-memory \
       --region "${REGION}" \
       --name "replication_memory_${ENV}" \
@@ -111,7 +111,7 @@ for REGION in "${PRIMARY_REGION}" "${SECONDARY_REGION}"; do
   eval "MEMORY_ID_${REGION//-/_}=${MEMORY_ID}"
 done
 
-# --- Step 5: Update Regional Stacks with Remote Memory IDs ---
+# --- 5단계: 원격 Memory ID로 Regional Stack 업데이트 ---
 PRIMARY_MEMORY_ID=$(eval echo "\$MEMORY_ID_${PRIMARY_REGION//-/_}")
 SECONDARY_MEMORY_ID=$(eval echo "\$MEMORY_ID_${SECONDARY_REGION//-/_}")
 
@@ -145,7 +145,7 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM \
   --no-fail-on-empty-changeset
 
-# --- Step 6: Seed DynamoDB ---
+# --- 6단계: DynamoDB 초기 데이터 입력 ---
 echo ">>> Seeding config table..."
 DEPLOY_TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 for ITEM_JSON in \

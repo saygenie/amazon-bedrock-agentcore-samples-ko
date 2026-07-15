@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Standalone script to run the Bedrock-AgentCore Browser Live Viewer.
-This shows how to use the interactive_tools modules.
+Bedrock-AgentCore Browser Live Viewer를 실행하는 독립 실행형 스크립트.
+interactive_tools 모듈 사용 방법을 보여준다.
 """
 
 import time
@@ -16,7 +16,7 @@ console = Console()
 
 
 def main():
-    """Run the browser live viewer with display sizing."""
+    """화면 크기를 지정하여 브라우저 라이브 뷰어를 실행한다."""
     console.print(
         Panel(
             "[bold cyan]Bedrock-AgentCore Browser Live Viewer[/bold cyan]\n\n"
@@ -31,18 +31,18 @@ def main():
     )
 
     try:
-        # Step 1: Create browser session
+        # 1단계: 브라우저 세션 생성
         console.print("\n[cyan]Step 1: Creating browser session...[/cyan]")
         browser_client = BrowserClient(region="us-west-2")
         session_id = browser_client.start()
         console.print(f"✅ Session created: {session_id}")
 
-        # Step 2: Start viewer server
+        # 2단계: 뷰어 서버 시작
         console.print("\n[cyan]Step 2: Starting viewer server...[/cyan]")
         viewer = BrowserViewerServer(browser_client, port=8000)
         viewer_url = viewer.start(open_browser=True)
 
-        # Step 3: Show features
+        # 3단계: 기능 표시
         console.print("\n[bold green]Viewer Features:[/bold green]")
         console.print("• Default display: 1600×900 (configured via displayLayout callback)")
         console.print("• Size options: 720p, 900p, 1080p, 1440p")
@@ -51,7 +51,7 @@ def main():
 
         console.print("\n[yellow]Press Ctrl+C to stop[/yellow]")
 
-        # Keep running
+        # 실행 상태 유지
         while True:
             time.sleep(1)
 

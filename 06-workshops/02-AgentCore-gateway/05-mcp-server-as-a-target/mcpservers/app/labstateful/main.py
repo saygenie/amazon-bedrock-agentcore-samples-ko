@@ -1,15 +1,15 @@
-"""MCP server used to test AgentCore Gateway streaming + sessions + elicitation.
+"""AgentCore Gateway streaming + session + elicitation 테스트용 MCP 서버입니다.
 
-Each tool maps to a feature in `MCP_feature_test_plan_for_AgentCore_Gateway...md`:
-  * streaming_demo       → Feature 1 (Streamable HTTP) + Feature 8 (progress)
-  * session_counter      → Feature 2 (session continuity)
-  * book_room            → Feature 3.3 (form elicitation)
-  * cancel_with_confirm  → Feature 3.3 (boolean confirm)
-  * log_expense          → Feature 3.7 (sequential elicitation)
+각 도구는 `MCP_feature_test_plan_for_AgentCore_Gateway...md`의 기능에 대응합니다.
+  * streaming_demo       → 기능 1(Streamable HTTP) + 기능 8(progress)
+  * session_counter      → 기능 2(session 연속성)
+  * book_room            → 기능 3.3(form elicitation)
+  * cancel_with_confirm  → 기능 3.3(boolean 확인)
+  * log_expense          → 기능 3.7(순차 elicitation)
 """
 
 import asyncio
-import uuid  # noqa: F401  -- used by URL-mode elicitation tools below
+import uuid  # noqa: F401 -- 아래 URL 모드 Elicitation 도구에서 사용
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from typing import Literal
@@ -20,11 +20,11 @@ from pydantic import BaseModel, Field
 
 @asynccontextmanager
 async def lifespan(server: FastMCP):
-    """Per-process state store. Counters are keyed by `Mcp-Session-Id` so the
-    gateway's session-mapping behaviour is observable end-to-end."""
+    """프로세스별 상태 저장소입니다. Counter는 `Mcp-Session-Id`를 키로 사용하므로
+    gateway의 session 매핑 동작을 엔드 투 엔드로 관찰할 수 있습니다."""
     yield {
         "session_counters": defaultdict(int),
-        # Per-session call counter for Flow 4.3 (URLElicitationRequiredError retry).
+        # Flow 4.3용 session별 호출 counter(URLElicitationRequiredError 재시도)
         "protected_resource_calls": defaultdict(int),
     }
 
@@ -35,10 +35,10 @@ mcp = FastMCP(
 )
 
 
-# --- Request logging middleware -----------------------------------------
-# Logs every MCP message plus (best-effort) the underlying HTTP request
-# headers. Useful for debugging what AgentCore Gateway forwards to the runtime.
-# Wrapped in try/except so an API mismatch can't crash the server on boot.
+# --- 요청 로깅 middleware -----------------------------------------------
+# 모든 MCP 메시지와 기반 HTTP 요청 헤더를 가능한 범위 내에서 기록
+# AgentCore Gateway가 runtime으로 전달하는 내용을 디버깅할 때 유용함
+# API 불일치로 서버 시작 시 중단되지 않도록 try/except로 감쌈
 
 try:
     from fastmcp.server.middleware import Middleware, MiddlewareContext
@@ -46,7 +46,7 @@ try:
     class HeaderLogMiddleware(Middleware):
         @staticmethod
         def _tool_name(context):
-            # tools/call params live in context.message; shape depends on fastmcp version
+            # tools/call params는 context.message에 있으며 형태는 fastmcp 버전에 따라 다름
             msg = getattr(context, "message", None)
             for path in ("name", "params.name", "tool"):
                 obj = msg
@@ -59,7 +59,7 @@ try:
         async def on_message(self, context: MiddlewareContext, call_next):
             tool = self._tool_name(context) if context.method == "tools/call" else None
             tool_suffix = f" tool={tool!r}" if tool else ""
-            # Dump params for initialize so we can audit gateway capability negotiation.
+            # gateway 기능 협상을 감사할 수 있도록 initialize의 params 출력
             params_suffix = ""
             if context.method == "initialize":
                 msg = getattr(context, "message", None)
@@ -82,7 +82,7 @@ try:
                         v = v[:25] + "..."
                     print(f"    {k}: {v[:120]}", flush=True)
             except Exception:
-                # Notifications and some intermediate messages have no HTTP context.
+                # Notification과 일부 중간 메시지에는 HTTP context가 없음
                 print(
                     f"[mcp] {context.source}:{context.type} method={context.method!r}{tool_suffix}{params_suffix}",
                     flush=True,
@@ -96,7 +96,7 @@ except (ImportError, AttributeError) as e:
 
 
 def _session_id(ctx: Context) -> str:
-    """Best-effort session ID extraction across fastmcp versions."""
+    """fastmcp 버전 전반에서 가능한 범위 내에서 session ID를 추출합니다."""
     return (
         getattr(ctx, "session_id", None)
         or getattr(getattr(ctx, "session", None), "session_id", None)
@@ -104,7 +104,7 @@ def _session_id(ctx: Context) -> str:
     )
 
 
-# --- Streaming / progress ------------------------------------------------
+# --- 스트리밍 / 진행률 ----------------------------------------------------
 
 
 @mcp.tool()
@@ -118,7 +118,7 @@ async def streaming_demo(ctx: Context, steps: int = 5) -> str:
     return f"Completed {steps} steps."
 
 
-# --- Session-stateful counter -------------------------------------------
+# --- Session 상태 유지 counter ------------------------------------------
 
 
 @mcp.tool()
@@ -130,7 +130,7 @@ async def session_counter(ctx: Context) -> dict:
     return {"session_id": sid, "count": counters[sid]}
 
 
-# --- Elicitation: form mode --------------------------------------------
+# --- Elicitation: 폼 모드 -----------------------------------------------
 
 
 class BookingDetails(BaseModel):
@@ -144,7 +144,7 @@ async def book_room(ctx: Context) -> str:
     """Form elicitation — server pauses for booking details."""
     result = await ctx.elicit("Please provide booking details", BookingDetails)
     if result.action == "accept":
-        d = result.data  # BookingDetails instance
+        d = result.data  # BookingDetails 인스턴스
         return (
             f"Booked {d.room_type} for {d.nights} night(s); breakfast: {d.breakfast}."
         )
@@ -167,7 +167,7 @@ async def cancel_with_confirm(ctx: Context, order_id: int) -> str:
     return f"Order {order_id} kept (action={result.action})."
 
 
-# --- Elicitation: sequential -------------------------------------------
+# --- Elicitation: 순차 실행 ---------------------------------------------
 
 
 class _Category(BaseModel):
@@ -208,11 +208,10 @@ async def log_expense(ctx: Context, amount: float) -> str:
     return f"Not submitted (action={conf.action})."
 
 
-# --- Keep-alive timeout probe -----------------------------------------
-# Sleep for `duration_seconds`, optionally emitting a progress notification
-# every `interval_seconds`. Used to characterise the gateway's session /
-# streaming timeout behaviour at various durations and with/without
-# progress notifications acting as keep-alives.
+# --- Keep-alive timeout 검사 --------------------------------------------
+# `duration_seconds` 동안 대기하면서 선택적으로 `interval_seconds`마다
+# progress notification을 내보냄. 다양한 지속 시간 및 keep-alive 역할의 progress
+# notification 유무에 따른 gateway의 session / streaming timeout 동작을 파악하는 데 사용
 
 
 @mcp.tool()
@@ -255,11 +254,10 @@ async def keepalive_demo(
     }
 
 
-# --- Long-running optimization with human-in-the-loop confirmation ----
-# Use case: enterprise AI assistant runs a long compute (>5 min), keeps the
-# session alive via 30-second progress notifications, then surfaces an
-# elicitation prompt before any write. Tests Streamable HTTP keep-alive +
-# bidirectional elicitation in one tool call.
+# --- human-in-the-loop 확인을 포함한 장기 최적화 ------------------------
+# 사용 사례: 엔터프라이즈 AI assistant가 장기 연산(5분 초과)을 실행하고 30초 간격의
+# progress notification으로 session을 유지한 다음 쓰기 전에 elicitation prompt를 표시
+# 하나의 도구 호출에서 Streamable HTTP keep-alive + 양방향 elicitation을 테스트
 
 
 class _ApplyConfirmation(BaseModel):
@@ -315,7 +313,7 @@ async def apply_recommendations(ctx: Context, change_ids: list[str]) -> str:
     return f"❌ No changes applied (action={result.action})."
 
 
-# --- Mid-stream error & logging & sampling ----------------------------
+# --- Stream 중간 오류, logging, sampling -------------------------------
 
 
 @mcp.tool()
@@ -351,11 +349,11 @@ async def sampling_demo(ctx: Context, prompt: str) -> str:
         system_prompt="Echo the user's message verbatim.",
         max_tokens=64,
     )
-    # fastmcp 3.x returns a TextContent-like object; .text attribute holds the string
+    # fastmcp 3.x는 TextContent와 유사한 객체를 반환하며 .text 속성에 문자열이 있음
     return getattr(result, "text", str(result))
 
 
-# --- Trivial sync tools (sanity checks) --------------------------------
+# --- 단순 동기화 도구(sanity check) -------------------------------------
 
 
 @mcp.tool()
@@ -370,9 +368,9 @@ def updateOrder(orderId: int) -> int:
     return 456
 
 
-# --- URL-mode elicitation (MCP spec 2025-11-25) -----------------------
-# fastmcp 3.2.4's ctx.elicit() is form-mode only — URL mode is reached via
-# the underlying ServerSession on ctx.request_context.session.
+# --- URL mode elicitation(MCP 사양 2025-11-25) --------------------------
+# fastmcp 3.2.4의 ctx.elicit()은 form mode 전용이며, URL mode는
+# ctx.request_context.session의 기반 ServerSession을 통해 사용
 
 
 @mcp.tool()
@@ -455,10 +453,10 @@ async def protected_resource(ctx: Context) -> dict:
 
 
 if __name__ == "__main__":
-    # stateless_http=False keeps the SSE push-back channel (required for
-    # elicitation + progress streaming).
+    # stateless_http=False는 elicitation + progress streaming에 필요한
+    # SSE push-back channel을 유지
     mcp.run(
         transport="streamable-http",
         host="0.0.0.0",
         stateless_http=False,  # nosec B104
-    )  # nosec B104 - AgentCore Runtime container requires bind to all interfaces
+    )  # nosec B104 - AgentCore Runtime 컨테이너는 모든 인터페이스에 바인딩해야 함

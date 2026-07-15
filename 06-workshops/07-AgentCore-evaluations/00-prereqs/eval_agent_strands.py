@@ -1,15 +1,15 @@
 from strands import Agent, tool
-from strands_tools import calculator  # Import the calculator tool
+from strands_tools import calculator  # 계산기 도구 가져오기
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from strands.models import BedrockModel
 
 app = BedrockAgentCoreApp()
 
 
-# Create a custom tool
+# 사용자 지정 도구 생성
 @tool
 def weather():
-    """Get weather"""  # Dummy implementation
+    """Get weather"""  # 더미 구현
     return "sunny"
 
 
@@ -27,7 +27,7 @@ agent = Agent(
 @app.entrypoint
 def strands_agent_bedrock(payload):
     """
-    Invoke the agent with a payload
+    페이로드로 에이전트를 호출합니다.
     """
     user_input = payload.get("prompt")
     print("User input:", user_input)

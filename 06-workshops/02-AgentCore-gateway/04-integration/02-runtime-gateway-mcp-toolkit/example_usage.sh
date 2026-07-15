@@ -1,5 +1,5 @@
 #!/bin/bash
-# Example usage of agentcore-mcp-toolkit with command line arguments
+# 명령줄 인수를 사용하는 agentcore-mcp-toolkit 예시
 
 agentcore-mcp-toolkit \
   --region us-east-1 \

@@ -1,33 +1,33 @@
 #!/usr/bin/env python3
 """
-Lab 4: Strands Prevention Agent with AgentCore Browser - AgentCore Runtime Deployment
-Uses FastMCP to implement MCP protocol for Gateway-to-Runtime communication
+Lab 4: AgentCore Browser를 사용하는 Strands Prevention Agent - AgentCore Runtime 배포
+Gateway-to-Runtime 통신용 MCP 프로토콜을 FastMCP로 구현합니다.
 
-Focuses on:
-- MCP protocol implementation with FastMCP
-- Prevention-focused infrastructure analysis
-- Real-time AWS documentation research using AgentCore Browser
-- Proactive recommendations to prevent issues
-- Current AWS best practices
+주요 내용:
+- FastMCP를 사용한 MCP 프로토콜 구현
+- 예방 중심의 인프라 분석
+- AgentCore Browser를 사용한 실시간 AWS 문서 조사
+- 문제 예방을 위한 선제적 권장 사항
+- 최신 AWS 모범 사례
 
-Deployed to AgentCore Runtime for serverless execution
+서버리스 실행을 위해 AgentCore Runtime에 배포됩니다.
 """
 
 import os
 import logging
 
-# FastMCP for MCP protocol implementation
+# MCP 프로토콜 구현용 FastMCP
 from fastmcp import FastMCP
 
-# Strands framework
+# Strands 프레임워크
 from strands import Agent
 from strands.models import BedrockModel
 from strands_tools.browser import AgentCoreBrowser
 
-# Bypass tool consent for AgentCore deployment
+# AgentCore 배포 시 도구 동의 우회
 os.environ["BYPASS_TOOL_CONSENT"] = "true"
 
-# Configure logging with explicit StreamHandler for CloudWatch capture
+# CloudWatch 수집을 위한 명시적 StreamHandler로 로깅 구성
 import sys
 
 logging.basicConfig(
@@ -37,10 +37,10 @@ logging.basicConfig(
     force=True,
 )
 
-# Use bedrock_agentcore.app namespace for proper AgentCore logging capture
+# 올바른 AgentCore 로그 수집을 위해 bedrock_agentcore.app 네임스페이스 사용
 logger = logging.getLogger("bedrock_agentcore.app")
 
-# Ensure handler exists
+# 핸들러가 존재하는지 확인
 if not logger.handlers:
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s")
@@ -48,11 +48,11 @@ if not logger.handlers:
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
 
-# Environment variables (set by AgentCore Runtime)
+# 환경 변수(AgentCore Runtime에서 설정)
 AWS_REGION = os.environ.get("AWS_REGION", "us-west-2")
 MODEL_ID = os.environ.get("MODEL_ID", "us.anthropic.claude-sonnet-4-20250514-v1:0")
 
-# Log environment diagnostics
+# 환경 진단 정보 기록
 logger.info("=" * 80)
 logger.info("AGENT INITIALIZATION DIAGNOSTICS")
 logger.info("=" * 80)
@@ -63,19 +63,19 @@ logger.info(f"DOCKER_CONTAINER: {os.environ.get('DOCKER_CONTAINER', 'NOT SET')}"
 logger.info(f"PYTHONUNBUFFERED: {os.environ.get('PYTHONUNBUFFERED', 'NOT SET')}")
 logger.info("=" * 80)
 
-# Initialize FastMCP server for AgentCore Runtime
-# host="0.0.0.0" - Listens on all interfaces as required by AgentCore
-# stateless_http=True - Enables session isolation for enterprise security
+# AgentCore Runtime용 FastMCP 서버 초기화
+# host="0.0.0.0" - AgentCore 요구 사항에 따라 모든 인터페이스에서 수신
+# stateless_http=True - 엔터프라이즈 보안을 위한 세션 격리 활성화
 mcp = FastMCP("SRE Prevention Agent", host="0.0.0.0", stateless_http=True)  # nosec B104
 
-# Global variables for browser and agent
+# Browser 및 Agent용 전역 변수
 agentcore_browser = None
 prevention_agent = None
 BROWSER_AVAILABLE = False
 
 
 def initialize_browser(region=AWS_REGION):
-    """Initialize AgentCore Browser for web research"""
+    """웹 조사용 AgentCore Browser를 초기화합니다."""
     global agentcore_browser, BROWSER_AVAILABLE
 
     try:
@@ -92,7 +92,7 @@ def initialize_browser(region=AWS_REGION):
         return False
 
 
-# Define FastMCP Tools
+# FastMCP 도구 정의
 logger.debug("[DIAGNOSTIC] Registering FastMCP tools...")
 
 
@@ -128,20 +128,20 @@ def research_agent(research_topic_query: str):
             logger.debug("[DIAGNOSTIC] Browser initialization failed, returning None")
             return None
 
-        # Reuse the global browser instance (already initialized)
+        # 이미 초기화된 전역 Browser 인스턴스 재사용
         logger.debug("[DIAGNOSTIC] Using existing AgentCoreBrowser instance...")
         if not agentcore_browser:
             logger.error("[DIAGNOSTIC] Browser flag is True but instance is None!")
             return None
 
-        # Setup Bedrock model
+        # Bedrock 모델 설정
         logger.debug(f"[DIAGNOSTIC] Setting up BedrockModel with model_id: {MODEL_ID}")
         model = BedrockModel(
             model_id=MODEL_ID,
             streaming=True,
         )
 
-        # Create agent with browser tool (reuse existing browser instance)
+        # 기존 Browser 인스턴스를 재사용하여 Browser 도구가 포함된 Agent 생성
         logger.debug("[DIAGNOSTIC] Creating Strands Agent with browser tool...")
         system_prompt = """ I need you to analyze our CRM infrastructure for prevention opportunities using the available tool to access AWS documentation. 
 
@@ -177,7 +177,7 @@ def research_agent(research_topic_query: str):
 
     return_text = ""
     response = prevention_agent(research_topic_query)
-    # 3. LOG RAW RESPONSE OBJECT
+    # 3. 원시 응답 객체 기록
     logger.info("=" * 80)
     logger.info("📤 RAW AGENT RESPONSE")
     logger.info(f"Response type: {type(response)}")
@@ -194,21 +194,21 @@ def research_agent(research_topic_query: str):
     return return_text
 
 
-# Note: Browser initialization is LAZY - happens on first tool call
-# This prevents blocking during module import and FastMCP server startup
+# 참고: Browser는 첫 번째 도구 호출 시 지연 초기화됨
+# 모듈 가져오기 및 FastMCP 서버 시작 중 차단을 방지함
 
 logger.info("=" * 80)
 logger.info("🚀 Module loaded - Browser will initialize on first tool call (lazy)")
 logger.info("=" * 80)
 
 
-# Run the FastMCP server
+# FastMCP 서버 실행
 if __name__ == "__main__":
-    # AgentCore Runtime requires stateless streamable-HTTP transport (NOT stdio)
-    # Per AWS docs: https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-mcp.html
-    # - Transport: streamable-http (stateless, HTTP-based)
-    # - Port: 8000 (MCP protocol requirement)
-    # - Host: 0.0.0.0 (listen on all interfaces)
+    # AgentCore Runtime에는 상태 비저장 streamable-HTTP 전송이 필요함(stdio 아님)
+    # AWS 문서 참조: https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-mcp.html
+    # - 전송: streamable-http(상태 비저장, HTTP 기반)
+    # - 포트: 8000(MCP 프로토콜 요구 사항)
+    # - 호스트: 0.0.0.0(모든 인터페이스에서 수신)
 
     logger.info("=" * 80)
     logger.info("🚀 PHASE 2: FastMCP Server Startup")

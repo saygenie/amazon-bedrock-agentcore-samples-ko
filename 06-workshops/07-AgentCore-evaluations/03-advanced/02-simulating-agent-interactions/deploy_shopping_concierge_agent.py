@@ -1,13 +1,13 @@
-"""Deploy the Shopping Concierge agent to AgentCore Runtime using the agentcore CLI.
+"""agentcore CLI를 사용하여 Shopping Concierge 에이전트를 AgentCore Runtime에 배포합니다.
 
-Run from the notebook via: %run -i deploy_shopping_concierge_agent.py
+Notebook에서 다음 명령으로 실행합니다: %run -i deploy_shopping_concierge_agent.py
 
-Expects REGION to be set in the caller's namespace (Step 2 config cell).
-Sets in the caller's namespace: AGENT_ID, AGENT_ARN, RUNTIME_ARN,
+호출자의 네임스페이스에 REGION이 설정되어 있어야 합니다(2단계 구성 셀).
+호출자의 네임스페이스에 다음 항목을 설정합니다: AGENT_ID, AGENT_ARN, RUNTIME_ARN,
     SERVICE_NAME, LOG_GROUP, SPANS_LOG_GROUP
 
-Uses the agentcore CLI (from bedrock-agentcore) which handles
-CodeBuild image builds, ECR push, OTel instrumentation, and runtime creation.
+CodeBuild 이미지 빌드, ECR 푸시, OTel 계측, Runtime 생성을 처리하는
+bedrock-agentcore의 agentcore CLI를 사용합니다.
 """
 
 import subprocess
@@ -19,7 +19,7 @@ import boto3
 _REGION = REGION  # noqa: F821
 _AGENT_NAME = f"shopping_concierge_{uuid.uuid4().hex[:8]}"
 
-# ---- 1. Configure ----
+# ---- 1. 구성 ----
 print(f"Configuring agent '{_AGENT_NAME}' ...")
 subprocess.run(
     [
@@ -39,7 +39,7 @@ subprocess.run(
 )
 print("Configuration complete.")
 
-# ---- 2. Deploy ----
+# ---- 2. 배포 ----
 print("\nDeploying Shopping Concierge Agent ...")
 print("  This takes ~5 minutes on first run (image build + push + runtime creation).")
 subprocess.run(
@@ -48,7 +48,7 @@ subprocess.run(
 )
 print("Deploy complete.")
 
-# ---- 3. Get agent ID ----
+# ---- 3. 에이전트 ID 가져오기 ----
 cp = boto3.client("bedrock-agentcore-control", region_name=_REGION)
 AGENT_ID = ""
 AGENT_ARN = ""
@@ -65,7 +65,7 @@ for page in paginator.paginate():
 if not AGENT_ID:
     raise RuntimeError(f"Could not find {_AGENT_NAME} runtime after deploy")
 
-# ---- 4. Wait for READY ----
+# ---- 4. READY 상태 대기 ----
 print("Waiting for READY ...")
 for elapsed in range(0, 600, 15):
     status = cp.get_agent_runtime(agentRuntimeId=AGENT_ID).get("status", "UNKNOWN")
@@ -78,7 +78,7 @@ for elapsed in range(0, 600, 15):
 else:
     raise TimeoutError("Agent did not reach READY in 600s")
 
-# ---- Set variables for the notebook ----
+# ---- Notebook용 변수 설정 ----
 RUNTIME_ARN = AGENT_ARN
 SERVICE_NAME = f"{_AGENT_NAME}.DEFAULT"
 LOG_GROUP = f"/aws/bedrock-agentcore/runtimes/{AGENT_ID}-DEFAULT"

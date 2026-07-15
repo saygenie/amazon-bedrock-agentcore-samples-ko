@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""GitHub data models."""
+"""GitHub 데이터 모델."""
 
 from pydantic import BaseModel, Field
 

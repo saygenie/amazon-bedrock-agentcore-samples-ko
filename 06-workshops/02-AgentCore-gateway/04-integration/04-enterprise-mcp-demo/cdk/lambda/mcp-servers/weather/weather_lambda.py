@@ -1,26 +1,26 @@
-# Access context properties in your Lambda function
+# Lambda 함수에서 컨텍스트 속성에 접근
 def lambda_handler(event, context):
     print(event)
     print(context)
-    # Since the visible tool name includes the target name as a prefix, we can use this delimiter to strip the prefix
+# 표시되는 도구 이름에는 target 이름이 접두사로 포함되므로 이 구분자로 접두사를 제거할 수 있음
     delimiter = "___"
 
-    # Get the tool name from the context
+# 컨텍스트에서 도구 이름 가져오기
     originalToolName = context.client_context.custom["bedrockAgentCoreToolName"]
     tool_name = originalToolName[originalToolName.index(delimiter) + len(delimiter) :]
 
-    # Get other context properties
+# 다른 컨텍스트 속성 가져오기
     _message_version = context.client_context.custom["bedrockAgentCoreMessageVersion"]
     _aws_request_id = context.client_context.custom["bedrockAgentCoreAwsRequestId"]
     _mcp_message_id = context.client_context.custom["bedrockAgentCoreMcpMessageId"]
     _gateway_id = context.client_context.custom["bedrockAgentCoreGatewayId"]
     _target_id = context.client_context.custom["bedrockAgentCoreTargetId"]
 
-    # Process the request based on the tool name
+# 도구 이름에 따라 요청 처리
     if tool_name == "get_weather":
-        # Handle searchProducts tool
+# searchProducts 도구 처리
         print("Processing get_weather tool")
         return f"It is vey sunny today in {event.get('timezone', 'unknown')}!"
     else:
-        # Handle unknown tool
+# 알 수 없는 도구 처리
         pass

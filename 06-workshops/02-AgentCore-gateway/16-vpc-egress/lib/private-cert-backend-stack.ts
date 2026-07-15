@@ -11,22 +11,22 @@ import { NagSuppressions } from "cdk-nag";
 import { Construct } from "constructs";
 
 /**
- * Deploys an EC2 instance running a REST API with a non-public TLS
- * certificate. Supports two modes:
+ * 공개되지 않은 TLS Certificate로 REST API를 실행하는 EC2 인스턴스를
+ * 배포합니다. 다음 두 가지 모드를 지원합니다.
  *
- * - **Private CA mode**: Pass `certificateAuthorityArn` to issue a certificate
- *   from AWS Private CA (short-lived, 7-day validity). The cert and key are
- *   stored in SSM Parameter Store and the EC2 serves HTTPS on port 443.
- * - **Self-signed mode**: Omit `certificateAuthorityArn` to generate a
- *   self-signed certificate via openssl. EC2 serves HTTP on port 8000 only
- *   (HTTPS setup is handled separately in the self-signed lab).
+ * - **Private CA 모드**: `certificateAuthorityArn`을 전달해 AWS Private CA에서
+ *   단기 Certificate(유효 기간 7일)를 발급합니다. Certificate와 키는
+ *   SSM Parameter Store에 저장되고 EC2는 443 포트에서 HTTPS를 제공합니다.
+ * - **Self-signed 모드**: `certificateAuthorityArn`을 생략해 openssl로
+ *   자체 서명 Certificate를 생성합니다. EC2는 8000 포트에서 HTTP만 제공하며
+ *   HTTPS 설정은 Self-signed Lab에서 별도로 처리합니다.
  *
- * Both produce a certificate that AgentCore Gateway cannot verify.
+ * 두 모드 모두 AgentCore Gateway가 검증할 수 없는 Certificate를 생성합니다.
  */
 export interface PrivateCertBackendStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
   baseDomain: string;
-  /** If provided, issues a cert from this Private CA. Otherwise generates self-signed. */
+  /** 제공되면 이 Private CA에서 Certificate를 발급하고, 아니면 자체 서명으로 생성합니다. */
   certificateAuthorityArn?: string;
 }
 
@@ -44,7 +44,7 @@ export class PrivateCertBackendStack extends cdk.Stack {
     const privateDomain = `api.internal.${props.baseDomain}`;
     const usePrivateCa = !!props.certificateAuthorityArn;
 
-    // --- Certificate via Lambda Custom Resource ---
+    // --- Lambda Custom Resource를 통한 Certificate ---
     const certHandler = new lambda.Function(this, "CertHandler", {
       runtime: lambda.Runtime.PYTHON_3_12,
       handler: "index.handler",
@@ -205,7 +205,7 @@ def handler(event, context):
 
     const certArn = cert.getAttString("CertificateArn");
 
-    // --- EC2 Instance running REST API ---
+    // --- REST API를 실행하는 EC2 인스턴스 ---
     this.ec2Sg = new ec2.SecurityGroup(this, "Ec2Sg", {
       vpc: props.vpc,
       description: "Simple API EC2 instance",
@@ -261,7 +261,7 @@ def handler(event, context):
       "    items.append(item)",
       "    return item",
       "PYEOF",
-      // HTTP service on port 8000 (for existing ALB)
+      // 8000 포트의 HTTP 서비스(기존 ALB용)
       "cat > /etc/systemd/system/simple-api.service << 'SVCEOF'",
       "[Unit]",
       "Description=Simple API Server (HTTP)",
@@ -281,9 +281,9 @@ def handler(event, context):
       "systemctl start simple-api",
     );
 
-    // HTTPS on port 443 with non-public certificate
+    // 공개되지 않은 Certificate를 사용하는 443 포트 HTTPS
     if (usePrivateCa) {
-      // Private CA mode: pull cert from SSM Parameter Store
+      // Private CA 모드: SSM Parameter Store에서 Certificate 가져오기
       this.instance.addToRolePolicy(
         new iam.PolicyStatement({
           actions: ["ssm:GetParameter"],
@@ -303,7 +303,7 @@ def handler(event, context):
         'aws ssm get-parameter --name "${SSM_PREFIX}/key" --with-decryption --query "Parameter.Value" --output text --region $REGION > /opt/simple-api/key.pem',
       );
     } else {
-      // Self-signed mode: generate cert directly on EC2
+      // Self-signed 모드: EC2에서 직접 Certificate 생성
       this.instance.addUserData(
         `# Generate self-signed certificate`,
         `DOMAIN="${privateDomain}"`,
@@ -311,7 +311,7 @@ def handler(event, context):
       );
     }
 
-    // HTTPS service on port 443 (both modes)
+    // 443 포트의 HTTPS 서비스(두 모드 모두)
     this.instance.addUserData(
       "# HTTPS service on port 443",
       "cat > /etc/systemd/system/simple-api-https.service << 'SVCEOF'",
@@ -333,7 +333,7 @@ def handler(event, context):
       "systemctl start simple-api-https",
     );
 
-    // --- Security group ingress rules ---
+    // --- Security Group 인바운드 규칙 ---
     this.ec2Sg.addIngressRule(
       ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
       ec2.Port.tcp(443),
@@ -347,8 +347,8 @@ def handler(event, context):
     );
 
     // --- Private Hosted Zone ---
-    // Resolves the cert domain (e.g., api.internal.example.com) to the EC2's private IP
-    // so TLS connections using the domain match the certificate's CN
+    // Certificate 도메인(예: api.internal.example.com)을 EC2 Private IP로 확인하여
+    // 도메인을 사용하는 TLS 연결이 Certificate의 CN과 일치하도록 함
     const zone = new route53.PrivateHostedZone(this, "PrivateZone", {
       zoneName: `internal.${props.baseDomain}`,
       vpc: props.vpc,
@@ -363,9 +363,9 @@ def handler(event, context):
       ttl: cdk.Duration.seconds(60),
     });
 
-    // --- Internal NLB (TLS passthrough) ---
-    // Provides a publicly resolvable DNS name for the EC2's private cert endpoint.
-    // Used as routingDomain to demonstrate that AgentCore rejects the private cert.
+    // --- Internal NLB(TLS 통과) ---
+    // EC2 Private Certificate 엔드포인트에 공개적으로 확인 가능한 DNS 이름을 제공합니다.
+    // AgentCore가 Private Certificate를 거부함을 보여 주는 routingDomain으로 사용합니다.
     const nlbAccessLogBucket = new s3.Bucket(this, "NlbAccessLogs", {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
@@ -413,7 +413,7 @@ def handler(event, context):
       },
     });
 
-    // --- Outputs ---
+    // --- 출력 ---
     const certType = usePrivateCa ? "private CA" : "self-signed";
 
     new cdk.CfnOutput(this, "NlbDnsName", {

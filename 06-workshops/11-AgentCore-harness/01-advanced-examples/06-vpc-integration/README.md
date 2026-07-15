@@ -1,135 +1,135 @@
-# Bring your VPC resources to your agents with AgentCore CLI and harness in AgentCore
+# AgentCore CLI와 AgentCore Harness를 사용해 VPC 리소스를 에이전트에 연결하기
 
-In this example, you will create the harness with VPC configuration, using AgentCore CLI.
+이 예제에서는 AgentCore CLI를 사용하여 VPC 구성이 적용된 AgentCore Harness를 생성합니다.
 
-## Prerequisites
+## 사전 요구 사항
 
-To get started, you will need:
+시작하려면 다음 항목이 필요합니다.
 
-- Node.js 20.x or later
-- uv for Python agents ([install](https://docs.astral.sh/uv/getting-started/installation/))
+- Node.js 20.x 이상
+- Python 에이전트용 uv([설치](https://docs.astral.sh/uv/getting-started/installation/))
 
-Then, **install agentcore-cli**:
+그런 다음 **AgentCore CLI를 설치**합니다.
 
 ```Bash
 npm i -g @aws/agentcore@preview
 
-# Verify
+# 확인
 agentcore --version
 ```
 
-Have your Network setup configured, like private subnets and VPC endpoints. [AgentCore Documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/vpc.html).
+프라이빗 서브넷, VPC 엔드포인트 등의 네트워크 구성을 준비하세요. 자세한 내용은 [AgentCore 문서](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/vpc.html)를 참조하세요.
 
-## Create and Invoke an Agent using Bedrock model provider
+## Bedrock 모델 공급자로 에이전트 생성 및 호출
 
-In this step-by-step tutorial, we will use interactive mode for AgentCore CLI, to navigate you through VPC supported configuration, but you can directly create using the following command:
+이 단계별 튜토리얼에서는 AgentCore CLI 대화형 모드로 VPC 지원 구성을 안내합니다. 다음 명령을 사용해 직접 생성할 수도 있습니다.
 
-To create your project:
+프로젝트를 생성합니다.
 
 ```bash
 agentcore create --name HarnessBedrockVPC --memory "none" --model-provider bedrock --network-mode VPC --subnets <ids> --security-groups <ids>
 
 ```
 
-### Start interactive mode
+### 대화형 모드 시작
 
-#### Configuring your harness
+#### AgentCore Harness 구성
 
-Run following command:
+다음 명령을 실행합니다.
 
 ```bash
 agentcore
 ```
 <p align="left">
-    <img src="images/agentcore-cli-start.png" alt="agentcore-cli-start" width="700" />
+    <img src="images/agentcore-cli-start.png" alt="AgentCore CLI 시작 화면" width="700" />
 </p> 
 
-Name your project and continue (return/enter):
+프로젝트 이름을 지정하고 계속 진행합니다(Return/Enter).
 
 <p align="left">
-    <img src="images/project_name.png" alt="project_name" width="700" />
+    <img src="images/project_name.png" alt="프로젝트 이름 입력 화면" width="700" />
 </p> 
 
-Choose creation mode "Harness" (default) and continue:
+생성 모드로 기본값인 "Harness"를 선택하고 계속 진행합니다.
 
 <p align="left">
-    <img src="images/harness_mode.png" alt="harness_mode" width="700" />
+    <img src="images/harness_mode.png" alt="Harness 생성 모드 선택 화면" width="700" />
 </p> 
 
-Name your harness and continue (return/enter):
+AgentCore Harness 이름을 지정하고 계속 진행합니다(Return/Enter).
 
 <p align="left">
-    <img src="images/harness_name.png" alt="harness_name" width="700" />
+    <img src="images/harness_name.png" alt="AgentCore Harness 이름 입력 화면" width="700" />
 </p> 
 
-Choose your model provider as "Bedrock":
+모델 공급자로 "Bedrock"을 선택합니다.
 
 <p align="left">
-    <img src="images/model_provider.png" alt="model_provider" width="700" />
+    <img src="images/model_provider.png" alt="Bedrock 모델 공급자 선택 화면" width="700" />
 </p> 
 
-Keep "None" as we are not going to customize the container:
+컨테이너를 사용자 지정하지 않을 것이므로 "None"을 유지합니다.
 
 <p align="left">
-    <img src="images/container.png" alt="container" width="700" />
+    <img src="images/container.png" alt="컨테이너 구성 선택 화면" width="700" />
 </p> 
 
-Don't add memory configuration:
+Memory 구성을 추가하지 않습니다.
 
 <p align="left">
-    <img src="images/memory.png" alt="memory" width="700" />
+    <img src="images/memory.png" alt="Memory 구성 선택 화면" width="700" />
 </p> 
 
-Tick "Network" option (with space key) to add VPC configuration and continue:
+VPC 구성을 추가하려면 Space 키로 "Network" 옵션을 선택하고 계속 진행합니다.
 
 <p align="left">
-    <img src="images/network.png" alt="network" width="700" />
+    <img src="images/network.png" alt="Network 옵션 선택 화면" width="700" />
 </p> 
 
-Choose "VPC" mode:
+"VPC" 모드를 선택합니다.
 
 <p align="left">
-    <img src="images/vpc.png" alt="vpc" width="700" />
+    <img src="images/vpc.png" alt="VPC 모드 선택 화면" width="700" />
 </p> 
 
-Type your subnets, separated by commas, and continue. If need more information on available AZs, go to the [documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-vpc.html#agentcore-supported-azs).
+서브넷을 쉼표로 구분하여 입력하고 계속 진행합니다. 사용 가능한 AZ에 대한 자세한 내용은 [문서](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agentcore-vpc.html#agentcore-supported-azs)를 참조하세요.
 
 <p align="left">
-    <img src="images/subnets.png" alt="subnets" width="700" />
+    <img src="images/subnets.png" alt="서브넷 입력 화면" width="700" />
 </p> 
 
-Add your security group (if you want to add more than one, separated them with commas):
+보안 그룹을 추가합니다. 여러 보안 그룹을 추가하려면 쉼표로 구분하세요.
 
 <p align="left">
-    <img src="images/sg.png" alt="sg" width="700" />
+    <img src="images/sg.png" alt="보안 그룹 입력 화면" width="700" />
 </p>
 
-Finally, you will see summary of your harness, if it's OK, just continue (return/enter):
+마지막으로 AgentCore Harness 구성 요약을 확인합니다. 구성이 올바르면 계속 진행합니다(Return/Enter).
 
 <p align="left">
-    <img src="images/summary.png" alt="summary" width="700" />
+    <img src="images/summary.png" alt="AgentCore Harness 구성 요약 화면" width="700" />
 </p>
 
-CLI will create your project and it will finish interactive mode after project creation:
+CLI가 프로젝트를 생성하고, 생성이 완료되면 대화형 모드가 종료됩니다.
 
 <p align="left">
-    <img src="images/ok.png" alt="ok" width="700" />
+    <img src="images/ok.png" alt="프로젝트 생성 완료 화면" width="700" />
 </p>
 
 <p align="left">
-    <img src="images/ok_2.png" alt="ok_2" width="700" />
+    <img src="images/ok_2.png" alt="대화형 모드 종료 화면" width="700" />
 </p>
 
-You can check your configuration file, by running following command:
+다음 명령을 실행하여 구성 파일을 확인할 수 있습니다.
 
 ```bash
 
 cat HarnessBedrockVPC/app/HarnessBedrockVPC/harness.json
 ```
 
-#### Deploying your harness
+#### AgentCore Harness 배포
 
-**Enter the brand new created folder, and run following command to deploy your harness agent**:
+**새로 생성된 폴더로 이동한 후 다음 명령을 실행하여 AgentCore Harness 에이전트를 배포합니다.**
 
 ```bash
 cd HarnessBedrockVPC
@@ -139,15 +139,15 @@ agentcore deploy
 ```
 
 <p align="left">
-    <img src="images/deploy.png" alt="deploy" width="700" />
+    <img src="images/deploy.png" alt="AgentCore Harness 배포 화면" width="700" />
 </p>
 
-After your agent is deployed, you will receive a confirmation message. 
-You can also open CloudFormation console to check status of the deploy.
+에이전트가 배포되면 확인 메시지가 표시됩니다.
+CloudFormation 콘솔에서 배포 상태를 확인할 수도 있습니다.
 
-#### Testing
+#### 테스트
 
-You can invoke your harness with `invoke` command:
+`invoke` 명령으로 AgentCore Harness를 호출할 수 있습니다.
 
 ```bash
 

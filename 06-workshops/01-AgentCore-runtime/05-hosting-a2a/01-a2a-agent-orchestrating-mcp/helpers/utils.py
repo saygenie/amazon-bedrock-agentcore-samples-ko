@@ -1,14 +1,14 @@
 """
-Utility functions for Amazon Bedrock AgentCore A2A tutorial.
+Amazon Bedrock AgentCore A2A 튜토리얼용 유틸리티 함수입니다.
 
-This module provides helper functions for managing AWS resources including:
-- SSM parameters
+이 모듈은 다음 AWS 리소스를 관리하는 헬퍼 함수를 제공합니다.
+- SSM 파라미터
 - Secrets Manager
-- Cognito User Pools
-- IAM roles and policies
-- AgentCore runtimes
-- CloudWatch logs
-- ECR repositories
+- Cognito User Pool
+- IAM 역할 및 정책
+- AgentCore Runtime
+- CloudWatch Logs
+- ECR 리포지토리
 """
 
 import base64
@@ -23,7 +23,7 @@ from boto3.session import Session
 
 sts_client = boto3.client("sts")
 
-# Get AWS account details
+# AWS 계정 세부 정보 가져오기
 REGION = boto3.session.Session().region_name
 
 USERNAME = "testuser"
@@ -40,22 +40,22 @@ AWS_BLOG_ROLE_NAME = f"AWSBlogsAssistantBedrockAgentCoreRole-{REGION}"
 ORCHESTRATOR_ROLE_NAME = f"AWSOrchestratorAssistantAgentCoreRole-{REGION}"
 
 
-# General functions
+# 일반 함수
 def get_aws_account_id() -> str:
-    """Get the AWS account ID for the current session."""
+    """현재 세션의 AWS 계정 ID를 가져옵니다."""
     sts = boto3.client("sts")
     return sts.get_caller_identity()["Account"]
 
 
 def get_ssm_parameter(name: str, with_decryption: bool = True) -> str:
-    """Get a parameter value from AWS Systems Manager Parameter Store."""
+    """AWS Systems Manager Parameter Store에서 파라미터 값을 가져옵니다."""
     ssm = boto3.client("ssm")
     response = ssm.get_parameter(Name=name, WithDecryption=with_decryption)
     return response["Parameter"]["Value"]
 
 
 def put_ssm_parameter(name: str, value: str, parameter_type: str = "String", with_encryption: bool = False) -> None:
-    """Put a parameter value into AWS Systems Manager Parameter Store."""
+    """AWS Systems Manager Parameter Store에 파라미터 값을 저장합니다."""
     ssm = boto3.client("ssm")
     put_params = {
         "Name": name,
@@ -70,7 +70,7 @@ def put_ssm_parameter(name: str, value: str, parameter_type: str = "String", wit
 
 
 def delete_ssm_parameter(name: str) -> None:
-    """Delete a parameter from AWS Systems Manager Parameter Store."""
+    """AWS Systems Manager Parameter Store에서 파라미터를 삭제합니다."""
     ssm = boto3.client("ssm")
     try:
         ssm.delete_parameter(Name=name)
@@ -79,7 +79,7 @@ def delete_ssm_parameter(name: str) -> None:
 
 
 def save_secret(secret_value: str) -> bool:
-    """Save a secret in AWS Secrets Manager."""
+    """AWS Secrets Manager에 보안 암호를 저장합니다."""
     boto_session = Session()
     region = boto_session.region_name
     secrets_client = boto3.client("secretsmanager", region_name=region)
@@ -101,7 +101,7 @@ def save_secret(secret_value: str) -> bool:
 
 
 def get_cognito_secret() -> Optional[str]:
-    """Get a secret value from AWS Secrets Manager."""
+    """AWS Secrets Manager에서 보안 암호 값을 가져옵니다."""
     boto_session = Session()
     region = boto_session.region_name
     secrets_client = boto3.client("secretsmanager", region_name=region)
@@ -114,7 +114,7 @@ def get_cognito_secret() -> Optional[str]:
 
 
 def delete_cognito_secret() -> bool:
-    """Delete a secret from AWS Secrets Manager."""
+    """AWS Secrets Manager에서 보안 암호를 삭제합니다."""
     boto_session = Session()
     region = boto_session.region_name
     secrets_client = boto3.client("secretsmanager", region_name=region)
@@ -127,14 +127,14 @@ def delete_cognito_secret() -> bool:
         return False
 
 
-# Cognito Resources
+# Cognito 리소스
 def reauthenticate_user(client_id: str, client_secret: str) -> str:
-    """Reauthenticate user and return bearer token."""
+    """사용자를 다시 인증하고 bearer token을 반환합니다."""
     boto_session = Session()
     region = boto_session.region_name
-    # Initialize Cognito client
+    # Cognito 클라이언트 초기화
     cognito_client = boto3.client("cognito-idp", region_name=region)
-    # Authenticate User and get Access Token
+    # 사용자를 인증하고 Access Token 가져오기
 
     message = bytes(USERNAME + client_id, "utf-8")
     key = bytes(client_secret, "utf-8")
@@ -154,19 +154,19 @@ def reauthenticate_user(client_id: str, client_secret: str) -> str:
 
 
 def setup_cognito_user_pool() -> Optional[Dict[str, str]]:
-    """Set up Cognito user pool and return configuration."""
+    """Cognito User Pool을 설정하고 구성을 반환합니다."""
     boto_session = Session()
     region = boto_session.region_name
     cognito_client = boto3.client("cognito-idp", region_name=region)
 
     try:
-        # Create User Pool
+        # User Pool 생성
         user_pool_response = cognito_client.create_user_pool(
             PoolName="MCPServerPool", Policies={"PasswordPolicy": {"MinimumLength": 8}}
         )
         pool_id = user_pool_response["UserPool"]["Id"]
 
-        # Create App Client
+        # App Client 생성
         app_client_response = cognito_client.create_user_pool_client(
             UserPoolId=pool_id,
             ClientName="MCPServerPoolClient",
@@ -182,7 +182,7 @@ def setup_cognito_user_pool() -> Optional[Dict[str, str]]:
         client_id = client_config["ClientId"]
         client_secret = client_config["ClientSecret"]
 
-        # Create and configure user
+        # 사용자 생성 및 구성
         cognito_client.admin_create_user(
             UserPoolId=pool_id,
             Username=USERNAME,
@@ -197,7 +197,7 @@ def setup_cognito_user_pool() -> Optional[Dict[str, str]]:
             Permanent=True,
         )
 
-        # Generate secret hash and authenticate
+        # Secret hash를 생성하고 인증
         message = bytes(USERNAME + client_id, "utf-8")
         key_bytes = bytes(client_secret, "utf-8")
         secret_hash = base64.b64encode(hmac.new(key_bytes, message, digestmod=hashlib.sha256).digest()).decode()
@@ -213,7 +213,7 @@ def setup_cognito_user_pool() -> Optional[Dict[str, str]]:
         )
         bearer_token = auth_response["AuthenticationResult"]["AccessToken"]
 
-        # Create configuration object
+        # 구성 객체 생성
         discovery_url = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/openid-configuration"
 
         cognito_config = {
@@ -225,7 +225,7 @@ def setup_cognito_user_pool() -> Optional[Dict[str, str]]:
             "discovery_url": discovery_url,
         }
 
-        # Output and save configuration
+        # 구성 출력 및 저장
         print(f"Pool id: {pool_id}")
         print(f"Discovery URL: {discovery_url}")
         print(f"Client ID: {client_id}")
@@ -240,30 +240,30 @@ def setup_cognito_user_pool() -> Optional[Dict[str, str]]:
 
 
 def cleanup_cognito_resources(pool_id: str) -> bool:
-    """Delete Cognito resources including users, app clients, and user pool."""
+    """사용자, App Client 및 User Pool을 포함한 Cognito 리소스를 삭제합니다."""
     try:
-        # Initialize Cognito client using the same session configuration
+        # 동일한 세션 구성으로 Cognito 클라이언트 초기화
         boto_session = Session()
         region = boto_session.region_name
         cognito_client = boto3.client("cognito-idp", region_name=region)
 
         if pool_id:
             try:
-                # List and delete all app clients
+                # 모든 App Client 나열 및 삭제
                 clients_response = cognito_client.list_user_pool_clients(UserPoolId=pool_id, MaxResults=60)
 
                 for client in clients_response["UserPoolClients"]:
                     print(f"Deleting app client: {client['ClientName']}")
                     cognito_client.delete_user_pool_client(UserPoolId=pool_id, ClientId=client["ClientId"])
 
-                # List and delete all users
+                # 모든 사용자 나열 및 삭제
                 users_response = cognito_client.list_users(UserPoolId=pool_id, AttributesToGet=["email"])
 
                 for user in users_response.get("Users", []):
                     print(f"Deleting user: {user['Username']}")
                     cognito_client.admin_delete_user(UserPoolId=pool_id, Username=user["Username"])
 
-                # Delete the user pool
+                # User Pool 삭제
                 print(f"Deleting user pool: {pool_id}")
                 cognito_client.delete_user_pool(UserPoolId=pool_id)
 
@@ -286,15 +286,15 @@ def cleanup_cognito_resources(pool_id: str) -> bool:
         return False
 
 
-# AgentCore Resources
+# AgentCore 리소스
 def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
-    """Create IAM role for AgentCore runtime execution."""
+    """AgentCore Runtime 실행용 IAM 역할을 생성합니다."""
     iam = boto3.client("iam")
     boto_session = Session()
     region = boto_session.region_name
     account_id = get_aws_account_id()
 
-    # Trust relationship policy
+    # 신뢰 관계 정책
     trust_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -311,7 +311,7 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
         ],
     }
 
-    # IAM policy document
+    # IAM 정책 문서
     policy_document = {
         "Version": "2012-10-17",
         "Statement": [
@@ -416,7 +416,7 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
     }
 
     try:
-        # Check if role already exists
+        # 역할이 이미 있는지 확인
         try:
             existing_role = iam.get_role(RoleName=role_name)
             print(f"ℹ️ Role {role_name} already exists")
@@ -425,7 +425,7 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
         except iam.exceptions.NoSuchEntityException:
             pass
 
-        # Create IAM role
+        # IAM 역할 생성
         role_response = iam.create_role(
             RoleName=role_name,
             AssumeRolePolicyDocument=json.dumps(trust_policy),
@@ -435,14 +435,14 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
         print(f"✅ Created IAM role: {role_name}")
         print(f"Role ARN: {role_response['Role']['Arn']}")
 
-        # Check if policy already exists
+        # 정책이 이미 있는지 확인
         policy_arn = f"arn:aws:iam::{account_id}:policy/{POLICY_NAME}"
 
         try:
             iam.get_policy(PolicyArn=policy_arn)
             print(f"ℹ️ Policy {POLICY_NAME} already exists")
         except iam.exceptions.NoSuchEntityException:
-            # Create policy
+            # 정책 생성
             policy_response = iam.create_policy(
                 PolicyName=POLICY_NAME,
                 PolicyDocument=json.dumps(policy_document),
@@ -451,7 +451,7 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
             print(f"✅ Created policy: {POLICY_NAME}")
             policy_arn = policy_response["Policy"]["Arn"]
 
-        # Attach policy to role
+        # 역할에 정책 연결
         try:
             iam.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
             print("✅ Attached policy to role")
@@ -475,28 +475,28 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
 
 
 def delete_agentcore_runtime_execution_role(role_name: str) -> None:
-    """Delete AgentCore runtime execution role and associated policy."""
+    """AgentCore Runtime 실행 역할과 연결된 정책을 삭제합니다."""
     iam = boto3.client("iam")
 
     try:
         account_id = boto3.client("sts").get_caller_identity()["Account"]
         policy_arn = f"arn:aws:iam::{account_id}:policy/{POLICY_NAME}"
 
-        # Detach policy from role
+        # 역할에서 정책 분리
         try:
             iam.detach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
             print("✅ Detached policy from role")
         except iam.exceptions.ClientError:
             pass
 
-        # Delete role
+        # 역할 삭제
         try:
             iam.delete_role(RoleName=role_name)
             print(f"✅ Deleted role: {role_name}")
         except iam.exceptions.ClientError:
             pass
 
-        # Delete policy
+        # 정책 삭제
         try:
             iam.delete_policy(PolicyArn=policy_arn)
             print(f"✅ Deleted policy: {POLICY_NAME}")
@@ -510,12 +510,12 @@ def delete_agentcore_runtime_execution_role(role_name: str) -> None:
 
 
 def runtime_resource_cleanup(agent_runtime_id: str) -> None:
-    """Clean up AgentCore runtime resources."""
+    """AgentCore Runtime 리소스를 정리합니다."""
     try:
-        # Initialize AWS clients
+        # AWS 클라이언트 초기화
         agentcore_control_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
 
-        # Delete the AgentCore Runtime
+        # AgentCore Runtime 삭제
         response = agentcore_control_client.delete_agent_runtime(agentRuntimeId=agent_runtime_id)
         print(f"  ✅ Agent runtime {agent_runtime_id} deleted: {response['status']}")
     except Exception as e:
@@ -523,10 +523,10 @@ def runtime_resource_cleanup(agent_runtime_id: str) -> None:
 
 
 def ecr_repo_cleanup() -> None:
-    """Clean up ECR repositories."""
+    """ECR 리포지토리를 정리합니다."""
     try:
         ecr_client = boto3.client("ecr", region_name=REGION)
-        # Delete the ECR repository
+        # ECR 리포지토리 삭제
         print("  🗑️  Deleting ECR repository...")
         repositories = ecr_client.describe_repositories()
 
@@ -546,7 +546,7 @@ def ecr_repo_cleanup() -> None:
 
 
 def get_memory_name(agent_name: str) -> Optional[str]:
-    """Get memory name for a given agent."""
+    """지정된 Agent의 Memory 이름을 가져옵니다."""
     try:
         agentcore_control_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
         resp = agentcore_control_client.list_memories()
@@ -560,7 +560,7 @@ def get_memory_name(agent_name: str) -> Optional[str]:
 
 
 def short_memory_cleanup(agent_name: str) -> None:
-    """Clean up short-term memory for an agent."""
+    """Agent의 단기 Memory를 정리합니다."""
     try:
         agentcore_control_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
         memory_id = get_memory_name(agent_name)
@@ -571,17 +571,17 @@ def short_memory_cleanup(agent_name: str) -> None:
         print(f"  ⚠️  Error deleting memories: {e}")
 
 
-# Observability Cleanup
+# 관찰성 리소스 정리
 def delete_observability_resources(agent_name: str) -> None:
-    """Delete observability resources for an agent."""
-    # Configuration
+    """Agent의 관찰성 리소스를 삭제합니다."""
+    # 구성
     log_stream_name = "default"
 
     logs_client = boto3.client("logs", region_name=REGION)
 
     complete_log_group = LOG_GROUP_BASE_NAME + agent_name + "-DEFAULT"
 
-    # Delete log stream first (must be done before deleting log group)
+    # 먼저 Log Stream 삭제(Log Group보다 먼저 삭제해야 함)
     try:
         print(f"  🗑️  Deleting log stream '{log_stream_name}'...")
         logs_client.delete_log_stream(logGroupName=complete_log_group, logStreamName=log_stream_name)
@@ -592,7 +592,7 @@ def delete_observability_resources(agent_name: str) -> None:
         else:
             print(f"  ⚠️  Error deleting log stream: {e}")
 
-    # Delete log group
+    # Log Group 삭제
     try:
         print(f"  🗑️  Deleting log group '{complete_log_group}'...")
         logs_client.delete_log_group(logGroupName=complete_log_group)
@@ -604,12 +604,12 @@ def delete_observability_resources(agent_name: str) -> None:
             print(f"  ⚠️  Error deleting log group: {e}")
 
 
-# Local Files Cleanup
+# 로컬 파일 정리
 
 
 def local_file_cleanup() -> None:
-    """Clean up local files created during the tutorial."""
-    # List of files to clean up
+    """튜토리얼 중 생성된 로컬 파일을 정리합니다."""
+    # 정리할 파일 목록
     files_to_delete = [
         "Dockerfile",
         ".dockerignore",

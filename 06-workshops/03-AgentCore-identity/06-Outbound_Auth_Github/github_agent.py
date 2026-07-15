@@ -9,11 +9,11 @@ from strands import Agent, tool
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 from bedrock_agentcore.identity.auth import requires_access_token
 
-# Environment configuration
+# 환경 설정
 os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["OTEL_PYTHON_EXCLUDED_URLS"] = "/ping,/invocations"
 
-# Initialize app
+# 애플리케이션 초기화
 app = BedrockAgentCoreApp()
 
 
@@ -53,7 +53,7 @@ def inspect_github_repos() -> str:
         str: A JSON string containing the list of repositories and their details
     """
 
-    # We use nested function so that the tool signature derivation does not consider the access_token parameter
+    # 도구 시그니처를 추론할 때 access_token 파라미터를 포함하지 않도록 중첩 함수 사용
     @requires_access_token(
         provider_name="github-provider",
         scopes=["repo", "read:user"],
@@ -86,13 +86,13 @@ def inspect_github_repos() -> str:
 
         try:
             with httpx.Client() as client:
-                # Get user information
+                # 사용자 정보 가져오기
                 user_response = client.get("https://api.github.com/user", headers=headers)
                 user_response.raise_for_status()
                 username = user_response.json().get("login", "Unknown")
                 app.logger.info(f"✅ User: {username}")
 
-                # Search for user's repositories
+                # 사용자 저장소 검색
                 repos_response = client.get(
                     f"https://api.github.com/search/repositories?q=user:{username}",
                     headers=headers,
@@ -105,7 +105,7 @@ def inspect_github_repos() -> str:
                 if not repos:
                     return f"No repositories found for {username}."
 
-                # Format repository information
+                # 저장소 정보 형식 지정
                 response_lines = [f"GitHub repositories for {username}:\n"]
 
                 for repo in repos:
@@ -117,7 +117,7 @@ def inspect_github_repos() -> str:
 
                     if repo.get("description"):
                         response_lines.append(f"   {repo['description']}")
-                    response_lines.append("")  # Empty line for spacing
+                    response_lines.append("")  # 간격을 위한 빈 줄
 
                 return "\n".join(response_lines)
 
@@ -129,7 +129,7 @@ def inspect_github_repos() -> str:
     return inspect_github_repos_tool()
 
 
-# Initialize the agent with tools and your preferred model choice
+# 도구와 원하는 모델을 사용하여 에이전트 초기화
 agent = Agent(
     model="global.anthropic.claude-haiku-4-5-20251001-v1:0",
     tools=[inspect_github_repos],
@@ -143,7 +143,7 @@ async def agent_task(user_message: str):
     try:
         await queue.put("Begin agent execution")
 
-        # Call the agent first to see if it needs authentication
+        # 먼저 에이전트를 호출하여 인증이 필요한지 확인
         response = await agent.invoke_async(user_message)
 
         await queue.put(response.message)
@@ -161,16 +161,16 @@ async def agent_invocation(payload):
         "No prompt found in input, please guide customer to create a json payload with prompt key",
     )
 
-    # Create and start the agent task
+    # 에이전트 태스크를 생성하고 시작
     task = asyncio.create_task(agent_task(user_message))
 
-    # Return the stream, but ensure the task runs concurrently
+    # 태스크가 동시에 실행되도록 보장하면서 스트림 반환
     async def stream_with_task():
-        # Stream results as they come
+        # 결과가 도착하는 대로 스트리밍
         async for item in queue.stream():
             yield item
 
-        # Ensure the task completes
+        # 태스크 완료 보장
         await task
 
     return stream_with_task()

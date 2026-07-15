@@ -1,15 +1,14 @@
 """
-AgentCore Runtime agent that calls tools through an AgentCore Gateway.
+AgentCore Gateway를 통해 도구를 호출하는 AgentCore Runtime 에이전트입니다.
 
-- Inbound Auth:  The runtime endpoint is protected by a Cognito JWT.
-                 Callers must present a valid bearer token.
-- Outbound Auth: The agent authenticates to the Gateway using a managed OAuth2
-                 credential (created by the CLI --agent-client-id/secret).
-                 The Gateway then authenticates to the upstream MCP server.
+- 인바운드 인증: 런타임 엔드포인트가 Cognito JWT로 보호됩니다.
+                  호출자는 유효한 bearer token을 제시해야 합니다.
+- 아웃바운드 인증: 에이전트가 관리형 OAuth2 자격 증명
+                   (CLI의 --agent-client-id/secret으로 생성)을 사용해 Gateway에 인증합니다.
+                   그런 다음 Gateway가 업스트림 MCP 서버에 인증합니다.
 
-The agent retrieves a Bearer token for the Gateway via AgentCore Identity
-(@requires_access_token), then calls the Gateway's MCP endpoint with httpx
-to discover and invoke tools.
+에이전트는 AgentCore Identity(@requires_access_token)를 통해 Gateway용 bearer token을
+가져온 다음, httpx로 Gateway의 MCP 엔드포인트를 호출하여 도구를 검색하고 실행합니다.
 """
 
 import os
@@ -32,12 +31,12 @@ _gateway_token_cache: dict = {}
     scopes=[],
 )
 async def _fetch_gateway_token(*, access_token: str) -> None:
-    """Fetch the managed Bearer token for the Gateway from AgentCore Identity."""
+    """AgentCore Identity에서 Gateway용 관리형 bearer token을 가져옵니다."""
     _gateway_token_cache["token"] = access_token
 
 
 async def _call_mcp(method: str, params: dict) -> dict:
-    """Call the AgentCore Gateway MCP endpoint with the managed credential."""
+    """관리형 자격 증명으로 AgentCore Gateway MCP 엔드포인트를 호출합니다."""
     if "token" not in _gateway_token_cache:
         await _fetch_gateway_token(access_token="")
 

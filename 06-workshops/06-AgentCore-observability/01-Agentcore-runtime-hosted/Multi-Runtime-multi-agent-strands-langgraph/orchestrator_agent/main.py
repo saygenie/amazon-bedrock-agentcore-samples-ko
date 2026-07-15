@@ -1,6 +1,6 @@
 """
-Orchestrator Agent: Strands-based agent that coordinates sub-agents.
-Uses direct AgentCore Runtime invocation with session ID propagation for trace correlation.
+Orchestrator Agent: 하위 에이전트를 조정하는 Strands 기반 에이전트입니다.
+트레이스 상관관계를 위해 세션 ID를 전파하며 AgentCore Runtime을 직접 호출합니다.
 """
 
 from strands import Agent, tool
@@ -23,27 +23,27 @@ MODEL_ID = os.getenv("MODEL_ID", "global.anthropic.claude-haiku-4-5-20251001-v1:
 
 
 def get_ssm_parameter(name: str) -> str:
-    """Get parameter from SSM."""
+    """SSM에서 파라미터를 가져옵니다."""
     return boto3.client("ssm").get_parameter(Name=name)["Parameter"]["Value"]
 
 
 def get_region() -> str:
-    """Get AWS region."""
+    """AWS 리전을 가져옵니다."""
     return boto3.Session().region_name or os.getenv("AWS_REGION", "us-east-1")
 
 
 class OrchestratorAgent:
-    """Orchestrator that coordinates sub-agents via direct invocation."""
+    """직접 호출을 통해 하위 에이전트를 조정하는 오케스트레이터입니다."""
 
     def __init__(self, session_id: str, user_id: str):
         self.session_id = session_id
         self.user_id = user_id
         self.region = get_region()
 
-        # Create AgentCore client for calling sub-agents
+        # 하위 에이전트 호출용 AgentCore 클라이언트 생성
         self.agentcore_client = boto3.client("bedrock-agentcore", region_name=self.region)
 
-        # Load sub-agent ARNs from SSM
+        # SSM에서 하위 에이전트 ARN 로드
         self.travel_arn = get_ssm_parameter("/agents/travel_agent_arn")
         self.weather_arn = get_ssm_parameter("/agents/weather_agent_arn")
 
@@ -51,7 +51,7 @@ class OrchestratorAgent:
         logger.info(f"Travel agent ARN: {self.travel_arn}")
         logger.info(f"Weather agent ARN: {self.weather_arn}")
 
-        # Create agent with tools
+        # 도구를 포함한 에이전트 생성
         model = BedrockModel(model_id=MODEL_ID)
         self.agent = Agent(
             name="Orchestrator",
@@ -64,29 +64,29 @@ Always call the appropriate agent tools to get real information, then combine th
         )
 
     def _call_sub_agent(self, agent_arn: str, query: str) -> str:
-        """Call a sub-agent via AgentCore Runtime with session propagation."""
+        """세션을 전파하며 AgentCore Runtime을 통해 하위 에이전트를 호출합니다."""
         try:
             payload = json.dumps({"prompt": query})
 
             logger.info(f"Calling sub-agent {agent_arn} with session {self.session_id}")
 
-            # Use the correct API parameters
+            # 올바른 API 파라미터 사용
             response = self.agentcore_client.invoke_agent_runtime(
                 agentRuntimeArn=agent_arn,
                 qualifier="DEFAULT",
                 payload=payload,
-                runtimeSessionId=self.session_id,  # For trace correlation
-                runtimeUserId=self.user_id,  # Required for SIGV4 auth
+                runtimeSessionId=self.session_id,  # 트레이스 상관관계에 사용
+                runtimeUserId=self.user_id,  # SIGV4 인증에 필요
             )
 
-            # Read response - use 'response' key (not 'body')
+            # 응답 읽기: 'body'가 아닌 'response' 키 사용
             response_body = response["response"].read().decode("utf-8")
             logger.info(f"Sub-agent response: {response_body[:200]}...")
 
-            # Parse the response
+            # 응답 파싱
             result = json.loads(response_body)
 
-            # Handle wrapped response format
+            # 래핑된 응답 형식 처리
             if isinstance(result, dict) and "response" in result:
                 resp = result["response"]
                 if isinstance(resp, list):
@@ -121,16 +121,16 @@ Always call the appropriate agent tools to get real information, then combine th
 
 @app.entrypoint
 def invoke(payload, context):
-    """Main entrypoint - receives session context from AgentCore Runtime."""
+    """AgentCore Runtime에서 세션 컨텍스트를 받는 기본 진입점입니다."""
     prompt = payload.get("prompt", "")
 
-    # Get session ID from AgentCore context or generate new one
+    # AgentCore 컨텍스트에서 세션 ID를 가져오거나 새로 생성
     session_id = context.session_id if hasattr(context, "session_id") else str(uuid.uuid4())
 
-    # Set session ID in OpenTelemetry baggage for propagation
+    # 전파를 위해 OpenTelemetry baggage에 세션 ID 설정
     baggage.set_baggage("session.id", session_id)
 
-    # Get user ID from headers or use default
+    # 헤더에서 사용자 ID를 가져오거나 기본값 사용
     request_headers = context.request_headers or {}
     user_id = request_headers.get(
         "x-amzn-bedrock-agentcore-runtime-user-id",

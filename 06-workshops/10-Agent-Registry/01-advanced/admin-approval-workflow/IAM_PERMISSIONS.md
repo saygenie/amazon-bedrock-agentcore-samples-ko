@@ -1,15 +1,15 @@
-# IAM Permissions for Admin Approval Workflow sample
+# 관리자 승인 워크플로 예제의 IAM 권한
 
-Create IAM user or role with the following permissions.
+다음 권한을 가진 IAM 사용자 또는 역할을 생성합니다.
 
-> **Before using these policies**, replace every occurrence of `YOUR_ACCOUNT_ID` with your 12-digit AWS account ID.
-> Run the following command to find it:
+> **이 정책을 사용하기 전에** 모든 `YOUR_ACCOUNT_ID`를 12자리 AWS 계정 ID로 바꾸세요.
+> 계정 ID를 확인하려면 다음 명령을 실행합니다.
 > ```bash
 > aws sts get-caller-identity --query Account --output text
 > ```
-> Then do a find-and-replace of `YOUR_ACCOUNT_ID` in the JSON below before attaching the policy.
+> 정책을 연결하기 전에 아래 JSON에서 `YOUR_ACCOUNT_ID`를 찾아 모두 바꾸세요.
 
-## Policy for AWS Agent Registry access (Administrator)
+## AWS Agent Registry 액세스 정책(관리자)
 
 ```json
 {
@@ -70,7 +70,7 @@ Create IAM user or role with the following permissions.
 }
 ```
 
-## Policy for AWS Agent Registry access (Publisher)
+## AWS Agent Registry 액세스 정책(게시자)
 
 ```json
 {
@@ -112,7 +112,7 @@ Create IAM user or role with the following permissions.
 }
 ```
 
-## Permissions Required to deploy the required CI/CD stack such as DynamoDB and AWS Lambda etc.
+## DynamoDB, AWS Lambda 등 필수 CI/CD 스택 배포에 필요한 권한
 
 ```json
 {
@@ -262,5 +262,4 @@ Create IAM user or role with the following permissions.
     ]
 }
 ```
-
 

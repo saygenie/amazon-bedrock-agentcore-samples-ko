@@ -1,11 +1,11 @@
 """
-Lab 05: Cleanup Supervisor Agent Resources
+Lab 05: Supervisor Agent 리소스 정리
 
-Cleans up all resources created during Lab 05 deployment:
+Lab 05 배포 중 생성한 모든 리소스를 정리합니다.
 - Supervisor Agent Runtime
-- IAM Role
-- ECR Repository (optional)
-- agent-supervisor.py file
+- IAM 역할
+- ECR 리포지토리(선택 사항)
+- agent-supervisor.py 파일
 - Dockerfile
 - .bedrock_agentcore.yaml
 """
@@ -24,15 +24,15 @@ logger = logging.getLogger(__name__)
 
 def delete_supervisor_runtime(runtime_name: str, region: str = AWS_REGION, verbose: bool = True) -> bool:
     """
-    Delete supervisor agent runtime.
+    Supervisor Agent Runtime을 삭제합니다.
 
-    Args:
-        runtime_name: Name of the supervisor runtime to delete
-        region: AWS region
-        verbose: Print status messages
+    인자:
+        runtime_name: 삭제할 Supervisor Runtime 이름
+        region: AWS 리전
+        verbose: 상태 메시지 출력 여부
 
-    Returns:
-        True if successful, False otherwise
+    반환:
+        성공하면 True, 그렇지 않으면 False
     """
     try:
         agentcore = boto3.client("bedrock-agentcore-control", region_name=region)
@@ -40,7 +40,7 @@ def delete_supervisor_runtime(runtime_name: str, region: str = AWS_REGION, verbo
         if verbose:
             logger.info(f"🗑️  Deleting supervisor runtime: {runtime_name}")
 
-        # List runtimes to find the one to delete
+        # Runtime 목록에서 삭제할 항목 찾기
         response = agentcore.list_agent_runtimes()
         runtime_id = None
 
@@ -54,7 +54,7 @@ def delete_supervisor_runtime(runtime_name: str, region: str = AWS_REGION, verbo
                 logger.warning(f"⚠️  Runtime not found: {runtime_name}")
             return True
 
-        # Delete the runtime
+        # Runtime 삭제
         agentcore.delete_agent_runtime(agentRuntimeId=runtime_id)
 
         if verbose:
@@ -76,15 +76,15 @@ def delete_supervisor_runtime(runtime_name: str, region: str = AWS_REGION, verbo
 
 def delete_supervisor_gateway(gateway_name: str, region: str = AWS_REGION, verbose: bool = True) -> bool:
     """
-    Delete supervisor gateway.
+    Supervisor Gateway를 삭제합니다.
 
-    Args:
-        gateway_name: Name of the supervisor gateway to delete
-        region: AWS region
-        verbose: Print status messages
+    인자:
+        gateway_name: 삭제할 Supervisor Gateway 이름
+        region: AWS 리전
+        verbose: 상태 메시지 출력 여부
 
-    Returns:
-        True if successful, False otherwise
+    반환:
+        성공하면 True, 그렇지 않으면 False
     """
     try:
         agentcore = boto3.client("bedrock-agentcore-control", region_name=region)
@@ -92,7 +92,7 @@ def delete_supervisor_gateway(gateway_name: str, region: str = AWS_REGION, verbo
         if verbose:
             logger.info(f"🗑️  Deleting supervisor gateway: {gateway_name}")
 
-        # List gateways to find the one to delete
+        # Gateway 목록에서 삭제할 항목 찾기
         response = agentcore.list_gateways()
         gateway_id = None
 
@@ -106,7 +106,7 @@ def delete_supervisor_gateway(gateway_name: str, region: str = AWS_REGION, verbo
                 logger.warning(f"⚠️  Gateway not found: {gateway_name}")
             return True
 
-        # Delete the gateway
+        # Gateway 삭제
         agentcore.delete_gateway(gatewayIdentifier=gateway_id)
 
         if verbose:
@@ -133,16 +133,16 @@ def delete_ecr_repository(
     force: bool = True,
 ) -> bool:
     """
-    Delete ECR repository for supervisor runtime.
+    Supervisor Runtime용 ECR 리포지토리를 삭제합니다.
 
-    Args:
-        repository_name: Name of the ECR repository
-        region: AWS region
-        verbose: Print status messages
-        force: Force delete even if repository has images
+    인자:
+        repository_name: ECR 리포지토리 이름
+        region: AWS 리전
+        verbose: 상태 메시지 출력 여부
+        force: 리포지토리에 이미지가 있어도 강제로 삭제할지 여부
 
-    Returns:
-        True if successful, False otherwise
+    반환:
+        성공하면 True, 그렇지 않으면 False
     """
     try:
         ecr = boto3.client("ecr", region_name=region)
@@ -171,19 +171,19 @@ def delete_ecr_repository(
 
 def delete_supervisor_files(file_names: List[str] = None, verbose: bool = True) -> Dict[str, bool]:
     """
-    Delete supervisor-related files from project root.
+    프로젝트 루트에서 Supervisor 관련 파일을 삭제합니다.
 
-    Args:
-        file_names: List of file names to delete (auto-defaults to standard files if not provided)
-        verbose: Print status messages
+    인자:
+        file_names: 삭제할 파일 이름 목록(제공하지 않으면 표준 파일을 기본값으로 사용)
+        verbose: 상태 메시지 출력 여부
 
-    Returns:
-        Dict with deletion status for each file
+    반환:
+        각 파일의 삭제 상태가 포함된 딕셔너리
     """
     if file_names is None:
         file_names = ["agent-supervisor.py", "Dockerfile", ".bedrock_agentcore.yaml"]
 
-    # Get the project root directory (3 levels up from lab_helpers/lab_05/cleanup.py)
+    # 프로젝트 루트 디렉터리 가져오기(lab_helpers/lab_05/cleanup.py에서 3단계 상위)
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     deletion_status = {}
@@ -214,15 +214,15 @@ def delete_supervisor_files(file_names: List[str] = None, verbose: bool = True) 
 
 def cleanup_lab_05(region_name: str = AWS_REGION, verbose: bool = True, delete_ecr: bool = True) -> Dict[str, bool]:
     """
-    Clean up all Lab 05 resources.
+    Lab 05의 모든 리소스를 정리합니다.
 
-    Args:
-        region_name: AWS region
-        verbose: Print status messages
-        delete_ecr: Whether to delete ECR repository (default: True)
+    인자:
+        region_name: AWS 리전
+        verbose: 상태 메시지 출력 여부
+        delete_ecr: ECR 리포지토리 삭제 여부(기본값: True)
 
-    Returns:
-        Dict with cleanup status for each resource
+    반환:
+        각 리소스의 정리 상태가 포함된 딕셔너리
     """
     logger.info("\n🧹 Starting Lab-05 Cleanup...")
     if verbose:
@@ -230,7 +230,7 @@ def cleanup_lab_05(region_name: str = AWS_REGION, verbose: bool = True, delete_e
 
     cleanup_status = {}
 
-    # 1. Delete supervisor runtime
+    # 1. Supervisor Runtime 삭제
     if verbose:
         logger.info("\n1️⃣  Deleting Supervisor Runtime...")
     cleanup_status["runtime"] = delete_supervisor_runtime(
@@ -239,7 +239,7 @@ def cleanup_lab_05(region_name: str = AWS_REGION, verbose: bool = True, delete_e
         verbose=verbose,
     )
 
-    # 2. Delete IAM role
+    # 2. IAM 역할 삭제
     if verbose:
         logger.info("\n2️⃣  Deleting IAM Role...")
     cleanup_status["iam_role"] = delete_supervisor_runtime_iam_role(
@@ -247,7 +247,7 @@ def cleanup_lab_05(region_name: str = AWS_REGION, verbose: bool = True, delete_e
         region=region_name,
     )
 
-    # 3. Delete ECR repository
+    # 3. ECR 리포지토리 삭제
     if verbose:
         logger.info("\n3️⃣  Deleting ECR Repository...")
     cleanup_status["ecr"] = delete_ecr_repository(
@@ -257,13 +257,13 @@ def cleanup_lab_05(region_name: str = AWS_REGION, verbose: bool = True, delete_e
         force=True,
     )
 
-    # 4. Delete supervisor-related files
+    # 4. Supervisor 관련 파일 삭제
     if verbose:
         logger.info("\n4️⃣  Deleting Supervisor Files...")
     files_cleanup = delete_supervisor_files(verbose=verbose)
     cleanup_status.update(files_cleanup)
 
-    # Summary
+    # 요약
     if verbose:
         logger.info("\n" + "=" * 70)
         logger.info("✅ Lab-05 Cleanup Summary:")

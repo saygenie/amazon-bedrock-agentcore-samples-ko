@@ -1,11 +1,11 @@
-# AgentCore Observability 
+# AgentCore Observability
 
-This repository demonstrates how to implement AgentCore observability for Agents using Amazon CloudWatch and other providers. It provides examples for both Amazon Bedrock AgentCore Runtime hosted agents and agents hosted non on runtime with popular open-source agent frameworks.
+이 저장소에서는 Amazon CloudWatch 및 기타 제공업체를 사용하여 에이전트에 AgentCore Observability를 구현하는 방법을 살펴봅니다. Amazon Bedrock AgentCore Runtime에서 호스팅되는 에이전트와 널리 사용되는 오픈 소스 에이전트 프레임워크를 사용하여 Runtime 외부에서 호스팅되는 에이전트의 예제를 모두 제공합니다.
 
 
 
-For more details on AgentCore Observability, please refer to [this](https://aws.amazon.com/blogs/machine-learning/build-trustworthy-ai-agents-with-amazon-bedrock-agentcore-observability/) blog post.
-## Project Structure
+AgentCore Observability에 대한 자세한 내용은 [이 블로그 게시물](https://aws.amazon.com/blogs/machine-learning/build-trustworthy-ai-agents-with-amazon-bedrock-agentcore-observability/)을 참조하세요.
+## 프로젝트 구조
 
 ```
 06-AgentCore-observability/
@@ -79,72 +79,72 @@ For more details on AgentCore Observability, please refer to [this](https://aws.
 └── README.md
 ```
 
-## Overview
+## 개요
 
-This repository provides examples and tools to help developers implement observability for GenAI applications. AgentCore Observability helps developers trace, debug, and monitor agent performance in production through unified operational dashboards. With support for OpenTelemetry compatible telemetry and detailed visualizations of each step of the agent workflow, Amazon CloudWatch GenAI Observability enables developers to easily gain visibility into agent behavior and maintain standards at scale.
+이 저장소는 개발자가 생성형 AI 애플리케이션에 관측성을 구현하는 데 도움이 되는 예제와 도구를 제공합니다. AgentCore Observability를 사용하면 통합 운영 대시보드에서 프로덕션 환경의 에이전트 성능을 추적, 디버깅 및 모니터링할 수 있습니다. Amazon CloudWatch GenAI Observability는 OpenTelemetry 호환 텔레메트리와 에이전트 워크플로 각 단계의 상세한 시각화를 지원하므로, 개발자가 에이전트 동작을 쉽게 파악하고 대규모 환경에서도 품질 기준을 유지할 수 있습니다.
 
-## Contents
+## 구성
 
-Demonstrates examples using the popular Agent dveelopment fraemworks: 
+널리 사용되는 다음 에이전트 개발 프레임워크의 예제를 살펴봅니다.
 
-- **Strands Agents**: Build LLM applications with complex workflows using model-driven agentic development
-- **CrewAI**: Create autonomous AI agents that work together in roles to accomplish tasks
-- **LangGraph**: Extend LangChain with stateful, multi-actor applications for complex reasoning systems
-- **LlamaIndex**: LLM-powered agents over data with workflows
+- **Strands Agents**: 모델 중심의 에이전트 개발 방식으로 복잡한 워크플로를 갖춘 LLM 애플리케이션 구축
+- **CrewAI**: 역할에 따라 협업하며 작업을 수행하는 자율 AI 에이전트 생성
+- **LangGraph**: 복잡한 추론 시스템을 위한 상태 기반 다중 행위자 애플리케이션으로 LangChain 확장
+- **LlamaIndex**: 워크플로를 활용하여 데이터 기반의 LLM 에이전트 구축
 
 
-### 1. Bedrock AgentCore Runtime Hosted (01-Agentcore-runtime-hosted)
+### 1. Bedrock AgentCore Runtime 호스팅 (01-Agentcore-runtime-hosted)
 
-Examples demonstrating observability for Agents hosted on Amazon Bedrock AgentCore Runtime using Amazon OpenTelemetry Python Instrumentation and Amazon CloudWatch.
+Amazon OpenTelemetry Python Instrumentation과 Amazon CloudWatch를 사용하여 Amazon Bedrock AgentCore Runtime에서 호스팅되는 에이전트의 관측성을 구현하는 예제입니다.
 
-### 2. Agent Not Hosted on Runtime (02-Agent-not-hosted-on-runtime)
+### 2. Runtime 외부에서 호스팅되는 에이전트 (02-Agent-not-hosted-on-runtime)
 
-Examples showcasing observability for popular open-source agent frameworks not hosted on Amazon Bedrock AgentCore Runtime:
+Amazon Bedrock AgentCore Runtime에서 호스팅되지 않는 널리 사용되는 오픈 소스 에이전트 프레임워크의 관측성 예제입니다.
 
-### 3. Advanced Concepts (03-advanced-concepts)
+### 3. 고급 개념 (03-advanced-concepts)
 
-Advanced observability patterns and techniques:
+고급 관측성 패턴과 기법을 다룹니다.
 
-- **Custom Span Creation**: Learn how to create custom spans for detailed tracing and monitoring of specific operations within your agent workflows
+- **사용자 지정 스팬 생성**: 에이전트 워크플로의 특정 작업을 상세히 추적하고 모니터링하기 위한 사용자 지정 스팬 생성 방법 학습
 
-### 4. Partner Observability (04-Agentcore-runtime-partner-observability)
+### 4. 파트너 관측성 (04-Agentcore-runtime-partner-observability)
 
-Examples of using agents hosted on Amazon Bedrock AgentCore Runtime with third-party observability tools:
+Amazon Bedrock AgentCore Runtime에서 호스팅되는 에이전트를 서드 파티 관측성 도구와 함께 사용하는 예제입니다.
 
-- **Arize**: AI and Agent engineering platform
-- **Braintrust**: AI evaluation and monitoring platform
-- **Datadog**: Unified observability platform for monitoring, APM, logs, and traces
-- **Instana**: Real-Time APM and Observability Platform
-- **Langfuse**: LLM observability and analytics
+- **Arize**: AI 및 에이전트 엔지니어링 플랫폼
+- **Braintrust**: AI 평가 및 모니터링 플랫폼
+- **Datadog**: 모니터링, APM, 로그 및 트레이스를 위한 통합 관측성 플랫폼
+- **Instana**: 실시간 APM 및 관측성 플랫폼
+- **Langfuse**: LLM 관측성 및 분석
 
-### 5. Lambda AgentCore Invocation (05-Lambda-AgentCore-invocation)
+### 5. Lambda에서 AgentCore 호출 (05-Lambda-AgentCore-invocation)
 
-Learn how to invoke AgentCore Runtime agents from AWS Lambda functions with full CloudWatch observability:
+완전한 CloudWatch 관측성을 갖춘 AWS Lambda 함수에서 AgentCore Runtime 에이전트를 호출하는 방법을 학습합니다.
 
-- **Lambda Integration**: Deploy serverless functions that invoke hosted agents
-- **MCP Multi-Server**: Use multiple MCP servers (AWS Docs + CDK) in a single agent
-- **CloudWatch GenAI Observability**: Monitor agent behavior and performance in production
+- **Lambda 통합**: 호스팅된 에이전트를 호출하는 서버리스 함수 배포
+- **MCP 다중 서버**: 단일 에이전트에서 여러 MCP 서버(AWS Docs + CDK) 사용
+- **CloudWatch GenAI Observability**: 프로덕션 환경의 에이전트 동작과 성능 모니터링
 
-## Getting Started
+## 시작하기
 
-1. Navigate to the directory of the framework you want to explore
-2. Install the requirements.
-3. Configure your AWS credentials
-4. Copy the `.env.example` file to `.env` and update the variables
-5. Open and run the Jupyter notebook
+1. 살펴볼 프레임워크의 디렉터리로 이동합니다.
+2. 필수 패키지를 설치합니다.
+3. AWS 자격 증명을 구성합니다.
+4. `.env.example` 파일을 `.env`로 복사하고 변수를 업데이트합니다.
+5. Jupyter notebook을 열어 실행합니다.
 
-## Prerequisites
+## 사전 요구 사항
 
-- AWS account with appropriate permissions
+- 적절한 권한이 있는 AWS 계정
 - Python 3.10+
-- Jupyter notebook environment
-- AWS CLI configured with your credentials
-- Enable Transaction Search
+- Jupyter 노트북 환경
+- 자격 증명이 구성된 AWS CLI
+- Transaction Search 활성화
 
-## Clean Up
+## 정리
 
-Please delete the Log groups and associated resources created on Amazon CloudWatch after completing the examples to avoid unnecessary charges.
+불필요한 비용이 발생하지 않도록 예제를 완료한 후 Amazon CloudWatch에서 생성한 로그 그룹과 관련 리소스를 삭제하세요.
 
-## License
+## 라이선스
 
-This project is licensed under the terms specified in the repository.
+이 프로젝트에는 저장소에 명시된 라이선스 조건이 적용됩니다.

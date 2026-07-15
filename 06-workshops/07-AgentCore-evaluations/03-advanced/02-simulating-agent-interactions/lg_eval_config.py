@@ -1,26 +1,26 @@
-# Evaluation Configuration
-# Edit the values below to customize your evaluation setup
+# 평가 구성
+# 평가 설정을 사용자 지정하려면 아래 값을 편집하세요.
 
-# AWS Configuration
+# AWS 구성
 AWS_REGION = "us-east-1"
 
-# AgentCore Configuration for your runtime deployed agent
-# TODO: Replace <YOUR_ACCOUNT_ID> and <UNIQUE-ID> with your actual values
+# Runtime에 배포된 agent의 AgentCore 구성
+# TODO: <YOUR_ACCOUNT_ID>와 <UNIQUE-ID>를 실제 값으로 바꾸세요.
 AGENT_ARN = "arn:aws:bedrock-agentcore:us-east-1:<YOUR_ACCOUNT_ID>:runtime/langgraph_web_search_agent-<UNIQUE-ID>"
 QUALIFIER = "DEFAULT"
 LOG_GROUP_NAME = "/aws/bedrock-agentcore/runtimes/langgraph_web_search_agent-<UNIQUE-ID>-DEFAULT"
 SERVICE_NAME = "langgraph_web_search_agent.DEFAULT"
 
-# Evaluation Configuration for AgentCore Evaluators using Online APIs
+# Online API를 사용하는 AgentCore Evaluators의 평가 구성
 EVAL_CONFIG_NAME = "web_search_agent_online_eval"
 EVAL_DESCRIPTION = "Online evaluation for web search agent test cases with builtin metrics"
-# TODO: Replace <YOUR_ACCOUNT_ID> with your actual AWS account ID
+# TODO: <YOUR_ACCOUNT_ID>를 실제 AWS 계정 ID로 바꾸세요.
 EVALUATION_ROLE_ARN = "arn:aws:iam::<YOUR_ACCOUNT_ID>:role/AgentCoreEvaluationRole"
 SAMPLING_PERCENTAGE = 100.0
 SESSION_TIMEOUT_MINUTES = 5
 EVALUATION_ENDPOINT_URL = "https://bedrock-agentcore-control.us-east-1.amazonaws.com"
 
-# Builtin Evaluators - Add or remove as needed
+# Builtin Evaluators - 필요에 따라 추가하거나 제거
 EVALUATORS = [
     "Builtin.Correctness",
     "Builtin.Faithfulness",
@@ -37,7 +37,7 @@ EVALUATORS = [
     "Builtin.ToolParameterAccuracy",
 ]
 
-# Agent Context for strands eval dataset generator
+# strands eval 데이터 세트 생성기용 에이전트 컨텍스트
 AGENT_CAPABILITIES = "Real-time web search using DuckDuckGo to find current information about destinations, attractions, events, shows, restaurants, museums, activities, travel tips, and general knowledge queries. Can retrieve up-to-date information from the internet including titles, summaries, and source URLs."
 
 AGENT_LIMITATIONS = "Cannot book flights, hotels, or activities. Cannot store or maintain conversation history across sessions. Cannot access private/gated content or perform authentication. Cannot make reservations or transactions. Limited to publicly available web information. Searches may take 20+ seconds due to rate limiting."
@@ -61,11 +61,11 @@ AGENT_TOPICS = [
 
 AGENT_COMPLEXITY = "Multi-turn web search queries. Can handle informational requests, comparison questions, and recommendation queries. Best suited for 'What', 'Where', 'When', and 'How' questions that require current web information."
 
-# Test Generation Settings for strands eval actor simulator
+# strands eval actor simulator용 테스트 생성 설정
 NUM_TEST_CASES = 10
 MAX_TURNS = 3
 
-# Custom Evaluator Configuration - LLM as a Judge
+# Custom Evaluator 구성 - LLM as a Judge
 CUSTOM_EVALUATOR_NAME = "web_search_quality_evaluator"
 CUSTOM_EVALUATOR_CONFIG = {
     "llmAsAJudge": {

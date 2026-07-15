@@ -35,7 +35,7 @@ export class AgentCoreStack extends cdk.Stack {
       return;
     }
 
-    // IAM Role with Bedrock + Browser permissions
+    // Bedrock + Browser 권한이 있는 IAM 역할
     const role = new iam.Role(this, 'AgentRuntimeRole', {
       roleName: `${agentName}-agentcore-runtime-role`,
       assumedBy: new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com', {
@@ -76,7 +76,7 @@ export class AgentCoreStack extends cdk.Stack {
       resources: [`arn:aws:logs:${this.region}:${this.account}:log-group:/aws/bedrock-agentcore/runtimes/*:log-stream:*`],
     }));
 
-    // AgentCore Browser sessions
+    // AgentCore Browser 세션
     role.addToPolicy(new iam.PolicyStatement({
       actions: [
         'bedrock-agentcore:StartBrowserSession',

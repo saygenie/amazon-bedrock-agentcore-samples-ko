@@ -1,5 +1,5 @@
 """
-Lab 01 helper functions for infrastructure verification and fault injection
+인프라 검증 및 fault injection용 Lab 01 헬퍼 함수
 """
 
 from .fault_injection import (

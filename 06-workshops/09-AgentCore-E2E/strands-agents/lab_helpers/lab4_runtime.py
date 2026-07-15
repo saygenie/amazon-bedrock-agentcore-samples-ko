@@ -1,7 +1,7 @@
 import boto3
 from bedrock_agentcore.runtime import (
     BedrockAgentCoreApp,
-)  # ### AGENTCORE RUNTIME - LINE 1 ####
+)  # ### AGENTCORE RUNTIME - 1번 줄 ####
 from lab_helpers.lab1_strands_agent import (
     MODEL_ID,
     SYSTEM_PROMPT,
@@ -21,50 +21,50 @@ from strands import Agent
 from strands.models import BedrockModel
 from strands.tools.mcp import MCPClient
 
-# Initialize boto3 client
+# boto3 클라이언트 초기화
 sts_client = boto3.client("sts")
 
-# Get AWS account details
+# AWS 계정 세부 정보 가져오기
 REGION = boto3.session.Session().region_name
 
-# Lab1 import: Create the Bedrock model
+# Lab 1 가져오기: Bedrock 모델 생성
 model = BedrockModel(model_id=MODEL_ID)
 
-# Lab2 import : Initialize memory via hooks
+# Lab 2 가져오기: 후크를 통해 Memory 초기화
 memory_id = get_ssm_parameter("/app/customersupport/agentcore/memory_id")
 memory_hooks = CustomerSupportMemoryHooks(memory_id, memory_client, ACTOR_ID, SESSION_ID)
 
-# Initialize the AgentCore Runtime App
-app = BedrockAgentCoreApp()  #### AGENTCORE RUNTIME - LINE 2 ####
+# AgentCore Runtime 앱 초기화
+app = BedrockAgentCoreApp()  #### AGENTCORE RUNTIME - 2번 줄 ####
 
 
-@app.entrypoint  #### AGENTCORE RUNTIME - LINE 3 ####
+@app.entrypoint  #### AGENTCORE RUNTIME - 3번 줄 ####
 async def invoke(payload, context=None):
-    """AgentCore Runtime entrypoint function"""
+    """AgentCore Runtime 진입점 함수"""
     user_input = payload.get("prompt", "")
 
-    # Access request headers - handle None case
+    # 요청 헤더에 접근하고 None인 경우 처리
     request_headers = context.request_headers or {}
 
-    # Get Client JWT token
+    # 클라이언트 JWT 토큰 가져오기
     auth_header = request_headers.get("Authorization", "")
 
     print(f"Authorization header: {auth_header}")
-    # Get Gateway ID
+    # Gateway ID 가져오기
     existing_gateway_id = get_ssm_parameter("/app/customersupport/agentcore/gateway_id")
 
-    # Initialize Bedrock AgentCore Control client
+    # Bedrock AgentCore Control 클라이언트 초기화
     gateway_client = boto3.client(
         "bedrock-agentcore-control",
         region_name=REGION,
     )
-    # Get existing gateway details
+    # 기존 Gateway 세부 정보 가져오기
     gateway_response = gateway_client.get_gateway(gatewayIdentifier=existing_gateway_id)
 
-    # Get gateway url
+    # Gateway URL 가져오기
     gateway_url = gateway_response["gatewayUrl"]
 
-    # Create MCP client and agent within context manager if JWT token available
+    # JWT 토큰을 사용할 수 있으면 컨텍스트 관리자 안에서 MCP 클라이언트와 에이전트 생성
     if gateway_url and auth_header:
         try:
             mcp_client = MCPClient(
@@ -79,14 +79,14 @@ async def invoke(payload, context=None):
                     get_technical_support,
                 ] + mcp_client.list_tools_sync()
 
-                # Create the agent with all customer support tools
+                # 모든 고객 지원 도구를 포함하는 에이전트 생성
                 agent = Agent(
                     model=model,
                     tools=tools,
                     system_prompt=SYSTEM_PROMPT,
                     hooks=[memory_hooks],
                 )
-                # Invoke the agent
+                # 에이전트 호출
                 response = agent(user_input)
                 return response.message["content"][0]["text"]
         except Exception as e:
@@ -97,4 +97,4 @@ async def invoke(payload, context=None):
 
 
 if __name__ == "__main__":
-    app.run()  #### AGENTCORE RUNTIME - LINE 4 ####
+    app.run()  #### AGENTCORE RUNTIME - 4번 줄 ####

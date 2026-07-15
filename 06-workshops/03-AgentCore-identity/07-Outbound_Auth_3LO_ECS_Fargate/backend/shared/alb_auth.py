@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""ALB JWT verification and user extraction utilities."""
+"""ALB JWT 검증 및 사용자 추출 유틸리티."""
 
 import logging
 from functools import lru_cache
@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 
 @lru_cache
 def get_alb_public_key(key_url: str) -> ec.EllipticCurvePublicKey:
-    """Fetch and cache ALB public key for JWT verification."""
+    """JWT 검증용 ALB 공개 키를 가져와 캐시한다."""
     response = httpx.get(key_url)
     response.raise_for_status()
     return load_pem_public_key(response.content)
 
 
 def verify_alb_jwt(token: str, region: str) -> dict:
-    """Verify ALB JWT signature and return claims."""
+    """ALB JWT 서명을 검증하고 claim을 반환한다."""
     kid = get_unverified_header(token)["kid"]
     key_url = f"https://public-keys.auth.elb.{region}.amazonaws.com/{kid}"
     public_key = get_alb_public_key(key_url)
@@ -33,7 +33,7 @@ def verify_alb_jwt(token: str, region: str) -> dict:
 
 
 def get_user_email_from_jwt(token: str, aws_region: str) -> str:
-    """Extract user identifier from ALB OIDC JWT."""
+    """ALB OIDC JWT에서 사용자 식별자를 추출한다."""
     try:
         claims = verify_alb_jwt(token, aws_region)
         return claims["sub"]

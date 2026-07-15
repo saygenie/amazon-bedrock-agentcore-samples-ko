@@ -1,13 +1,13 @@
 """
-Lab 02: Lambda function deployment and configuration helper
+Lab 02: Lambda 함수 배포 및 구성 헬퍼
 
-Handles:
-1. Creating ECR repositories
-2. Creating IAM execution roles
-3. Attaching required policies
-4. Storing all configuration in Parameter Store
+처리 항목:
+1. ECR 리포지토리 생성
+2. IAM 실행 역할 생성
+3. 필수 정책 연결
+4. 모든 구성을 Parameter Store에 저장
 
-Multi-account compatible: Each deployment stores its own values.
+여러 계정과 호환되며, 각 배포는 자체 값을 저장합니다.
 """
 
 import boto3
@@ -24,14 +24,14 @@ from lab_helpers.config import MODEL_ID, AWS_REGION
 
 def create_ecr_repository(repository_name, region_name=None):
     """
-    Create ECR repository (or return existing)
+    ECR 리포지토리를 생성하거나 기존 리포지토리를 반환합니다.
 
-    Args:
-        repository_name: Name of repository (e.g., "aiml301-diagnostic-agent")
-        region_name: AWS region
+    인자:
+        repository_name: 리포지토리 이름(예: "aiml301-diagnostic-agent")
+        region_name: AWS 리전
 
-    Returns:
-        ECR repository URI
+    반환:
+        ECR 리포지토리 URI
     """
     if region_name is None:
         region_name = AWS_REGION
@@ -40,13 +40,13 @@ def create_ecr_repository(repository_name, region_name=None):
     boto3.client("sts", region_name=region_name).get_caller_identity()["Account"]  # noqa: F841
 
     try:
-        # Check if repository exists
+        # 리포지토리가 존재하는지 확인
         response = ecr.describe_repositories(repositoryNames=[repository_name])
         repo_uri = response["repositories"][0]["repositoryUri"]
         print(f"✓ ECR Repository already exists: {repo_uri}")
         return repo_uri
     except ecr.exceptions.RepositoryNotFoundException:
-        # Create new repository
+        # 새 리포지토리 생성
         response = ecr.create_repository(repositoryName=repository_name)
         repo_uri = response["repository"]["repositoryUri"]
         print(f"✓ Created ECR Repository: {repo_uri}")
@@ -55,21 +55,21 @@ def create_ecr_repository(repository_name, region_name=None):
 
 def create_lambda_execution_role(role_name, region_name=None):
     """
-    Create Lambda execution role with required policies
+    필수 정책이 포함된 Lambda 실행 역할을 생성합니다.
 
-    Args:
-        role_name: Name of IAM role (e.g., "aiml301-diagnostic-lambda-role")
-        region_name: AWS region
+    인자:
+        role_name: IAM 역할 이름(예: "aiml301-diagnostic-lambda-role")
+        region_name: AWS 리전
 
-    Returns:
-        Role ARN
+    반환:
+        역할 ARN
     """
     if region_name is None:
         region_name = AWS_REGION
 
     iam = boto3.client("iam", region_name=region_name)
 
-    # Trust policy: Allow Lambda service to assume this role
+    # 신뢰 정책: Lambda 서비스가 이 역할을 수임하도록 허용
     trust_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -82,12 +82,12 @@ def create_lambda_execution_role(role_name, region_name=None):
     }
 
     try:
-        # Check if role exists
+        # 역할이 존재하는지 확인
         role = iam.get_role(RoleName=role_name)
         role_arn = role["Role"]["Arn"]
         print(f"✓ IAM Role already exists: {role_arn}")
     except iam.exceptions.NoSuchEntityException:
-        # Create new role
+        # 새 역할 생성
         role = iam.create_role(
             RoleName=role_name,
             AssumeRolePolicyDocument=json.dumps(trust_policy),
@@ -96,14 +96,14 @@ def create_lambda_execution_role(role_name, region_name=None):
         role_arn = role["Role"]["Arn"]
         print(f"✓ Created IAM Role: {role_arn}")
 
-    # Attach CloudWatch Logs policy (Lambda basic execution)
+    # CloudWatch Logs 정책 연결(Lambda 기본 실행)
     try:
         iam.attach_role_policy(RoleName=role_name, PolicyArn=IAM_POLICIES["cloudwatch_logs_policy"])
         print("✓ Attached CloudWatch Logs policy")
     except Exception as e:
         print(f"⚠ CloudWatch policy (may already be attached): {e}")
 
-    # Attach Bedrock InvokeModel policy (includes all Bedrock actions for Strands agent)
+    # Bedrock InvokeModel 정책 연결(Strands agent에 필요한 모든 Bedrock 작업 포함)
     bedrock_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -137,18 +137,18 @@ def create_lambda_execution_role(role_name, region_name=None):
 
 def prepare_lambda_build_context(handler_code, build_dir="lambda_diagnostic_agent"):
     """
-    Create Lambda build context with Dockerfile and requirements.txt
+    Dockerfile 및 requirements.txt가 포함된 Lambda 빌드 컨텍스트를 생성합니다.
 
-    Args:
-        handler_code: Python code for app.py (lambda_handler function)
-        build_dir: Directory to create build context in
+    인자:
+        handler_code: app.py용 Python 코드(lambda_handler 함수)
+        build_dir: 빌드 컨텍스트를 생성할 디렉터리
     """
     import os
 
-    # Create build directory
+    # 빌드 디렉터리 생성
     os.makedirs(build_dir, exist_ok=True)
 
-    # Generate Dockerfile from constants
+    # 상수에서 Dockerfile 생성
     dockerfile_content = f"""FROM --platform=linux/amd64 {ECR_CONFIG["base_image"]}
 
 # Copy requirements (to task root)
@@ -165,8 +165,8 @@ COPY lab_helpers ${{LAMBDA_TASK_ROOT}}/lab_helpers
 CMD ["app.lambda_handler"]
 """
 
-    # Requirements for Strands agent deployment
-    # Includes bedrock-agentcore and strands-agents for tool orchestration
+    # Strands agent 배포에 필요한 패키지
+    # 도구 오케스트레이션을 위한 bedrock-agentcore 및 strands-agents 포함
     requirements = """strands-agents==1.12.0
 bedrock-agentcore>=0.1.0
 bedrock-agentcore-starter-toolkit>=0.1.24
@@ -176,7 +176,7 @@ pydantic>=2.0
 requests>=2.30
 """
 
-    # Write files
+    # 파일 쓰기
     with open(f"{build_dir}/Dockerfile", "w") as f:
         f.write(dockerfile_content)
 
@@ -196,19 +196,19 @@ requests>=2.30
 
 def setup_lab_02_infrastructure(handler_code, region_name=None):
     """
-    Complete Lab 02 infrastructure setup:
-    1. Display Lambda specifications
-    2. Create Lambda build context (Dockerfile, requirements.txt, app.py)
-    3. Create ECR repository
-    4. Create Lambda execution role
-    5. Store all values in Parameter Store
+    Lab 02 인프라 설정을 완료합니다.
+    1. Lambda 사양 표시
+    2. Lambda 빌드 컨텍스트 생성(Dockerfile, requirements.txt, app.py)
+    3. ECR 리포지토리 생성
+    4. Lambda 실행 역할 생성
+    5. 모든 값을 Parameter Store에 저장
 
-    Args:
-        handler_code: Python code for Lambda handler (app.py)
-        region_name: AWS region (uses config.AWS_REGION if None)
+    인자:
+        handler_code: Lambda 핸들러용 Python 코드(app.py)
+        region_name: AWS 리전(None이면 config.AWS_REGION 사용)
 
-    Returns:
-        Dictionary with all created resources
+    반환:
+        생성된 모든 리소스가 포함된 딕셔너리
     """
     if region_name is None:
         region_name = AWS_REGION
@@ -218,14 +218,14 @@ def setup_lab_02_infrastructure(handler_code, region_name=None):
     print("=" * 70)
     print()
 
-    # Display Lambda specifications
+    # Lambda 사양 표시
     print("Lambda Function Specifications:")
     print(f"  Memory: {LAMBDA_CONFIG['memory_size']}MB (2GB for Strands agent)")
     print(f"  Timeout: {LAMBDA_CONFIG['timeout']}s")
     print(f"  Base Image: {ECR_CONFIG['base_image']}")
     print()
 
-    # Prepare Lambda build context (creates Dockerfile, requirements.txt, app.py)
+    # Lambda 빌드 컨텍스트 준비(Dockerfile, requirements.txt, app.py 생성)
     print("Preparing Lambda build context...")
     build_context = prepare_lambda_build_context(handler_code)
     print(f"✓ Created build directory: {build_context['build_dir']}")
@@ -234,31 +234,31 @@ def setup_lab_02_infrastructure(handler_code, region_name=None):
     print("✓ Created app.py (Lambda handler)")
     print()
 
-    # Get account ID
+    # 계정 ID 조회
     sts = boto3.client("sts", region_name=region_name)
     account_id = sts.get_caller_identity()["Account"]
     print(f"AWS Account: {account_id}")
     print(f"AWS Region: {region_name}")
     print()
 
-    # Store workshop metadata
+    # 워크숍 메타데이터 저장
     print("Storing workshop metadata...")
     store_workshop_metadata(account_id, region_name, region_name)
     print()
 
-    # Create ECR repository
+    # ECR 리포지토리 생성
     print("Setting up ECR repository...")
     repository_name = "aiml301-diagnostic-agent"
     ecr_repository_uri = create_ecr_repository(repository_name, region_name)
     print()
 
-    # Create Lambda execution role
+    # Lambda 실행 역할 생성
     print("Setting up Lambda execution role...")
     role_name = "aiml301-diagnostic-lambda-role"
     lambda_role_arn = create_lambda_execution_role(role_name, region_name)
     print()
 
-    # Store configuration in Parameter Store
+    # Parameter Store에 구성 저장
     print("Storing configuration in Parameter Store...")
     put_parameter(
         PARAMETER_PATHS["lab_02"]["ecr_repository_uri"],
@@ -280,7 +280,7 @@ def setup_lab_02_infrastructure(handler_code, region_name=None):
     )
     print()
 
-    # Return configuration
+    # 구성 반환
     config = {
         "account_id": account_id,
         "region": region_name,
@@ -308,13 +308,13 @@ def setup_lab_02_infrastructure(handler_code, region_name=None):
 
 def get_lab_02_deployment_instructions(config):
     """
-    Generate Docker and AWS CLI commands for Lambda deployment
+    Lambda 배포용 Docker 및 AWS CLI 명령을 생성합니다.
 
-    Args:
-        config: Configuration dictionary from setup_lab_02_infrastructure
+    인자:
+        config: setup_lab_02_infrastructure에서 반환된 구성 딕셔너리
 
-    Returns:
-        Formatted string with deployment instructions
+    반환:
+        배포 지침이 포함된 서식 지정 문자열
     """
     ecr_uri = config["ecr_repository_uri"]
     role_arn = config["lambda_role_arn"]
@@ -369,7 +369,7 @@ def get_lab_02_deployment_instructions(config):
 
 
 def show_lambda_config():
-    """Display Lambda configuration constants"""
+    """Lambda 구성 상수를 표시합니다."""
     print("Lambda Configuration Constants:")
     print(f"  Memory: {LAMBDA_CONFIG['memory_size']}MB")
     print(f"  Timeout: {LAMBDA_CONFIG['timeout']}s")
@@ -383,19 +383,19 @@ def show_lambda_config():
 
 
 # ============================================================================
-# ZIP DEPLOYMENT SUPPORT (VPC-friendly alternative to Docker)
+# ZIP 배포 지원(Docker를 대체하는 VPC 친화적 방식)
 # ============================================================================
 
 
 def get_zip_deployment_instructions(config):
     """
-    Generate instructions for ZIP-based Lambda deployment
+    ZIP 기반 Lambda 배포 지침을 생성합니다.
 
-    Args:
-        config: Configuration dictionary
+    인자:
+        config: 구성 딕셔너리
 
-    Returns:
-        Formatted string with ZIP deployment instructions
+    반환:
+        ZIP 배포 지침이 포함된 서식 지정 문자열
     """
     region = config["region"]
     role_arn = config["lambda_role_arn"]
@@ -453,7 +453,7 @@ Our package:   ~30-35 MB (uses direct upload by default)
 
 
 def show_deployment_methods():
-    """Display available deployment methods and their characteristics"""
+    """사용 가능한 배포 방식과 각 특성을 표시합니다."""
     from lab_helpers.constants import DEPLOYMENT_METHODS
 
     print("\n" + "=" * 70)

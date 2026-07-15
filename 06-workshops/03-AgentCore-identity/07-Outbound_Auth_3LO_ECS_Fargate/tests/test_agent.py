@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Tests for agent runtime API."""
+"""에이전트 런타임 API 테스트."""
 
 from unittest.mock import patch
 
@@ -38,7 +38,7 @@ class TestInvocationsEndpoint:
         assert response.status_code == 200
         assert "test response" in response.text
 
-        # Verify session was saved to S3
+        # 세션이 S3에 저장되었는지 확인
         s3 = boto3.client("s3", region_name=TEST_AWS_REGION)
         objects = s3.list_objects_v2(Bucket=TEST_BUCKET_NAME)
         assert "Contents" in objects
@@ -48,7 +48,7 @@ class TestInvocationsEndpoint:
             "/invocations",
             json={"session_id": "test-session", "user_message": "Hello"},
         )
-        assert response.status_code == 422  # FastAPI returns 422 for missing required header
+        assert response.status_code == 422  # 필수 헤더가 없으면 FastAPI가 422를 반환
 
     def test_invoke_agent_missing_fields(self, agent_client):
         with patch("backend.shared.alb_auth.verify_alb_jwt") as mock_verify:

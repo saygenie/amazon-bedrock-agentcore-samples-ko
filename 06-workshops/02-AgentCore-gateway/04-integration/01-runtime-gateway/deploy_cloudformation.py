@@ -5,19 +5,19 @@ from botocore.exceptions import ClientError
 
 def deploy_stack(stack_name, template_file, region, cf_client):
     """
-    Deploy or update a CloudFormation stack for Customer Support Lambda and return outputs.
+    Customer Support Lambda용 CloudFormation 스택을 배포하거나 업데이트하고 출력을 반환합니다.
 
-    Args:
-        stack_name (str): Name of the CloudFormation stack
-        template_file (str): Path to the CloudFormation template YAML file
-        region (str): AWS region
-        cf_client: Boto3 CloudFormation client
+    인수:
+        stack_name (str): CloudFormation 스택 이름
+        template_file (str): CloudFormation 템플릿 YAML 파일 경로
+        region (str): AWS 리전
+        cf_client: Boto3 CloudFormation 클라이언트
 
-    Returns:
+    반환값:
         tuple: (lambda_arn, gateway_role_arn, runtime_execution_role_arn)
     """
 
-    # Read the template file
+    # 템플릿 파일 읽기
     try:
         with open(template_file, "r") as f:
             template_body = f.read()
@@ -27,7 +27,7 @@ def deploy_stack(stack_name, template_file, region, cf_client):
     except Exception as e:
         raise Exception(f"❌ Error reading template file: {str(e)}")
 
-    # Check if stack exists
+    # 스택이 있는지 확인
     stack_exists = False
     try:
         response = cf_client.describe_stacks(StackName=stack_name)
@@ -35,7 +35,7 @@ def deploy_stack(stack_name, template_file, region, cf_client):
         stack_exists = True
         print(f"📋 Stack '{stack_name}' exists with status: {stack_status}")
 
-        # Check if stack is in a failed state
+        # 스택이 실패 상태인지 확인
         if stack_status in ["CREATE_FAILED", "ROLLBACK_COMPLETE", "ROLLBACK_FAILED"]:
             print(f"⚠️  Stack is in {stack_status} state. You may need to delete it first.")
 
@@ -47,7 +47,7 @@ def deploy_stack(stack_name, template_file, region, cf_client):
 
     try:
         if stack_exists:
-            # Update existing stack
+            # 기존 스택 업데이트
             print(f"🔄 Updating stack '{stack_name}'...")
             response = cf_client.update_stack(
                 StackName=stack_name,
@@ -63,7 +63,7 @@ def deploy_stack(stack_name, template_file, region, cf_client):
             wait_message = "Waiting for stack update to complete"
 
         else:
-            # Create new stack
+            # 새 스택 생성
             print(f"🚀 Creating stack '{stack_name}'...")
             response = cf_client.create_stack(
                 StackName=stack_name,
@@ -79,7 +79,7 @@ def deploy_stack(stack_name, template_file, region, cf_client):
             waiter = cf_client.get_waiter("stack_create_complete")
             wait_message = "Waiting for stack creation to complete"
 
-        # Wait for stack operation to complete with progress updates
+        # 진행 상황을 업데이트하며 스택 작업 완료 대기
         print(f"⏳ {wait_message}...")
         print("   This may take several minutes as it creates:")
         print("   - DynamoDB tables (WarrantyTable, CustomerProfileTable)")
@@ -90,8 +90,8 @@ def deploy_stack(stack_name, template_file, region, cf_client):
         waiter.wait(
             StackName=stack_name,
             WaiterConfig={
-                "Delay": 15,  # Check every 15 seconds
-                "MaxAttempts": 120,  # Wait up to 30 minutes
+                "Delay": 15,  # 15초마다 확인
+                "MaxAttempts": 120,  # 최대 30분 대기
             },
         )
         print("✅ Stack operation completed successfully!")
@@ -106,7 +106,7 @@ def deploy_stack(stack_name, template_file, region, cf_client):
             raise
         else:
             print(f"❌ Error during stack operation: {error_message}")
-            # Try to get stack events for debugging
+            # 디버깅을 위해 스택 이벤트 조회 시도
             try:
                 print("\n📋 Recent stack events:")
                 events = cf_client.describe_stack_events(StackName=stack_name)
@@ -122,7 +122,7 @@ def deploy_stack(stack_name, template_file, region, cf_client):
         print(f"❌ Unexpected error: {str(e)}")
         raise
 
-    # Get stack outputs
+    # 스택 출력 가져오기
     print("\n📤 Retrieving stack outputs...")
     try:
         response = cf_client.describe_stacks(StackName=stack_name)
@@ -131,7 +131,7 @@ def deploy_stack(stack_name, template_file, region, cf_client):
         if not outputs:
             raise Exception("❌ No outputs found in stack. Stack may have failed to create properly.")
 
-        # Extract specific outputs based on your template
+        # 템플릿에 따라 특정 출력 추출
         lambda_arn = None
         gateway_role_arn = None
         runtime_execution_role_arn = None
@@ -150,7 +150,7 @@ def deploy_stack(stack_name, template_file, region, cf_client):
                 runtime_execution_role_arn = value
                 print(f"   ✅ Runtime Execution Role ARN: {value}")
 
-        # Verify all required outputs were found
+        # 필요한 출력이 모두 확인되었는지 검증
         missing_outputs = []
         if not lambda_arn:
             missing_outputs.append("CustomerSupportLambdaArn")
@@ -178,36 +178,36 @@ def deploy_stack(stack_name, template_file, region, cf_client):
 
 def delete_stack(stack_name, region, cf_client, wait=True):
     """
-    Delete a CloudFormation stack and all its resources.
+    CloudFormation 스택과 모든 리소스를 삭제합니다.
 
-    Args:
-        stack_name (str): Name of the CloudFormation stack to delete
-        region (str): AWS region
-        cf_client: Boto3 CloudFormation client
-        wait (bool): Whether to wait for deletion to complete (default: True)
+    인수:
+        stack_name (str): 삭제할 CloudFormation 스택 이름
+        region (str): AWS 리전
+        cf_client: Boto3 CloudFormation 클라이언트
+        wait (bool): 삭제 완료를 기다릴지 여부(기본값: True)
 
-    Returns:
-        bool: True if deletion was successful, False otherwise
+    반환값:
+        bool: 삭제에 성공하면 True, 그렇지 않으면 False
     """
 
     print(f"🗑️  Preparing to delete stack: {stack_name}")
     print(f"   Region: {region}")
     print("=" * 80)
 
-    # Check if stack exists
+    # 스택이 있는지 확인
     try:
         response = cf_client.describe_stacks(StackName=stack_name)
         stack_status = response["Stacks"][0]["StackStatus"]
         print(f"📋 Current stack status: {stack_status}")
 
-        # Check if stack is already being deleted
+        # 스택이 이미 삭제 중인지 확인
         if stack_status == "DELETE_IN_PROGRESS":
             print("⏳ Stack deletion already in progress...")
             if wait:
                 return _wait_for_deletion(stack_name, cf_client)
             return True
 
-        # Check if stack is in a failed state
+        # 스택이 실패 상태인지 확인
         if stack_status == "DELETE_FAILED":
             print("⚠️  Stack is in DELETE_FAILED state. Will attempt to retry deletion...")
 
@@ -219,7 +219,7 @@ def delete_stack(stack_name, region, cf_client, wait=True):
             print(f"❌ Error checking stack status: {str(e)}")
             raise
 
-    # Get resources before deletion for reporting
+    # 보고를 위해 삭제 전에 리소스 조회
     try:
         print("\n📦 Resources to be deleted:")
         resources = cf_client.list_stack_resources(StackName=stack_name)
@@ -245,7 +245,7 @@ def delete_stack(stack_name, region, cf_client, wait=True):
                 elif resource_type == "AWS::IAM::Role":
                     print(f"        🔐 Role: {item['physical']}")
 
-        # Check for DynamoDB tables with data
+        # 데이터가 있는 DynamoDB 테이블 확인
         dynamodb_tables = resource_summary.get("AWS::DynamoDB::Table", [])
         if dynamodb_tables:
             print(f"\n⚠️  WARNING: This will delete {len(dynamodb_tables)} DynamoDB table(s) and ALL their data!")
@@ -262,12 +262,12 @@ def delete_stack(stack_name, region, cf_client, wait=True):
     except ClientError as e:
         print(f"⚠️  Could not list resources: {str(e)}")
 
-    # Confirm deletion
+    # 삭제 확인
     print("\n" + "=" * 80)
     print("⚠️  THIS ACTION CANNOT BE UNDONE!")
     print("=" * 80)
 
-    # Initiate stack deletion
+    # 스택 삭제 시작
     try:
         print("\n🚀 Initiating stack deletion...")
         cf_client.delete_stack(StackName=stack_name)
@@ -284,7 +284,7 @@ def delete_stack(stack_name, region, cf_client, wait=True):
             print(f"❌ Error initiating stack deletion: {error_message}")
             return False
 
-    # Wait for deletion if requested
+    # 요청된 경우 삭제 완료 대기
     if wait:
         return _wait_for_deletion(stack_name, cf_client)
     else:
@@ -294,15 +294,15 @@ def delete_stack(stack_name, region, cf_client, wait=True):
 
 def _wait_for_deletion(stack_name, cf_client, max_wait_minutes=30):
     """
-    Internal function to wait for stack deletion to complete.
+    스택 삭제가 완료될 때까지 기다리는 내부 함수입니다.
 
-    Args:
-        stack_name (str): Name of the stack
-        cf_client: CloudFormation client
-        max_wait_minutes (int): Maximum time to wait in minutes
+    인수:
+        stack_name (str): 스택 이름
+        cf_client: CloudFormation 클라이언트
+        max_wait_minutes (int): 최대 대기 시간(분)
 
-    Returns:
-        bool: True if deletion completed successfully
+    반환값:
+        bool: 삭제가 성공적으로 완료되면 True
     """
     print("\n⏳ Waiting for stack deletion to complete...")
     print(f"   This may take up to {max_wait_minutes} minutes")
@@ -327,43 +327,43 @@ def _wait_for_deletion(stack_name, cf_client, max_wait_minutes=30):
                 response = cf_client.describe_stacks(StackName=stack_name)
                 current_status = response["Stacks"][0]["StackStatus"]
 
-                # Print status if it changed
+                # 상태가 변경되면 출력
                 if current_status != last_status:
                     print(f"\n   Status: {current_status}")
                     last_status = current_status
                     dots = 0
                 else:
-                    # Print dots to show progress
+                    # 진행 상황을 나타내는 점 출력
                     print(".", end="", flush=True)
                     dots += 1
                     if dots >= 20:
                         print()
                         dots = 0
 
-                # Check for deletion failures
+                # 삭제 실패 확인
                 if current_status == "DELETE_FAILED":
                     print("\n❌ Stack deletion failed!")
                     _print_deletion_errors(stack_name, cf_client)
                     return False
 
-                # Still deleting
+                # 아직 삭제 중
                 if current_status == "DELETE_IN_PROGRESS":
                     time.sleep(check_interval)
                     continue
 
-                # Unexpected status
+                # 예상하지 못한 상태
                 print(f"\n⚠️  Unexpected status: {current_status}")
                 return False
 
             except ClientError as e:
                 if "does not exist" in str(e):
-                    # Stack successfully deleted
+                    # 스택 삭제 성공
                     print(f"\n✅ Stack '{stack_name}' deleted successfully!")
                     elapsed_minutes = elapsed / 60
                     print(f"   Total time: {elapsed_minutes:.1f} minutes")
                     return True
                 else:
-                    # Some other error
+                    # 기타 오류
                     print(f"\n❌ Error checking stack status: {str(e)}")
                     return False
 
@@ -375,7 +375,7 @@ def _wait_for_deletion(stack_name, cf_client, max_wait_minutes=30):
 
 def _print_deletion_errors(stack_name, cf_client):
     """
-    Internal function to print detailed error messages for failed stack deletion.
+    실패한 스택 삭제의 상세 오류 메시지를 출력하는 내부 함수입니다.
     """
     try:
         print("\n📋 Deletion failure details:")
@@ -384,7 +384,7 @@ def _print_deletion_errors(stack_name, cf_client):
         failed_events = [event for event in events["StackEvents"] if "FAILED" in event.get("ResourceStatus", "")]
 
         if failed_events:
-            for event in failed_events[:10]:  # Show last 10 failed events
+            for event in failed_events[:10]:  # 최근 실패 이벤트 10개 표시
                 resource_type = event.get("ResourceType", "Unknown")
                 logical_id = event.get("LogicalResourceId", "Unknown")
                 reason = event.get("ResourceStatusReason", "No reason provided")
@@ -403,13 +403,13 @@ def _print_deletion_errors(stack_name, cf_client):
 
 
 # ============================================================================
-# USAGE EXAMPLE
+# 사용 예
 # ============================================================================
 
 if __name__ == "__main__":
     import boto3
 
-    # Initialize
+    # 초기화
     session = boto3.Session()
     region = session.region_name
     stack_name = "customer-support-lambda-stack"
@@ -420,7 +420,7 @@ if __name__ == "__main__":
     print("CLOUDFORMATION STACK MANAGEMENT")
     print("=" * 80)
 
-    # Deploy the CloudFormation stack
+    # CloudFormation 스택 배포
     print("\n🚀 DEPLOYING STACK...")
     print("=" * 80)
 
@@ -446,7 +446,7 @@ if __name__ == "__main__":
         print(f"\n❌ Deployment failed: {str(e)}")
         exit(1)
 
-    # Optional: Uncomment to delete the stack
+    # 선택 사항: 스택을 삭제하려면 주석 해제
     # print("\n\n🗑️  DELETING STACK...")
     # print("=" * 80)
     #

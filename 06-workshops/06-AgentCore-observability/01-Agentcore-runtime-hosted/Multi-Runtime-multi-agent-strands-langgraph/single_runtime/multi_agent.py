@@ -1,6 +1,6 @@
 """
-Single Runtime Multi-Agent: All agents (Orchestrator, Travel, Weather) in one runtime.
-Uses Strands framework with StrandsTelemetry for unified observability.
+단일 런타임 멀티 에이전트: 모든 에이전트(Orchestrator, Travel, Weather)를 하나의 런타임에서 실행합니다.
+통합 관측성을 위해 StrandsTelemetry와 함께 Strands 프레임워크를 사용합니다.
 """
 
 from strands import Agent, tool
@@ -15,7 +15,7 @@ app = BedrockAgentCoreApp()
 MODEL_ID = os.getenv("MODEL_ID", "global.anthropic.claude-haiku-4-5-20251001-v1:0")
 
 
-# --- Travel Agent Tools ---
+# --- Travel Agent 도구 ---
 @tool
 def web_search(query: str) -> str:
     """Search the web for travel information."""
@@ -23,11 +23,11 @@ def web_search(query: str) -> str:
     return "\n".join([f"- {r['title']}: {r['body']}" for r in results])
 
 
-# --- Weather Agent Tools ---
+# --- Weather Agent 도구 ---
 @tool
 def get_weather(location: str) -> str:
     """Get current weather for a location (dummy implementation)."""
-    # Dummy weather data for demo
+    # 데모용 더미 날씨 데이터
     weather_data = {
         "new york": "72°F, Partly Cloudy",
         "london": "59°F, Rainy",
@@ -37,7 +37,7 @@ def get_weather(location: str) -> str:
     return weather_data.get(location.lower(), f"Weather data for {location}: 70°F, Clear skies")
 
 
-# --- Sub-Agents ---
+# --- 하위 에이전트 ---
 model = BedrockModel(model_id=MODEL_ID)
 
 travel_agent = Agent(
@@ -55,7 +55,7 @@ weather_agent = Agent(
 )
 
 
-# --- Orchestrator Tools ---
+# --- Orchestrator 도구 ---
 @tool
 def ask_travel_agent(query: str) -> str:
     """Ask the travel agent for travel-related information."""
@@ -70,7 +70,7 @@ def ask_weather_agent(query: str) -> str:
     return response.message["content"][0]["text"]
 
 
-# --- Orchestrator Agent ---
+# --- Orchestrator 에이전트 ---
 orchestrator = Agent(
     name="Orchestrator",
     model=model,
@@ -84,7 +84,7 @@ Combine responses into a helpful answer.""",
 
 @app.entrypoint
 def invoke(payload, context):
-    """Main entrypoint for the runtime."""
+    """런타임의 기본 진입점입니다."""
     prompt = payload.get("prompt", "")
     response = orchestrator(prompt)
     return response.message["content"][0]["text"]

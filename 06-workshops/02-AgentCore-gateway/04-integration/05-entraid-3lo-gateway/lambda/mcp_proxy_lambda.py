@@ -1,10 +1,10 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 """
-MCP OAuth Proxy Lambda — EntraID variant.
+MCP OAuth 프록시 Lambda - EntraID 변형입니다.
 
-Handles OAuth metadata, authorize/callback/token (EntraID), MCP forwarding,
-and the 3LO callback from AgentCore Identity.
+OAuth 메타데이터, authorize/callback/token(EntraID), MCP 전달,
+AgentCore Identity의 3LO 콜백을 처리합니다.
 """
 
 import json
@@ -18,19 +18,19 @@ from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 import boto3
 
-# Configuration from environment variables
+# 환경 변수에서 가져오는 구성
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "")
 ENTRA_TENANT_ID = os.environ.get("ENTRA_TENANT_ID", "")
 ENTRA_APP_A_CLIENT_ID = os.environ.get("ENTRA_APP_A_CLIENT_ID", "")
 ENTRA_DISCOVERY_URL = os.environ.get("ENTRA_DISCOVERY_URL", "")
 
-# Auth onboarding SPA config
+# 인증 온보딩 SPA 구성
 AUTH_ONBOARDING_ROLE_ARN = os.environ.get("AUTH_ONBOARDING_ROLE_ARN", "")
 OAUTH_CREDENTIAL_PROVIDER_NAME = os.environ.get("OAUTH_CREDENTIAL_PROVIDER_NAME", "")
 ENTRA_WEATHER_SCOPE = os.environ.get("ENTRA_WEATHER_SCOPE", "")
 
-# EntraID endpoints — derived from env vars set by CDK stack.
-# Supports both CIAM (ciamlogin.com) and standard (login.microsoftonline.com) tenants.
+# EntraID 엔드포인트 - CDK 스택에서 설정한 환경 변수로부터 파생
+# CIAM(ciamlogin.com) 및 표준(login.microsoftonline.com) tenant를 모두 지원
 ENTRA_AUTHORITY = os.environ.get(
     "ENTRA_AUTHORITY",
     f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}",
@@ -41,7 +41,7 @@ ENTRA_TOKEN_URL = f"{ENTRA_AUTHORITY}/oauth2/v2.0/token"
 
 
 def sign_request(request):
-    """Sign an HTTP request with AWS SigV4."""
+    """AWS SigV4로 HTTP 요청에 서명합니다."""
     session = boto3.Session()
     credentials = session.get_credentials()
     region = session.region_name or "us-east-1"
@@ -59,10 +59,10 @@ def sign_request(request):
 
 
 def lambda_handler(event, context):
-    """Main Lambda handler — routes requests based on path."""
+    """경로에 따라 요청을 라우팅하는 기본 Lambda 핸들러입니다."""
     path = event.get("path", "/")
     method = event.get("httpMethod") or event.get("requestContext", {}).get("http", {}).get("method", "GET")
-    # Log request metadata only (exclude headers which may contain tokens)
+    # 요청 메타데이터만 기록(토큰이 포함될 수 있는 헤더 제외)
     print(f"Method: {method}, Path: {path}")
 
     if method == "OPTIONS":
@@ -100,18 +100,18 @@ def lambda_handler(event, context):
 
 
 def handle_ping():
-    """Health check endpoint."""
+    """상태 확인 엔드포인트입니다."""
     return json_response(200, {"status": "healthy", "service": "mcp-proxy-entraid"})
 
 
 def handle_auth_page(event):
-    """Serve the auth onboarding SPA — uses the same MCP flow as VS Code.
+    """VS Code와 동일한 MCP 흐름을 사용하는 인증 온보딩 SPA를 제공합니다.
 
-    Instead of calling AgentCore APIs directly, the SPA calls POST /mcp with
-    the user's JWT (same as VS Code). The Gateway returns an elicitation (-32042)
-    if the user hasn't authorized yet. The SPA extracts the authorization URL
-    and redirects the user to consent. After consent, AgentCore redirects to
-    /auth/callback where CompleteResourceTokenAuth is called via SigV4.
+    SPA는 AgentCore API를 직접 호출하는 대신 사용자의 JWT로 POST /mcp를 호출합니다
+    (VS Code와 동일). 사용자가 아직 승인하지 않았다면 Gateway가 elicitation(-32042)을
+    반환합니다. SPA는 authorization URL을 추출하여 사용자를 동의 화면으로 리디렉션합니다.
+    동의 후 AgentCore가 /auth/callback으로 리디렉션하면 SigV4를 통해
+    CompleteResourceTokenAuth가 호출됩니다.
     """
     api_url = get_api_url(event)
     region = os.environ.get("AWS_REGION", "us-east-1")
@@ -395,17 +395,19 @@ function hideError() {{
 
 
 def handle_auth_callback_page(event):
-    """Serve the auth callback page — completes 3LO directly from the browser.
+    """브라우저에서 직접 3LO를 완료하는 인증 콜백 페이지를 제공합니다.
 
-    After the user consents in EntraID, AgentCore redirects here with
-    ?session_id=<urn:ietf:params:oauth:request_uri:...>. The page:
-    1. Reads the JWT from sessionStorage (saved by the main page before redirect)
-    2. Calls STS AssumeRoleWithWebIdentity(JWT) to get temporary AWS credentials
-    3. Calls CompleteResourceTokenAuth(sessionUri, userToken) with SigV4 signing
+    사용자가 EntraID에서 동의하면 AgentCore가
+    ?session_id=<urn:ietf:params:oauth:request_uri:...>와 함께 여기로 리디렉션합니다.
+    이 페이지는 다음 작업을 수행합니다.
+    1. sessionStorage에서 JWT 읽기(리디렉션 전에 기본 페이지에서 저장)
+    2. STS AssumeRoleWithWebIdentity(JWT)를 호출하여 임시 AWS 자격 증명 가져오기
+    3. SigV4 서명으로 CompleteResourceTokenAuth(sessionUri, userToken) 호출
 
-    No Lambda proxy needed — the browser calls AWS APIs directly using temp credentials.
-    The IAM role has secretsmanager:GetSecretValue gated by aws:CalledVia condition,
-    so only AgentCore can access secrets internally via Forward Access Sessions (FAS).
+    Lambda 프록시는 필요하지 않으며 브라우저가 임시 자격 증명을 사용해 AWS API를
+    직접 호출합니다. IAM role의 secretsmanager:GetSecretValue는 aws:CalledVia
+    조건으로 제한되므로 AgentCore만 Forward Access Sessions(FAS)를 통해 내부적으로
+    secret에 접근할 수 있습니다.
     """
     api_url = get_api_url(event)
     region = os.environ.get("AWS_REGION", "us-east-1")
@@ -563,7 +565,7 @@ completeAuth();
 
 
 def handle_oauth_metadata(event):
-    """Serve OAuth Authorization Server Metadata (RFC 8414) — pointing to EntraID."""
+    """EntraID를 가리키는 OAuth Authorization Server Metadata(RFC 8414)를 제공합니다."""
     api_url = get_api_url(event)
     return json_response(
         200,
@@ -587,7 +589,7 @@ def handle_oauth_metadata(event):
 
 
 def handle_protected_resource_metadata(event):
-    """Serve OAuth Protected Resource Metadata (RFC 9728)."""
+    """OAuth Protected Resource Metadata(RFC 9728)를 제공합니다."""
     api_url = get_api_url(event)
     return json_response(
         200,
@@ -600,34 +602,34 @@ def handle_protected_resource_metadata(event):
 
 
 def handle_authorize(event):
-    """Redirect /authorize to EntraID with callback interception.
+    """콜백을 가로채면서 /authorize를 EntraID로 리디렉션합니다.
 
-    Encodes the original redirect_uri in the state parameter so it survives
-    across Lambda invocations (Lambda is stateless).
+    상태 비저장 방식인 Lambda의 여러 호출에서도 유지되도록 원래 redirect_uri를
+    state 파라미터에 인코딩합니다.
     """
     params = event.get("queryStringParameters", {}) or {}
     print("=== HANDLE_AUTHORIZE (EntraID) ===")
     print(f"Original params: {json.dumps(params)}")
 
-    # Remove unsupported parameters
+    # 지원되지 않는 파라미터 제거
     params.pop("resource", None)
 
-    # Fix scope: convert + to spaces
+    # scope 수정: +를 공백으로 변환
     if "scope" in params:
         params["scope"] = params["scope"].replace("+", " ")
 
-    # Override client_id with EntraID App A
+    # client_id를 EntraID App A로 재정의
     params["client_id"] = ENTRA_APP_A_CLIENT_ID
 
-    # Inject App A gateway scope — without this, EntraID issues a token for
-    # Microsoft Graph (aud=00000003-...) instead of for our API (aud=App A client ID).
-    # The Gateway validates aud == ENTRA_APP_A_CLIENT_ID, so we MUST request this scope.
+    # App A gateway scope 삽입. 이 작업이 없으면 EntraID가 이 API(aud=App A client ID)가
+    # 아니라 Microsoft Graph(aud=00000003-...)용 토큰을 발급함
+    # Gateway가 aud == ENTRA_APP_A_CLIENT_ID를 검증하므로 이 scope를 반드시 요청해야 함
     gateway_scope = f"api://{ENTRA_APP_A_CLIENT_ID}/gateway.access"
     current_scope = params.get("scope", "openid profile email")
     if gateway_scope not in current_scope:
         params["scope"] = f"{gateway_scope} {current_scope}"
 
-    # Encode original redirect_uri and state in compound state
+    # 원래 redirect_uri와 state를 복합 state에 인코딩
     original_redirect_uri = params.get("redirect_uri", "")
     original_state = params.get("state", "")
 
@@ -642,7 +644,7 @@ def handle_authorize(event):
         encoded_state = base64.urlsafe_b64encode(json.dumps(compound_state).encode()).decode()
         params["state"] = encoded_state
 
-        # Replace redirect_uri with our callback
+        # redirect_uri를 이 프록시의 콜백으로 교체
         api_url = get_api_url(event)
         params["redirect_uri"] = f"{api_url}/callback"
 
@@ -652,9 +654,9 @@ def handle_authorize(event):
 
 
 def handle_callback(event):
-    """Handle OAuth callback from EntraID and forward to VS Code.
+    """EntraID의 OAuth 콜백을 처리하여 VS Code로 전달합니다.
 
-    Decodes the compound state to extract original redirect_uri and state.
+    복합 state를 디코딩하여 원래 redirect_uri와 state를 추출합니다.
     """
     params = event.get("queryStringParameters", {}) or {}
     code = params.get("code", "")
@@ -687,21 +689,21 @@ def handle_callback(event):
 
 
 def handle_token(event):
-    """Proxy token requests to EntraID with redirect_uri rewriting."""
+    """redirect_uri를 다시 작성하여 토큰 요청을 EntraID로 프록시합니다."""
     body = event.get("body", "")
     if event.get("isBase64Encoded"):
         body = base64.b64decode(body).decode()
 
     params = dict(urllib.parse.parse_qsl(body))
 
-    # Remove 'resource' parameter — EntraID v2.0 uses scopes, not resources.
-    # VS Code sends resource per RFC 9728 but it causes AADSTS9010010 on EntraID.
+    # 'resource' 파라미터 제거. EntraID v2.0은 resource가 아니라 scope를 사용함
+    # VS Code는 RFC 9728에 따라 resource를 보내지만 EntraID에서 AADSTS9010010을 유발함
     params.pop("resource", None)
 
-    # Override client_id — EntraID App A is a public client (SPA), no secret needed
+    # client_id 재정의. EntraID App A는 public client(SPA)이므로 secret이 필요하지 않음
     params["client_id"] = ENTRA_APP_A_CLIENT_ID
 
-    # Rewrite redirect_uri to our callback
+    # redirect_uri를 이 프록시의 콜백으로 다시 작성
     if "redirect_uri" in params:
         api_url = get_api_url(event)
         params["redirect_uri"] = f"{api_url}/callback"
@@ -709,11 +711,11 @@ def handle_token(event):
     data = urllib.parse.urlencode(params).encode()
     req = urllib.request.Request(ENTRA_TOKEN_URL, data=data, method="POST")
     req.add_header("Content-Type", "application/x-www-form-urlencoded")
-    # EntraID requires an Origin header for SPA (public client) token redemption.
-    # Without it, EntraID returns AADSTS9002327: "may only be redeemed via cross-origin requests".
+    # EntraID는 SPA(public client) token redemption에 Origin 헤더를 요구함
+    # 없으면 EntraID가 AADSTS9002327: "may only be redeemed via cross-origin requests"를 반환함
     req.add_header("Origin", get_api_url(event))
 
-    # Validate URL scheme to prevent file:// or other unexpected schemes (bandit B310)
+    # file:// 또는 기타 예상치 못한 scheme을 방지하도록 URL scheme 검증(bandit B310)
     if not req.full_url.startswith("https://"):
         return json_response(400, {"error": "Invalid token endpoint URL scheme"})
 
@@ -722,7 +724,7 @@ def handle_token(event):
             token_data = json.loads(resp.read().decode())
             if "created_at" not in token_data:
                 token_data["created_at"] = int(time.time() * 1000)
-            # Log token metadata for debugging (NOT the token itself)
+        # 디버깅을 위해 토큰 자체가 아닌 토큰 메타데이터 기록
             print(f"Token response keys: {list(token_data.keys())}")
             print(
                 f"Token type: {token_data.get('token_type')}, expires_in: {token_data.get('expires_in')}, scope: {token_data.get('scope')}"
@@ -735,7 +737,7 @@ def handle_token(event):
 
 
 def handle_dcr(event):
-    """Handle Dynamic Client Registration — return pre-registered EntraID App A client_id."""
+    """Dynamic Client Registration을 처리하여 사전 등록된 EntraID App A client_id를 반환합니다."""
     return json_response(
         200,
         {
@@ -750,7 +752,7 @@ def handle_dcr(event):
 
 
 def proxy_to_gateway(event):
-    """Forward MCP requests to AgentCore Gateway."""
+    """MCP 요청을 AgentCore Gateway로 전달합니다."""
     print("proxy_to_gateway")
     method = event.get("httpMethod") or event.get("requestContext", {}).get("http", {}).get("method", "GET")
     headers = event.get("headers", {})
@@ -761,7 +763,7 @@ def proxy_to_gateway(event):
 
     target_url = GATEWAY_URL
 
-    # Validate URL scheme to prevent file:// or other unexpected schemes (bandit B310)
+    # file:// 또는 기타 예상치 못한 scheme을 방지하도록 URL scheme 검증(bandit B310)
     if not target_url.startswith("https://"):
         return json_response(502, {"error": "Invalid gateway URL scheme"})
 
@@ -770,7 +772,7 @@ def proxy_to_gateway(event):
         "Accept": headers.get("accept", "application/json"),
     }
 
-    # Forward MCP headers
+    # MCP 헤더 전달
     for h in ["mcp-protocol-version", "mcp-session-id"]:
         if headers.get(h):
             req_headers[h.title()] = headers[h]
@@ -786,15 +788,15 @@ def proxy_to_gateway(event):
         for k, v in req_headers.items():
             req.add_header(k, v)
 
-        # Forward the EntraID JWT as Authorization header.
-        # When the Gateway uses custom JWT auth (not IAM), it expects ONLY the
-        # Bearer token — no SigV4 signing. SigV4 headers would confuse it.
+    # EntraID JWT를 Authorization 헤더로 전달
+    # Gateway가 IAM이 아닌 사용자 지정 JWT 인증을 사용할 때는 Bearer token만 예상함
+    # SigV4 서명은 사용하지 않으며, SigV4 헤더를 추가하면 처리가 혼동될 수 있음
         auth = headers.get("authorization")
         if auth:
             req.add_header("Authorization", auth)
             print(f"Forwarding Authorization header (first 50 chars): {auth[:50]}...")
         else:
-            # No JWT from client — fall back to SigV4 for IAM-based auth
+        # 클라이언트의 JWT가 없으면 IAM 기반 인증용 SigV4로 대체
             print("No Authorization header from client — signing with SigV4 only")
             sign_request(req)
 
@@ -816,7 +818,7 @@ def proxy_to_gateway(event):
             if session_id:
                 resp_headers["Mcp-Session-Id"] = session_id
 
-            # Rewrite Gateway URLs in WWW-Authenticate header to use our endpoint
+        # 이 엔드포인트를 사용하도록 WWW-Authenticate 헤더의 Gateway URL 다시 작성
             www_auth = resp.headers.get("WWW-Authenticate")
             if www_auth:
                 api_url = get_api_url(event)
@@ -854,7 +856,7 @@ def proxy_to_gateway(event):
 
 
 def get_api_url(event):
-    """Extract API URL from event (supports both ALB and API Gateway)."""
+    """이벤트에서 API URL을 추출합니다(ALB와 API Gateway 모두 지원)."""
     headers = event.get("headers", {})
     host = headers.get("host") or headers.get("Host")
     if host:
@@ -871,7 +873,7 @@ def get_api_url(event):
 
 
 def json_response(status_code, body):
-    """Create JSON response."""
+    """JSON 응답을 생성합니다."""
     return {
         "statusCode": status_code,
         "headers": {"Content-Type": "application/json"},

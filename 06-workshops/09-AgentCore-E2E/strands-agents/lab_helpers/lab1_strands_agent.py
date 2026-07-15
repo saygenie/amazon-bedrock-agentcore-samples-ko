@@ -6,7 +6,7 @@ import boto3
 
 MODEL_ID = "global.amazon.nova-2-lite-v1:0"
 
-# System prompt defining the agent's role and capabilities
+# 에이전트의 역할과 기능을 정의하는 시스템 프롬프트
 SYSTEM_PROMPT = """You are a helpful and professional customer support assistant for an electronics e-commerce company.
 Your role is to:
 - Provide accurate information using the tools available to you
@@ -56,7 +56,7 @@ def get_return_policy(product_category: str) -> str:
     Returns:
         Formatted return policy details including timeframes and conditions
     """
-    # Mock return policy database - in real implementation, this would query policy database
+    # 모의 반품 정책 데이터베이스 - 실제 구현에서는 정책 데이터베이스를 조회함
     return_policies = {
         "smartphones": {
             "window": "30 days",
@@ -84,7 +84,7 @@ def get_return_policy(product_category: str) -> str:
         },
     }
 
-    # Default policy for unlisted categories
+    # 목록에 없는 카테고리에 적용할 기본 정책
     default_policy = {
         "window": "30 days",
         "condition": "Original condition with all included components",
@@ -116,7 +116,7 @@ def get_product_info(product_type: str) -> str:
     Returns:
         Formatted product information including warranty, features, and policies
     """
-    # Mock product catalog - in real implementation, this would query a product database
+    # 모의 제품 카탈로그 - 실제 구현에서는 제품 데이터베이스를 조회함
     products = {
         "laptops": {
             "warranty": "1-year manufacturer warranty + optional extended coverage",
@@ -164,7 +164,7 @@ def get_product_info(product_type: str) -> str:
 @tool
 def get_technical_support(issue_description: str) -> str:
     try:
-        # Get KB ID from parameter store
+        # Parameter Store에서 KB ID 가져오기
         ssm = boto3.client("ssm")
         account_id = boto3.client("sts").get_caller_identity()["Account"]
         region = boto3.Session().region_name
@@ -172,7 +172,7 @@ def get_technical_support(issue_description: str) -> str:
         kb_id = ssm.get_parameter(Name=f"/{account_id}-{region}/kb/knowledge-base-id")["Parameter"]["Value"]
         print(f"Successfully retrieved KB ID: {kb_id}")
 
-        # Use strands retrieve tool
+        # Strands retrieve 도구 사용
         tool_use = {
             "toolUseId": "tech_support_query",
             "input": {

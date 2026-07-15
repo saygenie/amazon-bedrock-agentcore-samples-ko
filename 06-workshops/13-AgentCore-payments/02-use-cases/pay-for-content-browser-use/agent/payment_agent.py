@@ -1,27 +1,26 @@
 """
-Pay for Content (Browser Use) — Strands agent for AgentCore Runtime.
+Pay for Content (Browser Use) - AgentCore Runtime용 Strands agent입니다.
 
-The agent uses AgentCoreBrowser to navigate a paywalled page, reads the
-x402 requirement from the DOM, calls process_x402_payment to generate a
-proof, fills it into the paywall UI, and returns the unlocked content.
+Agent는 AgentCoreBrowser를 사용해 paywall 페이지로 이동하고, DOM에서
+x402 요구 사항을 읽고, process_x402_payment를 호출해 proof를 생성한 뒤
+paywall UI에 입력하고 잠금 해제된 콘텐츠를 반환합니다.
 
-When deployed to AgentCore Runtime, the container runs under
-ProcessPaymentRole. The agent's PaymentManager uses the container's
-ambient credentials — there is no sts:AssumeRole inside the agent.
+AgentCore Runtime에 배포하면 컨테이너는 ProcessPaymentRole로 실행됩니다.
+Agent의 PaymentManager는 컨테이너의 ambient credential을 사용하며,
+agent 내부에서는 sts:AssumeRole을 호출하지 않습니다.
 
-The app backend (notebook) creates the payment session under
-ManagementRole and passes all payment context via the invocation payload:
+앱 백엔드(Notebook)는 ManagementRole로 payment session을 생성하고
+호출 payload를 통해 모든 결제 컨텍스트를 전달합니다.
 
-    payment_manager_arn      — Payment Manager ARN
-    payment_session_id       — fresh session with budget
-    payment_instrument_id    — wallet to pay from
-    user_id                  — payment isolation key
-    paywall_url              — page to retrieve
+    payment_manager_arn      - Payment Manager ARN
+    payment_session_id       - 예산이 설정된 새 session
+    payment_instrument_id    - 결제에 사용할 wallet
+    user_id                  - 결제 격리 키
+    paywall_url              - 가져올 페이지
 
-Browser x402 pattern: the requirement is read from a <script> element in
-the DOM, not from an HTTP 402 response. The plugin's auto-intercept hook
-does not fire — process_x402_payment constructs the synthetic 402 shape
-PaymentManager expects.
+브라우저 x402 패턴에서는 HTTP 402 응답이 아니라 DOM의 <script> 요소에서
+요구 사항을 읽습니다. 따라서 plugin의 자동 가로채기 hook은 실행되지 않으며,
+process_x402_payment가 PaymentManager에서 요구하는 가상의 402 형식을 구성합니다.
 """
 
 import json
@@ -41,11 +40,10 @@ app = BedrockAgentCoreApp()
 
 REGION = os.environ.get("AWS_REGION", "us-west-2")
 MODEL_ID = os.environ.get("MODEL_ID", "us.anthropic.claude-sonnet-4-6")
-# Identifier reported in the AgentCore Payments observability dashboard's
-# "Agents using Payments" counter and on each payment span's
-# `payment_agent_name` attribute. Set via the
-# X-Amzn-Bedrock-AgentCore-Payments-Agent-Name HTTP header on every
-# data-plane call when PaymentManager is constructed with agent_name=.
+# AgentCore Payments observability dashboard의 "Agents using Payments" 카운터와
+# 각 결제 span의 `payment_agent_name` 속성에 보고되는 식별자입니다.
+# PaymentManager를 agent_name=으로 생성하면 모든 data-plane 호출에서
+# X-Amzn-Bedrock-AgentCore-Payments-Agent-Name HTTP header를 통해 설정됩니다.
 AGENT_NAME = os.environ.get("AGENT_NAME", "PayForContentBrowserAgent")
 
 SYSTEM_PROMPT = """\
@@ -72,19 +70,19 @@ Always be transparent about what you paid and what content you retrieved.
 
 @app.entrypoint
 def handle_request(payload, context=None):
-    """Handle a paywall retrieval request from the app backend.
+    """앱 백엔드에서 전달된 paywall 조회 요청을 처리합니다.
 
     Args:
-        payload: dict with:
-            prompt                 — natural-language task (may include the URL)
-            paywall_url            — target paywalled page
-            payment_manager_arn    — Payment Manager ARN
-            user_id                — payment isolation key
-            payment_session_id     — fresh session with budget
-            payment_instrument_id  — wallet to pay from
-        context: AgentCore Runtime context (provides session_id, etc.)
+        payload: 다음 항목을 포함하는 dict:
+            prompt                 - 자연어 작업(URL 포함 가능)
+            paywall_url            - 대상 paywall 페이지
+            payment_manager_arn    - Payment Manager ARN
+            user_id                - 결제 격리 키
+            payment_session_id     - 예산이 설정된 새 session
+            payment_instrument_id  - 결제에 사용할 wallet
+        context: AgentCore Runtime 컨텍스트(session_id 등을 제공)
     """
-    # `agentcore invoke` wraps a JSON arg as {"prompt": "<json-string>"}; unwrap it.
+    # `agentcore invoke`는 JSON 인수를 {"prompt": "<json-string>"}으로 감싸므로 이를 해제합니다.
     raw_prompt = payload.get("prompt", "")
     if isinstance(raw_prompt, str) and raw_prompt.strip().startswith("{"):
         try:
@@ -118,11 +116,11 @@ def handle_request(payload, context=None):
     if missing:
         return {"error": f"Missing required fields in payload: {', '.join(missing)}"}
 
-    # PaymentManager uses the container's ambient credentials (ProcessPaymentRole
-    # when deployed; whatever role is active when running locally for dev).
-    # agent_name populates the X-Amzn-Bedrock-AgentCore-Payments-Agent-Name
-    # header on every data-plane call so AgentCore Payments observability
-    # can attribute spans/metrics back to this agent.
+    # PaymentManager는 컨테이너의 ambient credential을 사용합니다(배포 시에는
+    # ProcessPaymentRole, 로컬 개발 실행 시에는 현재 활성화된 role).
+    # agent_name은 모든 data-plane 호출의
+    # X-Amzn-Bedrock-AgentCore-Payments-Agent-Name header를 채워
+    # AgentCore Payments observability가 span/metric을 이 agent에 연결할 수 있게 합니다.
     payment_manager = PaymentManager(
         payment_manager_arn=payment_manager_arn,
         region_name=REGION,
@@ -144,15 +142,14 @@ def handle_request(payload, context=None):
 
         first_accept = requirement["accepts"][0]
         amount_units = int(first_accept.get("maxAmountRequired") or first_accept.get("amount", 0))
-        # Token's smallest unit (e.g. 1_000_000 for USDC's 6 decimals) — the
-        # value is reported back to the caller for display, not used for
-        # routing or settlement.
+        # Token의 최소 단위입니다(예: 소수점 6자리인 USDC의 경우 1_000_000).
+        # 이 값은 표시를 위해 호출자에게 반환되며 routing이나 settlement에는
+        # 사용되지 않습니다.
         amount = amount_units / 1_000_000
 
-        # generate_payment_header expects an HTTP-402-shaped envelope.
-        # In the browser pattern the requirement comes from a DOM script tag
-        # rather than an HTTP 402 response, so we wrap it to match the SDK's
-        # input contract.
+        # generate_payment_header는 HTTP 402 형식의 envelope을 요구합니다.
+        # 브라우저 패턴에서는 HTTP 402 응답이 아닌 DOM script tag에서 요구 사항을
+        # 가져오므로 SDK의 입력 contract에 맞게 감쌉니다.
         payment_required_request = {
             "statusCode": 402,
             "headers": {},

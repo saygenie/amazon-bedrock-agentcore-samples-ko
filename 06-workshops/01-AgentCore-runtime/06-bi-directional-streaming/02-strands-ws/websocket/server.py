@@ -13,16 +13,16 @@ from agent import handle_websocket_session
 
 
 # ---------------------------------------------------------------------------
-# Large-event splitting (adapted from Sonic server for Strands event format)
+# 대용량 이벤트 분할(Strands 이벤트 형식에 맞게 Sonic Server에서 수정)
 # ---------------------------------------------------------------------------
 MAX_WS_MESSAGE_SIZE = 10000
 
 
 def split_large_event(event_dict, max_size=MAX_WS_MESSAGE_SIZE):
-    """Split a large event into smaller chunks by dividing the audio field.
+    """audio 필드를 나눠 큰 이벤트를 더 작은 청크로 분할합니다.
 
-    For audio events, ensures splits occur at base64 boundaries to avoid
-    corruption.  Returns a list of event dicts to send.
+    손상을 방지하도록 오디오 이벤트를 base64 경계에서 분할하고,
+    전송할 이벤트 딕셔너리 목록을 반환합니다.
     """
     event_json = json.dumps(event_dict)
     event_size = len(event_json.encode("utf-8"))
@@ -32,22 +32,22 @@ def split_large_event(event_dict, max_size=MAX_WS_MESSAGE_SIZE):
 
     event_type = event_dict.get("type", "unknown")
 
-    # Only split events that have an 'audio' field
+    # 'audio' 필드가 있는 이벤트만 분할
     if "audio" not in event_dict or not isinstance(event_dict["audio"], str):
         logger.warning(f"Event {event_type} is large ({event_size} bytes) but has no audio field to split")
         return [event_dict]
 
     audio_content = event_dict["audio"]
 
-    # Measure overhead (everything except the audio content)
+    # 오버헤드 측정(오디오 콘텐츠를 제외한 모든 항목)
     template = {k: v for k, v in event_dict.items() if k != "audio"}
     template["audio"] = ""
     overhead = len(json.dumps(template).encode("utf-8"))
 
-    # Max audio content per chunk (with margin)
+    # 청크당 최대 오디오 콘텐츠 크기(여유 공간 포함)
     max_content_size = max_size - overhead - 100
 
-    # Align to 4-char boundaries for valid base64 (4 base64 chars = 3 bytes)
+    # 유효한 base64를 위해 4자 경계로 정렬(base64 4자 = 3바이트)
     alignment = 4
     max_content_size = (max_content_size // alignment) * alignment
 
@@ -59,7 +59,7 @@ def split_large_event(event_dict, max_size=MAX_WS_MESSAGE_SIZE):
     for i in range(0, len(audio_content), max_content_size):
         chunk_audio = audio_content[i : i + max_content_size]
 
-        # Ensure proper base64 padding if needed
+        # 필요한 경우 적절한 base64 패딩 보장
         remainder = len(chunk_audio) % 4
         if remainder != 0:
             chunk_audio += "=" * (4 - remainder)
@@ -75,7 +75,7 @@ def split_large_event(event_dict, max_size=MAX_WS_MESSAGE_SIZE):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Check if Gateway configuration is available
+# Gateway 구성을 사용할 수 있는지 확인
 MCP_GATEWAY_ARNS = os.getenv("MCP_GATEWAY_ARNS")
 MCP_GATEWAY_URLS = os.getenv("MCP_GATEWAY_URLS")
 
@@ -96,7 +96,7 @@ _credential_refresh_task = None
 
 
 def get_imdsv2_token():
-    """Get IMDSv2 token for secure metadata access."""
+    """안전한 메타데이터 접근을 위한 IMDSv2 token을 가져옵니다."""
     try:
         response = requests.put(
             "http://169.254.169.254/latest/api/token",
@@ -111,7 +111,7 @@ def get_imdsv2_token():
 
 
 def get_credentials_from_imds():
-    """Retrieve IAM role credentials from EC2 IMDS (tries IMDSv2 first, falls back to IMDSv1)."""
+    """EC2 IMDS에서 IAM 역할 자격 증명을 가져옵니다(IMDSv2 우선, 실패 시 IMDSv1)."""
     result = {
         "success": False,
         "credentials": None,
@@ -164,7 +164,7 @@ def get_credentials_from_imds():
 
 
 async def refresh_credentials_from_imds():
-    """Background task to refresh credentials from IMDS."""
+    """IMDS에서 자격 증명을 갱신하는 백그라운드 작업입니다."""
     logger.info("Starting credential refresh task")
 
     while True:
@@ -301,7 +301,7 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
     async def chunked_send_json(event_dict):
-        """Send output events, splitting large audio payloads into smaller chunks."""
+        """큰 오디오 페이로드를 작은 청크로 나눠 출력 이벤트를 전송합니다."""
         chunks = split_large_event(event_dict)
         for idx, chunk in enumerate(chunks):
             await websocket.send_json(chunk)

@@ -1,4 +1,4 @@
-"""Data models for trace data and evaluation."""
+"""trace 데이터 및 평가용 데이터 모델입니다."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class Span:
-    """OpenTelemetry span with trace metadata."""
+    """trace 메타데이터가 포함된 OpenTelemetry span입니다."""
 
     trace_id: str
     span_id: str
@@ -24,7 +24,7 @@ class Span:
 
     @classmethod
     def from_cloudwatch_result(cls, result: Any) -> "Span":
-        """Create Span from CloudWatch Logs Insights query result."""
+        """CloudWatch Logs Insights 쿼리 결과로 Span을 생성합니다."""
         fields = result if isinstance(result, list) else result.get("fields", [])
 
         def get_field(field_name: str, default: Any = None) -> Any:
@@ -62,7 +62,7 @@ class Span:
 
 @dataclass
 class RuntimeLog:
-    """Runtime log entry from agent-specific log groups."""
+    """에이전트별 로그 그룹의 Runtime 로그 항목입니다."""
 
     timestamp: str
     message: str
@@ -72,7 +72,7 @@ class RuntimeLog:
 
     @classmethod
     def from_cloudwatch_result(cls, result: Any) -> "RuntimeLog":
-        """Create RuntimeLog from CloudWatch Logs Insights query result."""
+        """CloudWatch Logs Insights 쿼리 결과로 RuntimeLog를 생성합니다."""
         fields = result if isinstance(result, list) else result.get("fields", [])
 
         def get_field(field_name: str, default: Any = None) -> Any:
@@ -101,24 +101,24 @@ class RuntimeLog:
 
 @dataclass
 class TraceData:
-    """Complete session data including spans and runtime logs."""
+    """span과 Runtime 로그를 포함하는 전체 세션 데이터입니다."""
 
     session_id: Optional[str] = None
     spans: List[Span] = field(default_factory=list)
     runtime_logs: List[RuntimeLog] = field(default_factory=list)
 
     def get_trace_ids(self) -> List[str]:
-        """Get all unique trace IDs from spans."""
+        """span에서 고유한 모든 trace ID를 가져옵니다."""
         return list(set(span.trace_id for span in self.spans if span.trace_id))
 
     def get_tool_execution_spans(self, tool_name_filter: Optional[str] = None) -> List[str]:
-        """Get span IDs for tool execution spans.
+        """도구 실행 span의 span ID를 가져옵니다.
 
-        Args:
-            tool_name_filter: Optional tool name to filter by (e.g., "calculate_bmi")
+        인수:
+            tool_name_filter: 필터링할 선택적 도구 이름(예: "calculate_bmi")
 
-        Returns:
-            List of span IDs where gen_ai.operation.name == "execute_tool"
+        반환값:
+            gen_ai.operation.name == "execute_tool"인 span ID 목록
         """
         tool_span_ids = []
 
@@ -128,12 +128,12 @@ class TraceData:
 
             attributes = span.raw_message.get("attributes", {})
 
-            # Check if this is a tool execution span
+            # 도구 실행 span인지 확인
             operation_name = attributes.get("gen_ai.operation.name")
             if operation_name != "execute_tool":
                 continue
 
-            # Apply tool name filter if provided
+            # 도구 이름 필터가 제공된 경우 적용
             if tool_name_filter:
                 tool_name = attributes.get("gen_ai.tool.name")
                 if tool_name != tool_name_filter:
@@ -144,19 +144,19 @@ class TraceData:
         return tool_span_ids
 
     def to_session(self, mapper: SessionMapper) -> Session:
-        """Convert to Strands Eval Session using the provided mapper.
+        """제공된 매퍼를 사용하여 Strands Eval Session으로 변환합니다.
 
-        Args:
-            mapper: A SessionMapper implementation (e.g., CloudWatchSessionMapper)
+        인수:
+            mapper: SessionMapper 구현(예: CloudWatchSessionMapper)
 
-        Returns:
-            Session object ready for evaluation
+        반환값:
+            평가 준비가 완료된 Session 객체
         """
         return mapper.map_to_session(self.spans, self.session_id or "")
 
 
 class EvaluationRequest:
-    """Request payload for evaluation API."""
+    """평가 API의 요청 페이로드입니다."""
 
     def __init__(
         self,
@@ -169,10 +169,10 @@ class EvaluationRequest:
         self.evaluation_target = evaluation_target
 
     def to_api_request(self) -> tuple:
-        """Convert to API request format.
+        """API 요청 형식으로 변환합니다.
 
-        Returns:
-            Tuple of (evaluator_id_param, request_body)
+        반환값:
+            (evaluator_id_param, request_body) 튜플
         """
         request_body = {"evaluationInput": {"sessionSpans": self.session_spans}}
 
@@ -184,7 +184,7 @@ class EvaluationRequest:
 
 @dataclass
 class EvaluationResult:
-    """Result from evaluation API."""
+    """평가 API의 결과입니다."""
 
     evaluator_id: str
     evaluator_name: str
@@ -198,23 +198,23 @@ class EvaluationResult:
 
     @classmethod
     def from_api_response(cls, api_result: Dict[str, Any]) -> "EvaluationResult":
-        """Create EvaluationResult from API response."""
+        """API 응답으로 EvaluationResult를 생성합니다."""
         return cls(
             evaluator_id=api_result.get("evaluatorId", ""),
             evaluator_name=api_result.get("evaluatorName", ""),
             evaluator_arn=api_result.get("evaluatorArn", ""),
             explanation=api_result.get("explanation", ""),
             context=api_result.get("context", {}),
-            value=api_result.get("value"),  # None if not present
-            label=api_result.get("label"),  # None if not present
-            token_usage=api_result.get("tokenUsage"),  # None if not present
+            value=api_result.get("value"),  # 없으면 None
+            label=api_result.get("label"),  # 없으면 None
+            token_usage=api_result.get("tokenUsage"),  # 없으면 None
             error=None,
         )
 
 
 @dataclass
 class EvaluationResults:
-    """Collection of evaluation results for a session."""
+    """세션의 평가 결과 모음입니다."""
 
     session_id: str
     results: List[EvaluationResult] = field(default_factory=list)
@@ -222,11 +222,11 @@ class EvaluationResults:
     metadata: Optional[Dict[str, Any]] = None
 
     def add_result(self, result: EvaluationResult) -> None:
-        """Add an evaluation result."""
+        """평가 결과를 추가합니다."""
         self.results.append(result)
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
+        """JSON 직렬화를 위해 딕셔너리로 변환합니다."""
         output = {
             "session_id": self.session_id,
             "results": [
@@ -253,18 +253,18 @@ class EvaluationResults:
 
 @dataclass
 class SessionInfo:
-    """Information about a discovered session.
+    """검색된 세션에 관한 정보입니다.
 
-    Attributes:
-        session_id: Unique identifier for the session
-        span_count: Number of spans (time_based) or evaluations (score_based)
-            - For time_based discovery: actual span count from traces
-            - For score_based discovery: evaluation count (also in metadata.eval_count)
-        first_seen: Timestamp of first activity
-        last_seen: Timestamp of last activity
-        trace_count: Number of unique traces (only for time_based discovery)
-        discovery_method: How session was discovered ("time_based" or "score_based")
-        metadata: Additional data (for score_based: avg_score, min_score, max_score, eval_count)
+    속성:
+        session_id: 세션의 고유 식별자
+        span_count: span(time_based) 또는 평가(score_based) 수
+            - time_based 검색: trace의 실제 span 수
+            - score_based 검색: 평가 수(metadata.eval_count에도 포함)
+        first_seen: 최초 활동의 타임스탬프
+        last_seen: 마지막 활동의 타임스탬프
+        trace_count: 고유 trace 수(time_based 검색에만 해당)
+        discovery_method: 세션 검색 방식("time_based" 또는 "score_based")
+        metadata: 추가 데이터(score_based의 경우 avg_score, min_score, max_score, eval_count)
     """
 
     session_id: str
@@ -272,11 +272,11 @@ class SessionInfo:
     first_seen: datetime
     last_seen: datetime
     trace_count: Optional[int] = None
-    discovery_method: Optional[str] = None  # "time_based" or "score_based"
+    discovery_method: Optional[str] = None  # "time_based" 또는 "score_based"
     metadata: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
+        """JSON 직렬화를 위해 딕셔너리로 변환합니다."""
         return {
             "session_id": self.session_id,
             "span_count": self.span_count,
@@ -289,11 +289,11 @@ class SessionInfo:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SessionInfo":
-        """Create SessionInfo from dictionary."""
+        """딕셔너리로 SessionInfo를 생성합니다."""
         first_seen = data["first_seen"]
         last_seen = data["last_seen"]
 
-        # Parse datetime strings if needed and ensure timezone-aware
+        # 필요한 경우 datetime 문자열을 파싱하고 시간대 정보가 있는지 확인
         if isinstance(first_seen, str):
             first_seen = datetime.fromisoformat(first_seen.replace("Z", "+00:00"))
         if first_seen.tzinfo is None:
@@ -317,7 +317,7 @@ class SessionInfo:
 
 @dataclass
 class SessionDiscoveryResult:
-    """Result of session discovery operation."""
+    """세션 검색 작업의 결과입니다."""
 
     sessions: List[SessionInfo]
     discovery_time: datetime
@@ -328,7 +328,7 @@ class SessionDiscoveryResult:
     filter_criteria: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
+        """JSON 직렬화를 위해 딕셔너리로 변환합니다."""
         return {
             "sessions": [s.to_dict() for s in self.sessions],
             "discovery_time": self.discovery_time.isoformat(),
@@ -340,13 +340,13 @@ class SessionDiscoveryResult:
         }
 
     def save_to_json(self, filepath: str) -> None:
-        """Save discovery result to JSON file."""
+        """검색 결과를 JSON 파일로 저장합니다."""
         with open(filepath, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
 
     @classmethod
     def load_from_json(cls, filepath: str) -> "SessionDiscoveryResult":
-        """Load discovery result from JSON file."""
+        """JSON 파일에서 검색 결과를 불러옵니다."""
         with open(filepath, "r") as f:
             data = json.load(f)
 
@@ -361,5 +361,5 @@ class SessionDiscoveryResult:
         )
 
     def get_session_ids(self) -> List[str]:
-        """Get list of session IDs."""
+        """세션 ID 목록을 가져옵니다."""
         return [s.session_id for s in self.sessions]

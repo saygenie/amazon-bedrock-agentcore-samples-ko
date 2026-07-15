@@ -21,12 +21,12 @@ export interface PolicyProps {
 }
 
 /**
- * Construct that manages Bedrock AgentCore Policy Engine and policies.
+ * Bedrock AgentCore Policy Engine 및 policy를 관리하는 construct입니다.
  *
- * This construct:
- * 1. Creates a Policy Engine
- * 2. Provides methods to add policies to the engine
- * 3. Each policy has a name and statement
+ * 이 construct는 다음 작업을 수행합니다.
+ * 1. Policy Engine 생성
+ * 2. engine에 policy를 추가하는 메서드 제공
+ * 3. 각 policy에 이름과 statement 지정
  */
 export class AgentCorePolicyEngine extends Construct {
   public readonly policyFunction: LambdaFunction;
@@ -39,7 +39,7 @@ export class AgentCorePolicyEngine extends Construct {
   constructor(scope: Construct, id: string, props: AgentCorePolicyEngineProps) {
     super(scope, id);
 
-    // Create the Lambda function that will handle policy engine and policy operations
+    // policy engine 및 policy 작업을 처리할 Lambda 함수 생성
     this.policyFunction = new lambda.Function(
           this,
           "PolicyFunction",
@@ -65,7 +65,7 @@ export class AgentCorePolicyEngine extends Construct {
           }
         );
 
-    // Grant permissions to manage policy engines and policies
+    // policy engine 및 policy 관리 권한 부여
     this.policyFunction.addToRolePolicy(
       new PolicyStatement({
         effect: Effect.ALLOW,
@@ -81,7 +81,7 @@ export class AgentCorePolicyEngine extends Construct {
       }),
     );
 
-    // Grant permission to pass the gateway role if provided
+    // gateway role이 제공된 경우 전달 권한 부여
     if (props.gatewayRole) {
       this.policyFunction.addToRolePolicy(
         new PolicyStatement({
@@ -92,13 +92,13 @@ export class AgentCorePolicyEngine extends Construct {
       );
     }
 
-    // Create the custom resource provider
+    // 사용자 지정 리소스 공급자 생성
     this.provider = new Provider(this, 'Provider', {
       onEventHandler: this.policyFunction,
       logRetention: RetentionDays.ONE_MONTH,
     });
 
-    // Create the policy engine
+    // policy engine 생성
     this.policyEngineResource = new CustomResource(this, 'PolicyEngineResource', {
       serviceToken: this.provider.serviceToken,
       properties: {
@@ -110,25 +110,25 @@ export class AgentCorePolicyEngine extends Construct {
       },
     });
 
-    // Extract policy engine ID
+    // policy engine ID 추출
     this.policyEngineId = this.policyEngineResource.getAttString('PolicyEngineId');
     this.policyEngineArn = this.policyEngineResource.getAttString('PolicyEngineArn');
   }
 
   /**
-   * Add a policy to the policy engine
-   * @param policyName - The name of the policy
-   * @param description - The description of the policy
-   * @param policyStatement - The Cedar policy statement
-   * @returns The policy ID
+   * policy engine에 policy를 추가합니다.
+   * @param policyName - policy 이름
+   * @param description - policy 설명
+   * @param policyStatement - Cedar policy statement
+   * @returns policy ID
    */
   public addPolicy(policyName: string, description: string, policyStatement: string): string {
-    // Check if policy with this name already exists
+    // 이 이름의 policy가 이미 있는지 확인
     if (this.policies.has(policyName)) {
       throw new Error(`Policy with name '${policyName}' already exists`);
     }
 
-    // Create a custom resource for the policy
+    // policy의 사용자 지정 리소스 생성
     const policyResource = new CustomResource(this, `Policy-${policyName}`, {
       serviceToken: this.provider.serviceToken,
       properties: {
@@ -142,35 +142,35 @@ export class AgentCorePolicyEngine extends Construct {
       },
     });
 
-    // Make sure the policy is created after the engine
+    // engine 생성 후 policy가 생성되도록 보장
     policyResource.node.addDependency(this.policyEngineResource);
 
-    // Store the policy resource
+    // policy 리소스 저장
     this.policies.set(policyName, policyResource);
 
-    // Return the policy ID
+    // policy ID 반환
     return policyResource.getAttString('PolicyId');
   }
 
   /**
-   * Get the policy resource by name
-   * @param policyName - The name of the policy
-   * @returns The CustomResource for the policy, or undefined if not found
+   * 이름으로 policy 리소스를 가져옵니다.
+   * @param policyName - policy 이름
+   * @returns policy의 CustomResource이며, 찾지 못하면 undefined
    */
   public getPolicy(policyName: string): CustomResource | undefined {
     return this.policies.get(policyName);
   }
 
   /**
-   * Get all policy names
-   * @returns Array of policy names
+   * 모든 policy 이름을 가져옵니다.
+   * @returns policy 이름 배열
    */
   public getPolicyNames(): string[] {
     return Array.from(this.policies.keys());
   }
 
   public associateWithGateway(gatewayId: string, policyEngineConfigurationMode: string) {
-    // Create a custom resource to associate the policy engine with the gateway
+    // policy engine을 gateway와 연결할 사용자 지정 리소스 생성
     const associationResource = new CustomResource(this, 'PolicyEngineGatewayAssociation', {
       serviceToken: this.provider.serviceToken,
       properties: {
@@ -183,10 +183,10 @@ export class AgentCorePolicyEngine extends Construct {
       },
     });
 
-    // Ensure association happens after the policy engine is created
+    // policy engine 생성 후 연결되도록 보장
     associationResource.node.addDependency(this.policyEngineResource);
 
-    // Ensure association happens after all policies are added
+    // 모든 policy가 추가된 후 연결되도록 보장
     for (const policyResource of this.policies.values()) {
       associationResource.node.addDependency(policyResource);
     }

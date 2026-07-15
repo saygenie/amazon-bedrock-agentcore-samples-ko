@@ -1,12 +1,11 @@
 """
-Lambda Interceptor with DynamoDB Tool Permission Filtering
+DynamoDB 도구 권한 필터링을 사용하는 Lambda 인터셉터입니다.
 
-This Lambda function intercepts Gateway MCP RESPONSES and filters tools based on
-client permissions stored in DynamoDB. It is configured as a RESPONSE interceptor
-that filters the tools/list response. Only tools that the client is authorized to
-access will be returned.
+이 Lambda 함수는 Gateway MCP RESPONSE를 가로채 DynamoDB에 저장된 클라이언트
+권한을 기준으로 도구를 필터링합니다. tools/list 응답을 필터링하는 RESPONSE
+인터셉터로 구성됩니다. 클라이언트에 접근 권한이 있는 도구만 반환됩니다.
 
-The interceptor extracts client_id from JWT token in Authorization header.
+인터셉터는 Authorization 헤더의 JWT token에서 client_id를 추출합니다.
 """
 
 import json
@@ -16,47 +15,47 @@ import base64
 from typing import List, Dict, Any, Optional
 from botocore.exceptions import ClientError
 
-# Environment variables (set during deployment)
+# 환경 변수(배포 중 설정)
 TABLE_NAME = os.environ.get("PERMISSIONS_TABLE_NAME", "ClientToolPermissions")
 REGION = os.environ.get("DYNAMODB_REGION", os.environ.get("AWS_REGION", "us-east-1"))
 
-# Initialize DynamoDB resource
+# DynamoDB 리소스 초기화
 dynamodb = boto3.resource("dynamodb", region_name=REGION)
 permissions_table = dynamodb.Table(TABLE_NAME)
 
 
 def extract_client_id_from_jwt(token: str) -> Optional[str]:
     """
-    Extract client_id from JWT token payload.
+    JWT token payload에서 client_id를 추출합니다.
 
-    Args:
-        token: JWT token string (with or without 'Bearer ' prefix)
+    인자:
+        token: JWT token 문자열('Bearer ' 접두사 포함 여부와 무관)
 
-    Returns:
-        client_id from token payload, or None if extraction fails
+    반환:
+        token payload의 client_id이며, 추출에 실패하면 None
     """
     try:
-        # Remove 'Bearer ' prefix if present
+        # 'Bearer ' 접두사가 있으면 제거
         if token.startswith("Bearer "):
             token = token[7:]
 
-        # Split token into parts
+        # token을 부분별로 분할
         parts = token.split(".")
         if len(parts) != 3:
             print(f"Invalid JWT format: expected 3 parts, got {len(parts)}")
             return None
 
-        # Decode payload (second part)
+        # payload 디코딩(두 번째 부분)
         payload = parts[1]
 
-        # Add padding if needed
+        # 필요한 경우 padding 추가
         payload += "=" * (4 - len(payload) % 4)
 
-        # Decode base64
+        # base64 디코딩
         decoded = base64.urlsafe_b64decode(payload)
         payload_data = json.loads(decoded)
 
-        # Extract client_id (don't log full payload - may contain sensitive data)
+        # client_id 추출(민감한 데이터가 있을 수 있으므로 전체 payload는 기록하지 않음)
         client_id = payload_data.get("client_id")
 
         if client_id:
@@ -73,13 +72,13 @@ def extract_client_id_from_jwt(token: str) -> Optional[str]:
 
 def get_client_permissions(client_id: str) -> List[str]:
     """
-    Query DynamoDB to get all allowed tools for a specific client.
+    DynamoDB를 쿼리하여 특정 클라이언트에 허용된 모든 도구를 가져옵니다.
 
-    Args:
-        client_id: The client ID to look up
+    인자:
+        client_id: 조회할 클라이언트 ID
 
-    Returns:
-        List of tool names that the client is allowed to access
+    반환:
+        클라이언트에 접근이 허용된 도구 이름 목록
     """
     try:
         print(f"Querying permissions for client: {client_id}")
@@ -89,7 +88,7 @@ def get_client_permissions(client_id: str) -> List[str]:
             ExpressionAttributeValues={":client_id": client_id},
         )
 
-        # Filter for only allowed tools
+        # 허용된 도구만 필터링
         allowed_tools = [item["ToolName"] for item in response.get("Items", []) if item.get("Allowed", False)]
 
         print(f"Found {len(allowed_tools)} allowed tools for client {client_id}: {allowed_tools}")
@@ -98,7 +97,7 @@ def get_client_permissions(client_id: str) -> List[str]:
     except ClientError as e:
         print(f"Error querying DynamoDB: {e}")
         print(f"Error details: {e.response}")
-        # On error, return empty list (deny all tools)
+        # 오류 발생 시 빈 목록 반환(모든 도구 거부)
         return []
     except Exception as e:
         print(f"Unexpected error getting permissions: {e}")
@@ -107,15 +106,15 @@ def get_client_permissions(client_id: str) -> List[str]:
 
 def extract_tool_name(gateway_tool_name: str) -> str:
     """
-    Extract actual tool name from Gateway's naming format.
-    Gateway returns: 'target-name___tool_name'
-    We need: 'tool_name'
+    Gateway 이름 형식에서 실제 도구 이름을 추출합니다.
+    Gateway 반환값: 'target-name___tool_name'
+    필요한 값: 'tool_name'
 
-    Args:
-        gateway_tool_name: Tool name in Gateway format
+    인자:
+        gateway_tool_name: Gateway 형식의 도구 이름
 
-    Returns:
-        Extracted tool name
+    반환:
+        추출된 도구 이름
     """
     if "___" in gateway_tool_name:
         return gateway_tool_name.split("___")[1]
@@ -124,20 +123,20 @@ def extract_tool_name(gateway_tool_name: str) -> str:
 
 def filter_tools(tools: List[Dict[str, Any]], allowed_tools: List[str]) -> List[Dict[str, Any]]:
     """
-    Filter tools list to only include tools the client is allowed to access.
-    Handles Gateway's 'target-name___tool_name' naming format.
+    클라이언트에 접근이 허용된 도구만 포함하도록 도구 목록을 필터링합니다.
+    Gateway의 'target-name___tool_name' 이름 형식을 처리합니다.
 
-    Args:
-        tools: List of tool dictionaries from Gateway
-        allowed_tools: List of allowed tool names from DynamoDB
+    인자:
+        tools: Gateway의 도구 dictionary 목록
+        allowed_tools: DynamoDB의 허용된 도구 이름 목록
 
-    Returns:
-        Filtered list of tools
+    반환:
+        필터링된 도구 목록
     """
     if not tools:
         return []
 
-    # Convert allowed_tools to set for faster lookup
+    # 더 빠른 조회를 위해 allowed_tools를 set으로 변환
     allowed_set = set(allowed_tools)
 
     filtered = []
@@ -150,7 +149,7 @@ def filter_tools(tools: List[Dict[str, Any]], allowed_tools: List[str]) -> List[
 
     print(f"Filtered {len(tools)} tools down to {len(filtered)} allowed tools")
 
-    # Log which tools were filtered out
+    # 필터링된 도구 기록
     filtered_out = []
     for tool in tools:
         gateway_name = tool.get("name", "")
@@ -166,9 +165,9 @@ def filter_tools(tools: List[Dict[str, Any]], allowed_tools: List[str]) -> List[
 
 def lambda_handler(event, context):
     """
-    Main Lambda handler for Gateway RESPONSE interceptor.
+    Gateway RESPONSE 인터셉터의 기본 Lambda 핸들러입니다.
 
-    Expected event structure (from Gateway RESPONSE):
+    예상 이벤트 구조(Gateway RESPONSE):
     {
         "mcp": {
             "gatewayResponse": {
@@ -179,7 +178,7 @@ def lambda_handler(event, context):
                 "body": {
                     "jsonrpc": "2.0",
                     "result": {
-                        "tools": [...]  # Tools list from Gateway targets
+                        "tools": [...]  # Gateway target의 도구 목록
                     },
                     "id": 1
                 }
@@ -193,24 +192,24 @@ def lambda_handler(event, context):
         }
     }
 
-    Returns transformed response with filtered tools.
+    필터링된 도구가 포함된 변환 응답을 반환합니다.
     """
     print(f"Received event: {json.dumps(event, default=str)}")
 
     try:
-        # Extract both request (for Authorization header) and response (for tools)
+        # 요청(Authorization 헤더용)과 응답(도구용)을 모두 추출
         mcp_data = event.get("mcp", {})
         gateway_response = mcp_data.get("gatewayResponse", {})
         gateway_request = mcp_data.get("gatewayRequest", {})
 
-        # Get request headers for Authorization
+        # Authorization용 요청 헤더 가져오기
         request_headers = gateway_request.get("headers", {})
 
-        # Get response data
+        # 응답 데이터 가져오기
         response_headers = gateway_response.get("headers", {})
         response_body = gateway_response.get("body", {})
 
-        # Extract Authorization header (case-insensitive lookup)
+        # Authorization 헤더 추출(대소문자 구분 없는 조회)
         auth_header = None
         for key, value in request_headers.items():
             if key.lower() == "authorization":
@@ -219,24 +218,24 @@ def lambda_handler(event, context):
 
         print(f"Authorization header present: {bool(auth_header)}")
 
-        # Extract client_id from JWT token
+        # JWT token에서 client_id 추출
         client_id = None
         if auth_header:
             client_id = extract_client_id_from_jwt(auth_header)
 
         print(f"Extracted client_id: {client_id}")
 
-        # If no client_id extracted, deny all tools (security: fail closed)
+        # client_id를 추출하지 못하면 모든 도구 거부(보안: fail closed)
         if not client_id:
             print("ERROR: No client_id found in JWT token, denying all tools")
-            # Try to preserve the original response structure but with empty tools
+            # 도구를 비운 채 원래 응답 구조 유지 시도
             denied_body = {
                 "jsonrpc": "2.0",
                 "result": {
-                    "tools": []  # Deny all tools when client_id is missing
+                    "tools": []  # client_id가 누락되면 모든 도구 거부
                 },
             }
-            # Preserve the id field if it exists in the original response
+            # 원래 응답에 id 필드가 있으면 유지
             if isinstance(response_body, dict) and "id" in response_body:
                 denied_body["id"] = response_body["id"]
 
@@ -253,31 +252,31 @@ def lambda_handler(event, context):
                 },
             }
 
-        # Get allowed tools for this client from DynamoDB
+        # DynamoDB에서 이 클라이언트에 허용된 도구 가져오기
         allowed_tools = get_client_permissions(client_id)
 
-        # Check if this is a tools/list response (MCP JSON-RPC format)
-        # Response body format: {"jsonrpc": "2.0", "result": {"tools": [...]}, "id": 1}
+        # tools/list 응답인지 확인(MCP JSON-RPC 형식)
+        # 응답 본문 형식: {"jsonrpc": "2.0", "result": {"tools": [...]}, "id": 1}
         if "result" in response_body and "tools" in response_body.get("result", {}):
             result = response_body["result"]
             original_tools = result.get("tools", [])
 
-            # Filter tools based on permissions
+            # 권한을 기준으로 도구 필터링
             filtered_tools = filter_tools(original_tools, allowed_tools)
 
-            # Update response with filtered tools
+            # 필터링된 도구로 응답 업데이트
             filtered_body = response_body.copy()
             filtered_body["result"] = result.copy()
             filtered_body["result"]["tools"] = filtered_tools
 
-            # Log permission enforcement
+            # 권한 적용 기록
             print("Permission enforcement summary:")
             print(f"  - Client ID: {client_id}")
             print(f"  - Original tools count: {len(original_tools)}")
             print(f"  - Filtered tools count: {len(filtered_tools)}")
             print(f"  - Tools removed: {len(original_tools) - len(filtered_tools)}")
 
-            # Return transformed response with filtered tools
+            # 필터링된 도구가 포함된 변환 응답 반환
             return {
                 "interceptorOutputVersion": "1.0",
                 "mcp": {
@@ -288,7 +287,7 @@ def lambda_handler(event, context):
                 },
             }
         else:
-            # Not a tools/list response, pass through unchanged
+            # tools/list 응답이 아니면 변경 없이 전달
             print("Not a tools/list response, passing through unchanged")
             return {
                 "interceptorOutputVersion": "1.0",
@@ -308,7 +307,7 @@ def lambda_handler(event, context):
 
         print(f"Traceback: {traceback.format_exc()}")
 
-        # On error, return minimal safe response (no tools)
+        # 오류 발생 시 도구가 없는 최소 안전 응답 반환
         error_response = {
             "interceptorOutputVersion": "1.0",
             "mcp": {
@@ -320,7 +319,7 @@ def lambda_handler(event, context):
                     "body": {
                         "jsonrpc": "2.0",
                         "result": {
-                            "tools": []  # Safe default: no tools on error
+                            "tools": []  # 안전한 기본값: 오류 발생 시 도구 없음
                         },
                         "id": 1,
                     },

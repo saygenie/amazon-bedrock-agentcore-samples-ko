@@ -1,13 +1,13 @@
-# Helper tool functions for log and metrics retrieval
+# 로그 및 지표 조회용 헬퍼 도구 함수
 
-# AWS SDK and configuration
+# AWS SDK 및 구성
 import boto3
 import datetime
 
-# Workshop configuration
+# Workshop 구성
 from lab_helpers.config import AWS_REGION
 
-# Initialize AWS clients
+# AWS 클라이언트 초기화
 cloudwatch_client = boto3.client("logs", region_name=AWS_REGION)
 ec2_client = boto3.client("ec2", region_name=AWS_REGION)
 lambda_client = boto3.client("lambda", region_name=AWS_REGION)
@@ -15,7 +15,7 @@ sts_client = boto3.client("sts", region_name=AWS_REGION)
 
 
 def fetch_crm_app_logs(log_group_name="/aws/sre-workshop/crm-application", hours=2, use_mock=False):
-    """Fetch CRM application logs from CloudWatch"""
+    """CloudWatch에서 CRM 애플리케이션 로그를 가져옵니다."""
     if use_mock:
         return mock_data.get_ec2_logs()  # noqa: F821
 
@@ -37,7 +37,7 @@ def fetch_crm_app_logs(log_group_name="/aws/sre-workshop/crm-application", hours
 
 
 def fetch_ec2_logs(log_group_name="/aws/sre-workshop/application", hours=2, use_mock=False):
-    """Fetch EC2 application logs from CloudWatch or mock data"""
+    """CloudWatch 또는 모의 데이터에서 EC2 애플리케이션 로그를 가져옵니다."""
     if use_mock:
         return mock_data.get_ec2_logs()  # noqa: F821
 
@@ -59,7 +59,7 @@ def fetch_ec2_logs(log_group_name="/aws/sre-workshop/application", hours=2, use_
 
 
 def fetch_nginx_error_logs(log_group_name="/aws/sre-workshop/nginx/error", hours=2, use_mock=False):
-    """Fetch NGINX error logs from CloudWatch or mock data"""
+    """CloudWatch 또는 모의 데이터에서 NGINX 오류 로그를 가져옵니다."""
     if use_mock:
         return mock_data.get_nginx_logs()  # noqa: F821
 
@@ -81,7 +81,7 @@ def fetch_nginx_error_logs(log_group_name="/aws/sre-workshop/nginx/error", hours
 
 
 def fetch_nginx_access_logs(log_group_name="/aws/sre-workshop/nginx/access", hours=24, use_mock=False):
-    """Fetch NGINX access/eor logs from CloudWatch or mock data"""
+    """CloudWatch 또는 모의 데이터에서 NGINX 접근/오류 로그를 가져옵니다."""
     if use_mock:
         return mock_data.get_nginx_logs()  # noqa: F821
 
@@ -102,7 +102,7 @@ def fetch_nginx_access_logs(log_group_name="/aws/sre-workshop/nginx/access", hou
 
 
 def fetch_dynamodb_metrics(table_name, period_minutes=60, use_mock=False):
-    """Fetch DynamoDB operation logs from CloudWatch or mock data"""
+    """CloudWatch 또는 모의 데이터에서 DynamoDB 작업 로그를 가져옵니다."""
     if use_mock:
         return mock_data.get_dynamodb_logs()  # noqa: F821
 
@@ -110,7 +110,7 @@ def fetch_dynamodb_metrics(table_name, period_minutes=60, use_mock=False):
         end_time = datetime.datetime.utcnow()
         start_time = end_time - timedelta(minutes=period_minutes)  # noqa: F821
 
-        # Query all metrics in one call using get_metric_data
+        # get_metric_data 호출 한 번으로 모든 지표 조회
         cloudwatch = boto3.client("cloudwatch", region_name=AWS_REGION)
         response = cloudwatch.get_metric_data(
             MetricDataQueries=[
@@ -191,7 +191,7 @@ def fetch_dynamodb_metrics(table_name, period_minutes=60, use_mock=False):
             EndTime=end_time,
         )
 
-        # Extract values from response
+        # 응답에서 값 추출
         result = {
             "table_name": table_name,
             "timestamp": end_time.isoformat(),
@@ -219,7 +219,7 @@ def fetch_dynamodb_metrics(table_name, period_minutes=60, use_mock=False):
 
 
 def get_cpu_metrics(instance_id, period_minutes=60):
-    """Helper function to get a CloudWatch metric."""
+    """CloudWatch 지표를 가져오는 헬퍼 함수입니다."""
     cloudwatch = boto3.client("cloudwatch", region_name=AWS_REGION)
     end_time = datetime.datetime.utcnow()
     start_time = end_time - datetime.timedelta(minutes=period_minutes)
@@ -251,7 +251,7 @@ def get_cpu_metrics(instance_id, period_minutes=60):
 
 
 def get_memory_metrics(instance_id, period_minutes=60):
-    """Helper function to get a CloudWatch metric."""
+    """CloudWatch 지표를 가져오는 헬퍼 함수입니다."""
     cloudwatch = boto3.client("cloudwatch", region_name=AWS_REGION)
     end_time = datetime.datetime.utcnow()
     start_time = end_time - datetime.timedelta(minutes=period_minutes)

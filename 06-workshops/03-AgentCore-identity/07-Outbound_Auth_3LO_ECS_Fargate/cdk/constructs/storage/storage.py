@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Storage construct combining and S3."""
+"""S3를 결합하는 스토리지 construct."""
 
 from aws_cdk import Aws
 from aws_cdk import aws_kms as kms
@@ -10,7 +10,7 @@ from cdk.constructs.storage.s3 import S3Bucket
 
 
 class Storage(Construct):
-    """Storage construct and S3 buckets."""
+    """스토리지 construct 및 S3 버킷."""
 
     def __init__(
         self,
@@ -20,7 +20,7 @@ class Storage(Construct):
         kms_key: kms.Key,
         session_expiration_days: int = 90,
     ):
-        """Initialize storage construct."""
+        """스토리지 construct를 초기화한다."""
         super().__init__(scope, id)
 
         account_id = Aws.ACCOUNT_ID

@@ -1,9 +1,9 @@
-"""Nova Sonic bidirectional streaming session.
+"""Nova Sonic 양방향 스트리밍 세션입니다.
 
-Manages the full lifecycle of a Nova Sonic conversation:
-1. Connect to Bedrock and open a bidirectional stream
-2. Configure the session (model params, voice, system prompt)
-3. Stream microphone audio in, receive spoken responses out
+Nova Sonic 대화의 전체 수명 주기를 관리합니다.
+1. Amazon Bedrock에 연결하고 양방향 스트림 열기
+2. 세션 구성(모델 파라미터, 음성, system prompt)
+3. 마이크 오디오를 스트리밍하고 음성 응답 수신
 """
 
 import asyncio
@@ -30,7 +30,7 @@ MODEL_ID = "amazon.nova-2-sonic-v1:0"
 VOICE_ID = "matthew"
 SYSTEM_PROMPT = "You are a helpful AI assistant. Keep responses brief and conversational."
 
-# Shared audio format used in both input and output config
+# 입력 및 출력 구성에서 함께 사용하는 오디오 형식
 _AUDIO_FORMAT = {
     "mediaType": "audio/lpcm",
     "sampleSizeBits": 16,
@@ -41,7 +41,7 @@ _AUDIO_FORMAT = {
 
 
 async def _send(stream, event_dict):
-    """Send a single event to the Nova Sonic stream."""
+    """Nova Sonic 스트림에 단일 이벤트를 전송합니다."""
     await stream.input_stream.send(
         InvokeModelWithBidirectionalStreamInputChunk(
             value=BidirectionalInputPayloadPart(bytes_=json.dumps(event_dict).encode("utf-8"))
@@ -50,9 +50,9 @@ async def _send(stream, event_dict):
 
 
 async def _setup_session(stream, prompt_name):
-    """Configure the Nova Sonic session: model params, system prompt, audio format."""
+    """Nova Sonic 세션의 모델 파라미터, system prompt 및 오디오 형식을 구성합니다."""
 
-    # 1. Start session with inference parameters
+    # 1. 추론 파라미터로 세션 시작
     await _send(
         stream,
         {
@@ -68,7 +68,7 @@ async def _setup_session(stream, prompt_name):
         },
     )
 
-    # 2. Configure audio output (Nova Sonic -> browser)
+    # 2. 오디오 출력 구성(Nova Sonic -> 브라우저)
     await _send(
         stream,
         {
@@ -85,7 +85,7 @@ async def _setup_session(stream, prompt_name):
         },
     )
 
-    # 3. Send system prompt
+    # 3. system prompt 전송
     system_content = str(uuid.uuid4())
     await _send(
         stream,
@@ -128,7 +128,7 @@ async def _setup_session(stream, prompt_name):
 
 
 async def _start_audio_input(stream, prompt_name, audio_content_name):
-    """Tell Nova Sonic to expect audio input in our format."""
+    """지정 형식의 오디오 입력이 들어올 것을 Nova Sonic에 알립니다."""
     await _send(
         stream,
         {
@@ -150,17 +150,17 @@ async def _start_audio_input(stream, prompt_name, audio_content_name):
 
 
 async def run_session(audio_in, audio_out, region, pc_id):
-    """Run a full Nova Sonic conversation session.
+    """전체 Nova Sonic 대화 세션을 실행합니다.
 
-    Args:
-        audio_in:  WebRTC MediaStreamTrack (microphone from browser)
-        audio_out: OutputTrack (plays Nova Sonic responses to browser)
-        region:    AWS region for Bedrock
-        pc_id:     Peer connection ID for logging
+    인자:
+        audio_in:  WebRTC MediaStreamTrack(브라우저의 마이크)
+        audio_out: OutputTrack(브라우저에서 Nova Sonic 응답 재생)
+        region:    Amazon Bedrock용 AWS 리전
+        pc_id:     로깅용 Peer Connection ID
     """
     logger.info(f"Starting Nova Sonic session for {pc_id}")
 
-    # --- Connect to Bedrock ---
+    # --- Amazon Bedrock에 연결 ---
     client = BedrockRuntimeClient(
         Config(
             endpoint_uri=f"https://bedrock-runtime.{region}.amazonaws.com",
@@ -173,17 +173,17 @@ async def run_session(audio_in, audio_out, region, pc_id):
         InvokeModelWithBidirectionalStreamOperationInput(model_id=MODEL_ID)
     )
 
-    # --- Configure session ---
+    # --- 세션 구성 ---
     prompt_name = str(uuid.uuid4())
     audio_content_name = str(uuid.uuid4())
     await _setup_session(stream, prompt_name)
     await _start_audio_input(stream, prompt_name, audio_content_name)
 
-    # --- Receive responses (runs concurrently with audio sending) ---
-    # The ready event gates audio sending until Nova Sonic acknowledges the session.
-    # The 0.5s timeout is a fallback in case the first event is delayed.
+    # --- 응답 수신(오디오 전송과 동시에 실행) ---
+    # ready 이벤트는 Nova Sonic이 세션을 확인할 때까지 오디오 전송을 차단함
+    # 첫 이벤트가 지연될 때를 대비해 0.5초 제한 시간을 대체 수단으로 사용
     ready = asyncio.Event()
-    content_roles = {}  # contentId -> role
+    content_roles = {}  # contentId -> 역할
 
     async def receive_responses():
         try:
@@ -208,7 +208,7 @@ async def run_session(audio_in, audio_out, region, pc_id):
                     to = event["textOutput"]
                     content = to["content"]
                     role = content_roles.get(to.get("contentId"), "ASSISTANT")
-                    # Barge-in: Nova Sonic sends this before contentEnd INTERRUPTED
+                    # Barge-in: Nova Sonic이 contentEnd INTERRUPTED보다 먼저 전송함
                     if "interrupted" in content and "true" in content:
                         logger.info("Barge-in detected, clearing audio queue")
                         audio_out.clear()
@@ -231,7 +231,7 @@ async def run_session(audio_in, audio_out, region, pc_id):
     await ready.wait()
     logger.info("Session ready, streaming audio")
 
-    # --- Stream microphone audio to Nova Sonic ---
+    # --- 마이크 오디오를 Nova Sonic으로 스트리밍 ---
     try:
         frame_count = 0
         while True:

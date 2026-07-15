@@ -1,47 +1,47 @@
-# Hosting Spring AI Agents with Amazon Bedrock models in Amazon Bedrock AgentCore Runtime
+# Amazon Bedrock AgentCore Runtime에서 Amazon Bedrock 모델을 사용하는 Spring AI 에이전트 호스팅
 
-## Overview
+## 개요
 
-In this tutorial we will learn how to host a Java/Spring AI agent on Amazon Bedrock AgentCore Runtime.
+이 자습서에서는 Amazon Bedrock AgentCore Runtime에서 Java/Spring AI 에이전트를 호스팅하는 방법을 학습합니다.
 
-This is the Java equivalent of the Python [Strands with Bedrock model](../../01-strands-with-bedrock-model) tutorial.
+Python [Strands with Bedrock model](../../01-strands-with-bedrock-model) 자습서의 Java 버전입니다.
 
-### Tutorial Details
+### 자습서 세부 정보
 
-| Information         | Details                                                                                  |
+| 정보                | 세부 정보                                                                                |
 |:--------------------|:-----------------------------------------------------------------------------------------|
-| Tutorial type       | Hosting Tools                                                                            |
-| Agent type          | Single                                                                                   |
-| Agentic Framework   | Spring AI                                                                                |
-| LLM model           | Anthropic Claude Haiku 4.5                                                               |
-| Tutorial components | Hosting agent on AgentCore Runtime. Using Spring AI ChatClient and Amazon Bedrock Model  |
-| Tutorial vertical   | Cross-vertical                                                                           |
-| Example complexity  | Easy                                                                                     |
-| SDK used            | spring-ai-agentcore-runtime-starter (Java) and AWS CDK                                   |
+| 자습서 유형         | 도구 호스팅                                                                              |
+| 에이전트 유형       | 단일                                                                                     |
+| 에이전틱 프레임워크 | Spring AI                                                                                |
+| LLM 모델            | Anthropic Claude Haiku 4.5                                                               |
+| 자습서 구성 요소    | AgentCore Runtime에서 에이전트 호스팅, Spring AI ChatClient 및 Amazon Bedrock 모델 사용 |
+| 자습서 분야         | 여러 산업 분야                                                                           |
+| 예제 난이도         | 쉬움                                                                                     |
+| 사용 SDK            | spring-ai-agentcore-runtime-starter(Java) 및 AWS CDK                                     |
 
-### Library
+### 라이브러리
 
-This tutorial uses the [spring-ai-agentcore](https://github.com/spring-ai-community/spring-ai-agentcore) community library, a Spring Boot starter that auto-configures AgentCore Runtime endpoints and provides the `@AgentCoreInvocation` annotation.
+이 자습서는 AgentCore Runtime 엔드포인트를 자동 구성하고 `@AgentCoreInvocation` annotation을 제공하는 Spring Boot starter인 [spring-ai-agentcore](https://github.com/spring-ai-community/spring-ai-agentcore) community library를 사용합니다.
 
-### Tutorial Key Features
+### 자습서 주요 기능
 
-* First Java-based tutorial in the AgentCore samples repository
-* Hosting Spring Boot agents on Amazon Bedrock AgentCore Runtime
-* Using Spring AI `ChatClient` with Amazon Bedrock models
-* `@AgentCoreInvocation` annotation as the Java equivalent of Python's `@app.entrypoint`
-* Corretto 21 Docker image
-* CDK infrastructure with `CfnRuntime` L1 construct
+* AgentCore samples repository의 첫 Java 기반 자습서
+* Amazon Bedrock AgentCore Runtime에서 Spring Boot 에이전트 호스팅
+* Amazon Bedrock 모델과 Spring AI `ChatClient` 사용
+* Python의 `@app.entrypoint`에 해당하는 Java `@AgentCoreInvocation` annotation
+* Corretto 21 Docker 이미지
+* `CfnRuntime` L1 construct를 사용하는 CDK 인프라
 
-## Prerequisites
+## 사전 요구 사항
 
-* Java 21 (Amazon Corretto recommended)
+* Java 21(Amazon Corretto 권장)
 * Maven 3.9+
 * Docker
-* Node.js 18+ and npm (for CDK)
-* AWS CLI configured with appropriate credentials
+* Node.js 18+ 및 npm(CDK용)
+* 적절한 자격 증명으로 구성된 AWS CLI
 * AWS CDK CLI (`npm install -g aws-cdk`)
 
-## Project Structure
+## 프로젝트 구조
 
 ```
 01-springai-with-bedrock-model/
@@ -61,24 +61,24 @@ This tutorial uses the [spring-ai-agentcore](https://github.com/spring-ai-commun
     └── cdk.json
 ```
 
-## Step-by-Step Deployment
+## 단계별 배포
 
-### 1. Install CDK dependencies
+### 1. CDK 종속성 설치
 
 ```bash
 cd infra
 npm install
 ```
 
-### 2. Deploy ECR repository (first run)
+### 2. ECR repository 배포(최초 실행)
 
 ```bash
 cdk deploy -c firstRun=true
 ```
 
-Note the `EcrRepositoryUri` from the output.
+출력의 `EcrRepositoryUri`를 기록해 두세요.
 
-### 3. Build and push the Docker image
+### 3. Docker 이미지 빌드 및 push
 
 ```bash
 cd ../agent
@@ -86,14 +86,14 @@ chmod +x build-and-push.sh
 ./build-and-push.sh -r us-east-1 -u <EcrRepositoryUri>
 ```
 
-### 4. Deploy the full stack
+### 4. 전체 stack 배포
 
 ```bash
 cd ../infra
 cdk deploy
 ```
 
-### 5. Invoke the agent
+### 5. 에이전트 호출
 
 ```bash
 RUNTIME_ARN=$(aws cloudformation describe-stacks \
@@ -109,20 +109,20 @@ aws bedrock-agentcore invoke-agent-runtime \
   /dev/stdout
 ```
 
-## How It Works
+## 작동 방식
 
-The agent is a single Spring Boot application with one class:
+에이전트는 하나의 class로 구성된 단일 Spring Boot 애플리케이션입니다.
 
-1. `AgentApplication` — boots Spring and defines a `ConversationalAgent` inner service
-2. `@AgentCoreInvocation` — marks the `chat()` method as the AgentCore Runtime entry point
-3. `spring-ai-agentcore-runtime-starter` — auto-configures `/invoke` and `/ping` endpoints
+1. `AgentApplication` - Spring을 시작하고 `ConversationalAgent` 내부 서비스를 정의
+2. `@AgentCoreInvocation` - `chat()` method를 AgentCore Runtime 진입점으로 표시
+3. `spring-ai-agentcore-runtime-starter` - `/invoke` 및 `/ping` 엔드포인트 자동 구성
 
-The CDK stack provisions:
-- ECR repository for the container image
-- IAM role with Bedrock InvokeModel and CloudWatch Logs permissions
-- `CfnRuntime` resource pointing to the ECR image
+CDK stack은 다음 항목을 프로비저닝합니다.
+- 컨테이너 이미지용 ECR repository
+- Bedrock InvokeModel 및 CloudWatch Logs 권한이 있는 IAM 역할
+- ECR 이미지를 가리키는 `CfnRuntime` 리소스
 
-## Cleanup
+## 정리
 
 ```bash
 cd infra

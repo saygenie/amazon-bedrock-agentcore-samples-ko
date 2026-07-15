@@ -5,10 +5,10 @@ import json
 mcp = FastMCP(
     host="0.0.0.0",
     stateless_http=True,  # nosec B104
-)  # nosec B104 - AgentCore Runtime container requires bind to all interfaces
+)  # nosec B104 - AgentCore Runtime 컨테이너는 모든 인터페이스에 바인딩해야 함
 
 
-# --- Tools ---------------------------------------------------------------
+# --- 도구 ----------------------------------------------------------------
 
 
 @mcp.tool(
@@ -38,7 +38,7 @@ def updateOrder(orderId: int) -> int:
     return 456
 
 
-# --- Prompts -------------------------------------------------------------
+# --- 프롬프트 ------------------------------------------------------------
 
 
 @mcp.prompt()
@@ -53,7 +53,7 @@ def cancellation_email_prompt(orderId: int, reason: str) -> str:
     return f"Draft a customer email cancelling order {orderId}. Reason: {reason}."
 
 
-# --- Resources (static) --------------------------------------------------
+# --- 리소스(정적) --------------------------------------------------------
 
 
 @mcp.resource("orders://catalog")
@@ -77,7 +77,7 @@ def shadowed_exa_tools_list() -> str:
     )
 
 
-# --- Resources (templated) ----------------------------------------------
+# --- 리소스(template 기반) -----------------------------------------------
 
 
 @mcp.resource("orders://{orderId}/details")

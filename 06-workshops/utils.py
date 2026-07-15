@@ -11,15 +11,15 @@ TEMP_ADMIN_PASSWORD = "Temp123!"  # pragma: allowlist secret
 def setup_cognito_user_pool(pool_name="MCPServerPool"):
     boto_session = Session()
     region = boto_session.region_name
-    # Initialize Cognito client
+    # Cognito 클라이언트 초기화
     cognito_client = boto3.client("cognito-idp", region_name=region)
     try:
-        # Create User Pool
+        # 사용자 풀 생성
         user_pool_response = cognito_client.create_user_pool(
             PoolName=pool_name, Policies={"PasswordPolicy": {"MinimumLength": 8}}
         )
         pool_id = user_pool_response["UserPool"]["Id"]
-        # Create App Client
+        # 앱 클라이언트 생성
         app_client_response = cognito_client.create_user_pool_client(
             UserPoolId=pool_id,
             ClientName="MCPServerPoolClient",
@@ -27,18 +27,18 @@ def setup_cognito_user_pool(pool_name="MCPServerPool"):
             ExplicitAuthFlows=["ALLOW_USER_PASSWORD_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"],
         )
         client_id = app_client_response["UserPoolClient"]["ClientId"]
-        # Create User
+        # 사용자 생성
         cognito_client.admin_create_user(
             UserPoolId=pool_id,
             Username=USER_NAME,
             TemporaryPassword=TEMP_ADMIN_PASSWORD,
             MessageAction="SUPPRESS",
         )
-        # Set Permanent Password
+        # 영구 암호 설정
         cognito_client.admin_set_user_password(
             UserPoolId=pool_id, Username=USER_NAME, Password=PASSWORD, Permanent=True
         )
-        # Authenticate User and get Access Token
+        # 사용자를 인증하고 액세스 토큰 가져오기
         auth_response = cognito_client.initiate_auth(
             ClientId=client_id,
             AuthFlow="USER_PASSWORD_AUTH",
@@ -46,14 +46,14 @@ def setup_cognito_user_pool(pool_name="MCPServerPool"):
         )
         bearer_token = auth_response["AuthenticationResult"]["AccessToken"]
         refresh_token = auth_response["AuthenticationResult"]["RefreshToken"]
-        # Output the required values
+        # 필요한 값 출력
         print(f"Pool id: {pool_id}")
         print(f"Discovery URL: https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/openid-configuration")
         print(f"Client ID: {client_id}")
         print(f"Bearer Token: {bearer_token}")
         print(f"Refresh Token: {refresh_token}")
 
-        # Return values if needed for further processing
+        # 후속 처리에 사용할 수 있도록 값 반환
         return {
             "pool_id": pool_id,
             "client_id": client_id,
@@ -69,9 +69,9 @@ def setup_cognito_user_pool(pool_name="MCPServerPool"):
 def reauthenticate_user(client_id):
     boto_session = Session()
     region = boto_session.region_name
-    # Initialize Cognito client
+    # Cognito 클라이언트 초기화
     cognito_client = boto3.client("cognito-idp", region_name=region)
-    # Authenticate User and get Access Token
+    # 사용자를 인증하고 액세스 토큰 가져오기
     auth_response = cognito_client.initiate_auth(
         ClientId=client_id,
         AuthFlow="USER_PASSWORD_AUTH",
@@ -183,14 +183,14 @@ def create_agentcore_role(agent_name):
 
     assume_role_policy_document_json = json.dumps(assume_role_policy_document)
     role_policy_document = json.dumps(role_policy)
-    # Create IAM Role for the Lambda function
+    # Lambda 함수용 IAM 역할 생성
     try:
         agentcore_iam_role = iam_client.create_role(
             RoleName=agentcore_role_name,
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-        # Pause to make sure role is created
+        # 역할이 생성될 때까지 잠시 대기
         time.sleep(10)
     except iam_client.exceptions.EntityAlreadyExistsException:
         print("Role already exists -- deleting and creating it again")
@@ -206,7 +206,7 @@ def create_agentcore_role(agent_name):
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-    # Attach the AWSLambdaBasicExecutionRole policy
+    # AWSLambdaBasicExecutionRole 정책 연결
     print(f"attaching role policy {agentcore_role_name}")
     try:
         iam_client.put_role_policy(

@@ -1,4 +1,4 @@
-/* Bedrock AgentCore Browser Viewer Styles */
+/* Bedrock AgentCore Browser 뷰어 스타일 */
 body { 
     margin: 0; 
     padding: 0; 
@@ -86,7 +86,7 @@ button.active {
     border-color: #0073bb;
 }
 
-/* Added control button styles */
+/* 추가된 제어 버튼 스타일 */
 .control-group {
     display: flex;
     gap: 8px;

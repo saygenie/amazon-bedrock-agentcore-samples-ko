@@ -3,7 +3,7 @@ import json
 import os
 import boto3
 
-# Configure logging
+# 로깅 구성
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -23,16 +23,16 @@ def lambda_handler(event, context):
         For REQUEST interceptors: logs the MCP method and passes request through unchanged
         For RESPONSE interceptors: passes response through unchanged
         """
-        # Extract the MCP data from the event
+    # 이벤트에서 MCP 데이터 추출
         mcp_data = event.get("mcp", {})
 
         logger.info(f"Received event: {json.dumps(event, indent=2)}")
 
-        # Check if this is a REQUEST or RESPONSE interceptor based on presence of gatewayResponse
+    # gatewayResponse 존재 여부에 따라 REQUEST 또는 RESPONSE 인터셉터인지 확인
         if "gatewayResponse" in mcp_data and mcp_data["gatewayResponse"] is not None:
             logger.info("This is a RESPONSE interceptor")
 
-            # Get the request body to check the method (method is in the request, not response)
+        # 메서드를 확인하기 위해 요청 본문 가져오기(메서드는 응답이 아니라 요청에 있음)
             request_body = mcp_data.get("gatewayRequest", {}).get("body", {})
             response_body = mcp_data.get("gatewayResponse", {}).get("body", {}) or {}
 
@@ -45,11 +45,11 @@ def lambda_handler(event, context):
 
             logger.info(f"Processing RESPONSE interceptor - MCP method: {mcp_method}")
 
-            # === HANDLE TOOLS/LIST FILTERING BASED ON _meta ===
+            # === _meta 기반 TOOLS/LIST 필터링 처리 ===
             if mcp_method == "tools/list" and response_body:
                 logger.info("tools/list response detected in RESPONSE interceptor")
 
-                # Extract target filter from MCP _meta (spec-compliant)
+                # MCP _meta에서 target 필터 추출(사양 준수)
                 target_filter = None
                 meta = request_body.get("_meta", {})
                 if isinstance(meta, dict):
@@ -61,7 +61,7 @@ def lambda_handler(event, context):
                 else:
                     logger.info("No target filter in _meta - returning ALL tools (no filtering)")
 
-                # Filter tools if target filter is specified
+                    # target 필터가 지정된 경우 도구 필터링
                 if "result" in response_body and "tools" in response_body.get("result", {}):
                     result = response_body["result"]
                     original_tools = result.get("tools", [])
@@ -69,14 +69,14 @@ def lambda_handler(event, context):
                     logger.info(f"Original tools count: {len(original_tools)}")
 
                     if target_filter:
-                        # Filter by gateway target name prefix (format: "target___tool")
+                        # gateway target 이름 접두사로 필터링(형식: "target___tool")
                         filtered_tools = [
                             tool for tool in original_tools if tool.get("name", "").startswith(f"{target_filter}___")
                         ]
 
                         logger.info(f"Filtered to {len(filtered_tools)} tools for target '{target_filter}'")
 
-                        # Log matched tools
+                                # 일치하는 도구 기록
                         if filtered_tools:
                             logger.info("Matched tools:")
                             for tool in filtered_tools:
@@ -84,19 +84,19 @@ def lambda_handler(event, context):
                         else:
                             logger.warning(f"No tools matched target '{target_filter}'")
 
-                        # Log filtering summary
+                        # 필터링 요약 기록
                         removed = len(original_tools) - len(filtered_tools)
                         if removed > 0:
                             logger.info(f"Filtered out {removed} tools not matching target")
 
-                        # Create filtered response
+                        # 필터링된 응답 생성
                         filtered_body = {
                             "jsonrpc": response_body.get("jsonrpc", "2.0"),
                             "id": response_body.get("id"),
                             "result": {"tools": filtered_tools},
                         }
 
-                        # Preserve _meta from response if present
+                        # 응답에 _meta가 있으면 유지
                         if "_meta" in response_body:
                             filtered_body["_meta"] = response_body["_meta"]
 
@@ -112,7 +112,7 @@ def lambda_handler(event, context):
                         logger.info("Returning filtered tools/list response")
                         return response
                     else:
-                        # No filtering - log all tools and return unchanged
+                        # 필터링하지 않고 모든 도구를 기록한 뒤 변경 없이 반환
                         logger.info(f"No filtering applied - returning all {len(original_tools)} tools")
                         logger.info("Available tools:")
                         for tool in original_tools:
@@ -168,10 +168,10 @@ def lambda_handler(event, context):
             else:
                 logger.info("Non tools/call method detected in RESPONSE interceptor. Passing through unchanged.")
 
-            # This is a RESPONSE interceptor
+        # RESPONSE 인터셉터
             logger.info("Processing RESPONSE interceptor - passing through unchanged")
 
-            # Pass through the original request and response unchanged
+        # 원래 요청과 응답을 변경 없이 전달
             response = {
                 "interceptorOutputVersion": "1.0",
                 "mcp": {
@@ -184,16 +184,16 @@ def lambda_handler(event, context):
             logger.info(f"Interceptor response: {json.dumps(response, indent=2)}")
             return response
         else:
-            # This is a REQUEST interceptor
+        # REQUEST 인터셉터
             gateway_request = mcp_data.get("gatewayRequest", {})
             request_body = gateway_request.get("body", {})
             mcp_method = request_body.get("method", "unknown")
 
-            # Log the MCP method
+        # MCP 메서드 기록
             logger.info(f"Processing REQUEST interceptor - MCP method: {mcp_method}")
 
             if mcp_method == "tools/call" and request_body:
-                # This is a REQUEST interceptor
+        # REQUEST 인터셉터
                 if GUARDRAIL_ID:
                     gr_response = client.apply_guardrail(
                         guardrailIdentifier=GUARDRAIL_ID,
@@ -216,12 +216,12 @@ def lambda_handler(event, context):
                         guardrail_text = gr_response.get("outputs", [{}])[0].get("text", "{}")
                         logger.warning(guardrail_text)
 
-                        # Parse the guardrail output back to a dict since the gateway
-                        # expects body to be a JSON object, not a string
+            # gateway는 본문을 문자열이 아닌 JSON 객체로 예상하므로
+            # guardrail 출력을 다시 dict로 파싱
                         try:
                             transformed_body = json.loads(guardrail_text)
                         except (json.JSONDecodeError, TypeError):
-                            # If guardrail output isn't valid JSON, pass through original request
+                # guardrail 출력이 유효한 JSON이 아니면 원래 요청 전달
                             logger.error("Guardrail output is not valid JSON, passing through original request")
                             transformed_body = request_body
 
@@ -242,7 +242,7 @@ def lambda_handler(event, context):
             else:
                 logger.info("Non tools/call method detected in REQUEST interceptor. Passing through unchanged.")
 
-            # Pass through the original request unchanged
+        # 원래 요청을 변경 없이 전달
             response = {
                 "interceptorOutputVersion": "1.0",
                 "mcp": {

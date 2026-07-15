@@ -1,17 +1,17 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Authentication decorator for AgentCore identity.
+"""AgentCore Identity용 인증 데코레이터.
 
-This module provides a custom requires_access_token decorator as an alternative to
-the official bedrock_agentcore.identity.auth decorator:
+이 모듈은 공식 bedrock_agentcore.identity.auth 데코레이터의 대안으로
+사용자 지정 requires_access_token 데코레이터를 제공한다.
 https://github.com/aws/bedrock-agentcore-sdk-python/blob/main/src/bedrock_agentcore/identity/auth.py
 https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-authentication.html
 
-Why not use the official decorator directly?
-- The official decorator relies on contextvars (BedrockAgentCoreContext) to obtain the
-  workload_access_token, which requires using BedrockAgentCoreApp as your server.
-- This implementation accepts workload_access_token as an explicit parameter, making it
-  usable with any server framework (FastAPI, Starlette, etc.) without implicit context.
+공식 데코레이터를 직접 사용하지 않는 이유:
+- 공식 데코레이터는 workload_access_token을 가져오기 위해 contextvars
+  (BedrockAgentCoreContext)에 의존하므로 서버로 BedrockAgentCoreApp을 사용해야 한다.
+- 이 구현은 workload_access_token을 명시적 파라미터로 받으므로 암시적 컨텍스트 없이
+  FastAPI, Starlette 등 어떤 서버 프레임워크에서도 사용할 수 있다.
 """
 
 import logging
@@ -39,24 +39,24 @@ def requires_access_token(
     into: str = "access_token",
     region: str | None = None,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    """Fetch OAuth2 access token with explicit workload token.
+    """명시적 워크로드 토큰을 사용하여 OAuth2 액세스 토큰을 가져온다.
 
-    Args:
-        provider_name: The credential provider name
-        scopes: OAuth2 scopes to request
-        auth_flow: Authentication flow type ("M2M" or "USER_FEDERATION")
-        workload_access_token: The workload access token (explicit, not from context)
-        session_binding_url: Session Binding URL pointing to the customer-managed service that completes the session binding
-        on_auth_url: Handler invoked with the authorization URL when user authorization is required
-        force_authentication: Force re-authentication
-        token_poller: Custom token poller implementation
-        custom_state: State for callback verification
-        custom_parameters: Additional OAuth parameters
-        into: Parameter name to inject the token into
-        region: AWS region
+    인수:
+        provider_name: 자격 증명 공급자 이름
+        scopes: 요청할 OAuth2 범위
+        auth_flow: 인증 흐름 유형("M2M" 또는 "USER_FEDERATION")
+        workload_access_token: 컨텍스트가 아닌 명시적으로 전달된 워크로드 액세스 토큰
+        session_binding_url: 세션 바인딩을 완료하는 고객 관리형 서비스를 가리키는 Session Binding URL
+        on_auth_url: 사용자 권한 부여가 필요할 때 권한 부여 URL과 함께 호출되는 핸들러
+        force_authentication: 재인증 강제 여부
+        token_poller: 사용자 지정 토큰 폴러 구현
+        custom_state: 콜백 검증용 상태
+        custom_parameters: 추가 OAuth 파라미터
+        into: 토큰을 주입할 파라미터 이름
+        region: AWS 리전
 
-    Returns:
-        Decorator function
+    반환값:
+        데코레이터 함수
 
     """
 

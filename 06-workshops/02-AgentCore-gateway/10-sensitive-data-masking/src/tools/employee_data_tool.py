@@ -1,8 +1,8 @@
 """
-Employee Data Tool - Mock employee information API for Gateway
+직원 데이터 도구 - Gateway용 모의 직원 정보 API
 
-This tool provides mock employee information including contact and location PII.
-WARNING: This tool handles sensitive PII data and should have restricted access.
+이 도구는 연락처 및 위치 PII를 포함한 모의 직원 정보를 제공합니다.
+주의: 이 도구는 민감한 PII 데이터를 처리하므로 접근을 제한해야 합니다.
 """
 
 import json
@@ -11,18 +11,18 @@ import random
 
 def lambda_handler(event, context):
     """
-    Lambda handler for employee data tool.
+    직원 데이터 도구의 Lambda 핸들러입니다.
 
-    Expected input:
+    예상 입력:
     {
         "employee_id": "EMP-98765"
     }
 
-    Returns mock employee data including PII (email, address).
+    PII(이메일, 주소)가 포함된 모의 직원 데이터를 반환합니다.
     """
     print(f"Employee data tool received event: {json.dumps(event)}")
 
-    # Parse input
+    # 입력 파싱
     body = event if isinstance(event, dict) else json.loads(event)
     employee_id = body.get("employee_id", None)
 
@@ -38,8 +38,8 @@ def lambda_handler(event, context):
             ),
         }
 
-    # Generate mock employee data
-    # Field names don't indicate sensitivity, but content contains PII
+    # 모의 직원 데이터 생성
+    # 필드 이름에는 민감도가 드러나지 않지만 콘텐츠에는 PII가 포함됨
     first_names = ["Alice", "Bob", "Carol", "David", "Emma", "Frank", "Grace", "Henry"]
     last_names = [
         "Smith",
@@ -75,37 +75,37 @@ def lambda_handler(event, context):
     city = random.choice(cities)
     street = random.choice(streets)
 
-    # Generate employee data with 5 fields: 2 sensitive, 3 non-sensitive
+    # 민감한 필드 2개와 민감하지 않은 필드 3개가 포함된 직원 데이터 생성
     employee_data = {
-        # NON-SENSITIVE: Business identifier
+        # 민감하지 않음: 비즈니스 식별자
         "employee_id": employee_id,
-        # NON-SENSITIVE: Organizational information
+        # 민감하지 않음: 조직 정보
         "department": department,
-        # SENSITIVE: Contains email (but field name doesn't indicate it)
-        # EMAIL - Will be detected and anonymized by Guardrails
+        # 민감함: 필드 이름에는 드러나지 않지만 이메일이 포함됨
+        # EMAIL - Guardrails에서 탐지하여 익명화
         "contact_info": f"{first_name.lower()}.{last_name.lower()}@company.com",
-        # SENSITIVE: Contains address (but field name doesn't directly indicate it)
-        # ADDRESS - Will be detected and anonymized by Guardrails based on CONTENT, not field name
+        # 민감함: 필드 이름에는 직접 드러나지 않지만 주소가 포함됨
+        # ADDRESS - 필드 이름이 아닌 콘텐츠를 기반으로 Guardrails에서 탐지하여 익명화
         "mailing_info": f"{random.randint(100, 9999)} {street}, {city}, MA {random.randint(10000, 99999)}",
-        # NON-SENSITIVE: Employment status
+        # 민감하지 않음: 고용 상태
         "status": random.choice(["Active", "On Leave", "Remote"]),
         "financial_info": {
-            # SENSITIVE - Will be masked by Guardrails
-            # US_BANK_ACCOUNT_NUMBER - Will be detected by Guardrails
+            # 민감함 - Guardrails에서 마스킹
+            # US_BANK_ACCOUNT_NUMBER - Guardrails에서 탐지
             "bank_account": f"{random.randint(100000000, 999999999)}",
-            # US_BANK_ROUTING_NUMBER - Will be detected by Guardrails
+            # US_BANK_ROUTING_NUMBER - Guardrails에서 탐지
             "routing_number": f"{random.randint(100000000, 999999999)}",
-            # CREDIT_DEBIT_CARD_NUMBER - Will be detected by Guardrails
+            # CREDIT_DEBIT_CARD_NUMBER - Guardrails에서 탐지
             "credit_card": f"{random.randint(4000, 4999)}-{random.randint(1000, 9999)}-{random.randint(1000, 9999)}-{random.randint(1000, 9999)}",
-            # CREDIT_DEBIT_CARD_CVV - Will be detected by Guardrails
+            # CREDIT_DEBIT_CARD_CVV - Guardrails에서 탐지
             "cvv": f"{random.randint(100, 999)}",
-            # CREDIT_DEBIT_CARD_EXPIRY - Will be detected by Guardrails
+            # CREDIT_DEBIT_CARD_EXPIRY - Guardrails에서 탐지
             "card_expiry": f"{random.randint(1, 12):02d}/{random.randint(25, 30)}",
-            # PIN - Will be detected by Guardrails
+            # PIN - Guardrails에서 탐지
             "pin": f"{random.randint(1000, 9999)}",
-            # US_INDIVIDUAL_TAX_IDENTIFICATION_NUMBER - Will be detected by Guardrails
+            # US_INDIVIDUAL_TAX_IDENTIFICATION_NUMBER - Guardrails에서 탐지
             "tax_id": f"{random.randint(900, 999)}-{random.randint(70, 99)}-{random.randint(1000, 9999)}",
-            # NON-SENSITIVE - These will NOT be masked
+            # 민감하지 않음 - 마스킹하지 않음
             "account_balance": round(random.uniform(1000, 50000), 2),
             "credit_score": random.randint(600, 850),
             "currency": "USD",
@@ -129,7 +129,7 @@ def lambda_handler(event, context):
     return response
 
 
-# MCP Tool Definition for Gateway registration
+# Gateway 등록용 MCP 도구 정의
 TOOL_DEFINITION = {
     "name": "employee_data_tool",
     "description": "Retrieve employee information by Employee ID. Returns employee record with contact and location information. Sensitive data will be automatically anonymized by Bedrock Guardrails.",
@@ -147,11 +147,11 @@ TOOL_DEFINITION = {
 
 
 if __name__ == "__main__":
-    # Test the tool locally
+    # 로컬에서 도구 테스트
     test_events = [
         {"employee_id": "EMP-98765"},
         {"employee_id": "EMP-12345"},
-        {},  # Test missing employee_id
+        {},  # employee_id 누락 테스트
     ]
 
     for test_event in test_events:

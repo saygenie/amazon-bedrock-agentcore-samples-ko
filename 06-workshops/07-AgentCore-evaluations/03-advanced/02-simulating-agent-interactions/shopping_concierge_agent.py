@@ -1,11 +1,11 @@
-"""Shopping Concierge agent: used by Strands-AgentCore-ShoppingConcierge.ipynb.
+"""Shopping Concierge 에이전트: Strands-AgentCore-ShoppingConcierge.ipynb에서 사용합니다.
 
-A Strands agent with eight tools over a deterministic mock product catalog,
-mock shopping carts, and mock orders. The mock data makes evaluation results
-fully reproducible across runs.
+결정론적 모의 제품 카탈로그, 모의 장바구니, 모의 주문을 대상으로 하는
+8개 도구를 갖춘 Strands 에이전트입니다. 모의 데이터 덕분에 실행할 때마다
+평가 결과를 완전히 재현할 수 있습니다.
 
-Deployed to AgentCore Runtime via the `agentcore` CLI.
-See Step 3 of `Strands-AgentCore-ShoppingConcierge.ipynb`.
+`agentcore` CLI를 통해 AgentCore Runtime에 배포합니다.
+`Strands-AgentCore-ShoppingConcierge.ipynb`의 3단계를 참조하세요.
 """
 
 from strands import Agent, tool
@@ -21,7 +21,7 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 # ---------------------------------------------------------------------------
-# Mock product catalog
+# 모의 제품 카탈로그
 # ---------------------------------------------------------------------------
 PRODUCTS = {
     "PROD-001": {
@@ -106,10 +106,10 @@ PRODUCTS = {
     },
 }
 
-# Mock cart: session_id -> list of {product_id, quantity, price_each}
+# 모의 장바구니: session_id -> {product_id, quantity, price_each} 목록
 _carts: dict = {}
 
-# Mock orders
+# 모의 주문
 _orders = {
     "ORD-SC-001": {
         "status": "delivered",
@@ -137,7 +137,7 @@ _orders = {
 
 
 # ---------------------------------------------------------------------------
-# Tools
+# 도구
 # ---------------------------------------------------------------------------
 
 
@@ -151,7 +151,7 @@ def search_products(query: str, category: str = None, max_price: float = None) -
             continue
         if max_price and p["price"] > max_price:
             continue
-        # Simple keyword match against name + description + category
+        # 이름, 설명, 카테고리를 대상으로 단순 키워드 일치
         text = f"{p['name']} {p['description']} {p['category']}".lower()
         if any(word in text for word in query_lower.split()):
             results.append(f"{pid}: {p['name']} - ${p['price']:.2f} | Rating: {p['rating']} | Stock: {p['stock']}")
@@ -185,7 +185,7 @@ def add_to_cart(product_id: str, quantity: int, session_id: str = "default") -> 
     if p["stock"] < quantity:
         return f"Cannot add {quantity} units - only {p['stock']} in stock."
     cart = _carts.setdefault(session_id, [])
-    # Update existing item or add new
+    # 기존 항목을 업데이트하거나 새 항목 추가
     for item in cart:
         if item["product_id"] == product_id:
             item["quantity"] += quantity
@@ -223,7 +223,7 @@ def checkout(shipping_address: str, payment_method: str, session_id: str = "defa
         return "Cannot checkout - cart is empty."
     total = sum(i["quantity"] * i["price_each"] for i in cart)
     order_id = f"ORD-SC-{uuid.uuid4().hex[:6].upper()}"
-    # Clear cart after checkout
+    # 결제 완료 후 장바구니 비우기
     _carts[session_id] = []
     return (
         f"Order confirmed! Order ID: {order_id}\n"
@@ -301,7 +301,7 @@ TOOLS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Agent setup
+# 에이전트 설정
 # ---------------------------------------------------------------------------
 
 agent = Agent(

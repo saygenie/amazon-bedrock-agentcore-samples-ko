@@ -6,7 +6,7 @@ from dynamo_utils import FinanceDB
 
 mcp = FastMCP(name="ElicitationMCP")
 
-# AWS_REGION is reliably set in all AgentCore/Lambda containers
+# 모든 AgentCore/Lambda container에는 AWS_REGION이 안정적으로 설정됨
 _region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
 db = FinanceDB(region_name=_region)
 
@@ -20,11 +20,11 @@ class DescriptionInput(BaseModel):
 
 
 class CategoryInput(BaseModel):
-    category: str  # one of: food, transport, bills, entertainment, other
+    category: str  # 다음 중 하나: food, transport, bills, entertainment, other
 
 
 class ConfirmInput(BaseModel):
-    confirm: str  # Yes or No
+    confirm: str  # Yes 또는 No
 
 
 @mcp.tool()
@@ -34,19 +34,19 @@ async def add_expense_interactive(user_alias: str, ctx: Context) -> str:
         user_alias: User identifier
     """
     print(f"Debug this method, user_alias: {user_alias}")
-    # Step 1: Ask for the amount
+    # 1단계: 금액 요청
     result = await ctx.elicit("How much did you spend?", AmountInput)
     if not isinstance(result, AcceptedElicitation):
         return "Expense entry cancelled."
     amount = result.data.amount
 
-    # Step 2: Ask for a description
+    # 2단계: 설명 요청
     result = await ctx.elicit("What was it for?", DescriptionInput)
     if not isinstance(result, AcceptedElicitation):
         return "Expense entry cancelled."
     description = result.data.description
 
-    # Step 3: Select a category
+    # 3단계: Category 선택
     result = await ctx.elicit(
         "Select a category (food, transport, bills, entertainment, other):",
         CategoryInput,
@@ -55,7 +55,7 @@ async def add_expense_interactive(user_alias: str, ctx: Context) -> str:
         return "Expense entry cancelled."
     category = result.data.category
 
-    # Step 4: Confirm before saving
+    # 4단계: 저장 전 확인
     confirm_msg = f"Confirm: add expense of ${amount:.2f} for {description} (category: {category})? Reply Yes or No"
     result = await ctx.elicit(confirm_msg, ConfirmInput)
     if not isinstance(result, AcceptedElicitation) or result.data.confirm != "Yes":

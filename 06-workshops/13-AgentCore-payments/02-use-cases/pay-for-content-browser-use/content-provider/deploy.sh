@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 # =============================================================
-# deploy.sh — Deploy the AgentCore Payments x402 content provider
+# deploy.sh - AgentCore Payments x402 content provider 배포
 #
-# Usage:
+# 사용법:
 #   PAY_TO=0x<your-wallet-address> bash deploy.sh
 #
-# Optional overrides:
+# 선택적 재정의:
 #   PRICE_USDC_UNITS=100000   Price in USDC atomic units (default: 100000 = $0.10 USDC)
 #   NETWORK=eip155:84532      CAIP-2 network (default: Base Sepolia testnet)
 #   USDC_ADDRESS=0x...        USDC contract address (default: Base Sepolia USDC)
 #   AWS_PROFILE=myprofile     Named AWS CLI profile to use
 #
-# What it does:
-#   1. Installs CDK dependencies
-#   2. Bootstraps CDK in your AWS account/region (safe to re-run)
-#   3. Deploys: S3 + CloudFront distribution + Lambda@Edge paywall handler
-#   4. Prints the CloudFront distribution URL — copy this into your .env file
+# 수행 작업:
+#   1. CDK dependency 설치
+#   2. AWS account/region에서 CDK bootstrap 실행(다시 실행해도 안전함)
+#   3. S3 + CloudFront distribution + Lambda@Edge paywall handler 배포
+#   4. CloudFront distribution URL 출력 - .env 파일에 복사
 #
-# Cleanup: run `cdk destroy` from the cdk/ directory, or see the README.
+# 정리: cdk/ 디렉터리에서 `cdk destroy`를 실행하거나 README를 참조하세요.
 # =============================================================
 
 set -euo pipefail
@@ -25,7 +25,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CDK_DIR="$SCRIPT_DIR/cdk"
 
-# ── Validate required input ──────────────────────────────────────────────────
+# ── 필수 입력 검증 ──────────────────────────────────────────────────────────
 if [[ -z "${PAY_TO:-}" ]]; then
   echo ""
   echo "ERROR: PAY_TO is required — set it to your merchant wallet address."
@@ -49,18 +49,18 @@ echo "  Network:         $NETWORK"
 echo "  USDC contract:   $USDC_ADDRESS"
 echo ""
 
-# ── Install CDK dependencies ─────────────────────────────────────────────────
+# ── CDK dependency 설치 ──────────────────────────────────────────────────────
 echo "Installing CDK dependencies..."
 cd "$CDK_DIR"
 npm install --silent
 
-# ── CDK bootstrap (idempotent — safe to run every time) ─────────────────────
+# ── CDK bootstrap(멱등성이 있어 매번 실행해도 안전함) ────────────────────────
 echo "Bootstrapping CDK (us-east-1)..."
-# Lambda@Edge must live in us-east-1; bootstrap that region
+# Lambda@Edge는 us-east-1에 있어야 하므로 해당 region을 bootstrap합니다.
 npx cdk bootstrap aws://$(aws sts get-caller-identity --query Account --output text)/us-east-1 \
   ${AWS_PROFILE:+--profile "$AWS_PROFILE"} 2>&1 | tail -5
 
-# ── Deploy ───────────────────────────────────────────────────────────────────
+# ── 배포 ─────────────────────────────────────────────────────────────────────
 echo ""
 echo "Deploying stack (this takes ~5 minutes for CloudFront)..."
 npx cdk deploy \
@@ -71,7 +71,7 @@ npx cdk deploy \
   --context "USDC_ADDRESS=$USDC_ADDRESS" \
   ${AWS_PROFILE:+--profile "$AWS_PROFILE"}
 
-# ── Extract and display the distribution URL ─────────────────────────────────
+# ── distribution URL 추출 및 표시 ────────────────────────────────────────────
 echo ""
 DIST_URL=$(aws cloudformation describe-stacks \
   --stack-name AgentCoreContentProvider \

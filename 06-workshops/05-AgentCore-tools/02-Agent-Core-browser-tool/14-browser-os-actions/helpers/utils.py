@@ -15,13 +15,13 @@ def get_aws_account_id() -> str:
 
 
 def create_agentcore_execution_role(role_name: str) -> Optional[str]:
-    """Create IAM role for AgentCore runtime execution."""
+    """AgentCore Runtime 실행용 IAM 역할을 생성한다."""
     iam = boto3.client("iam")
     boto_session = Session()
     region = boto_session.region_name
     account_id = get_aws_account_id()
 
-    # Trust relationship policy
+    # 신뢰 관계 정책
     trust_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -38,7 +38,7 @@ def create_agentcore_execution_role(role_name: str) -> Optional[str]:
         ],
     }
 
-    # IAM policy document
+    # IAM 정책 문서
     policy_document = {
         "Version": "2012-10-17",
         "Statement": [
@@ -56,7 +56,7 @@ def create_agentcore_execution_role(role_name: str) -> Optional[str]:
     }
 
     try:
-        # Check if role already exists
+        # 역할이 이미 존재하는지 확인
         try:
             existing_role = iam.get_role(RoleName=role_name)
             print(f"ℹ️ Role {role_name} already exists")
@@ -65,7 +65,7 @@ def create_agentcore_execution_role(role_name: str) -> Optional[str]:
         except iam.exceptions.NoSuchEntityException:
             pass
 
-        # Create IAM role
+        # IAM 역할 생성
         role_response = iam.create_role(
             RoleName=role_name,
             AssumeRolePolicyDocument=json.dumps(trust_policy),
@@ -75,14 +75,14 @@ def create_agentcore_execution_role(role_name: str) -> Optional[str]:
         print(f"✅ Created IAM role: {role_name}")
         print(f"Role ARN: {role_response['Role']['Arn']}")
 
-        # Check if policy already exists
+        # 정책이 이미 존재하는지 확인
         policy_arn = f"arn:aws:iam::{account_id}:policy/{POLICY_NAME}"
 
         try:
             iam.get_policy(PolicyArn=policy_arn)
             print(f"ℹ️ Policy {POLICY_NAME} already exists")
         except iam.exceptions.NoSuchEntityException:
-            # Create policy
+            # 정책 생성
             policy_response = iam.create_policy(
                 PolicyName=POLICY_NAME,
                 PolicyDocument=json.dumps(policy_document),
@@ -91,7 +91,7 @@ def create_agentcore_execution_role(role_name: str) -> Optional[str]:
             print(f"✅ Created policy: {POLICY_NAME}")
             policy_arn = policy_response["Policy"]["Arn"]
 
-        # Attach policy to role
+        # 역할에 정책 연결
         try:
             iam.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
             print("✅ Attached policy to role")
@@ -110,28 +110,28 @@ def create_agentcore_execution_role(role_name: str) -> Optional[str]:
 
 
 def delete_agentcore_execution_role(role_name: str) -> None:
-    """Delete AgentCore runtime execution role and associated policy."""
+    """AgentCore Runtime 실행 역할과 관련 정책을 삭제한다."""
     iam = boto3.client("iam")
 
     try:
         account_id = get_aws_account_id()
         policy_arn = f"arn:aws:iam::{account_id}:policy/{POLICY_NAME}"
 
-        # Detach policy from role
+        # 역할에서 정책 분리
         try:
             iam.detach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
             print("✅ Detached policy from role")
         except iam.exceptions.ClientError:
             pass
 
-        # Delete role
+        # 역할 삭제
         try:
             iam.delete_role(RoleName=role_name)
             print(f"✅ Deleted role: {role_name}")
         except iam.exceptions.ClientError:
             pass
 
-        # Delete policy
+        # 정책 삭제
         try:
             iam.delete_policy(PolicyArn=policy_arn)
             print(f"✅ Deleted policy: {POLICY_NAME}")
@@ -143,8 +143,8 @@ def delete_agentcore_execution_role(role_name: str) -> None:
 
 
 def local_file_cleanup() -> None:
-    """Clean up local files created during the tutorial."""
-    # List of files to clean up
+    """튜토리얼 중 생성된 로컬 파일을 정리한다."""
+    # 정리할 파일 목록
     files_to_delete = ["Dockerfile", ".dockerignore", ".bedrock_agentcore.yaml"]
 
     deleted_files = []

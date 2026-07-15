@@ -1,1 +1,1 @@
-"""Examples for Agentcore SDK Tools."""
+"""Agentcore SDK Tools 예제."""

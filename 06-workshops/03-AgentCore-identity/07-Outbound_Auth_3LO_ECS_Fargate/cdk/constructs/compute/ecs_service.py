@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""ECS service construct for agent and session binding services."""
+"""에이전트 및 세션 바인딩 서비스용 ECS 서비스 construct."""
 
 from aws_cdk import Aws, Duration, RemovalPolicy
 from aws_cdk import aws_ec2 as ec2
@@ -17,7 +17,7 @@ from config import OidcConfig
 
 
 class EcsService(Construct):
-    """ECS Cluster with Agent and Session Binding services."""
+    """Agent 및 Session Binding 서비스가 포함된 ECS Cluster."""
 
     def __init__(
         self,
@@ -36,7 +36,7 @@ class EcsService(Construct):
         workload_identity_name: str,
         github_provider_name: str,
     ):
-        """Initialize ECS service construct."""
+        """ECS 서비스 construct를 초기화한다."""
         super().__init__(scope, id)
 
         account_id = Aws.ACCOUNT_ID
@@ -309,7 +309,7 @@ class EcsService(Construct):
             health_check=elbv2.HealthCheck(path="/ping"),
             vpc=vpc,
         )
-        # Session Binding Target Group
+        # Session Binding 대상 그룹
         session_binding_target_group = elbv2.ApplicationTargetGroup(
             self,
             "SessionBindingTargetGroup",

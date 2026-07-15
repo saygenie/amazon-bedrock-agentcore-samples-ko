@@ -1,7 +1,7 @@
 """
-3LO OAuth Callback Lambda - Handles outbound OAuth callbacks and calls CompleteResourceTokenAuth.
+3LO OAuth 콜백 Lambda - 아웃바운드 OAuth 콜백을 처리하고 CompleteResourceTokenAuth를 호출합니다.
 
-This Lambda function replaces the local oauth2_callback_server.py script.
+이 Lambda 함수는 로컬 oauth2_callback_server.py 스크립트를 대체합니다.
 """
 
 import json
@@ -10,12 +10,12 @@ import boto3
 
 REGION = os.environ.get("AWS_REGION", "us-west-2")
 
-# In-memory token storage (use DynamoDB for production)
+# 인메모리 토큰 스토리지(프로덕션에서는 DynamoDB 사용)
 USER_TOKEN = {}
 
 
 def lambda_handler(event, context):
-    """Main Lambda handler - routes requests based on path."""
+    """경로에 따라 요청을 라우팅하는 기본 Lambda 핸들러입니다."""
     path = event.get("rawPath", event.get("path", "/"))
     method = event.get("requestContext", {}).get("http", {}).get("method", "GET")
 
@@ -30,7 +30,7 @@ def lambda_handler(event, context):
 
 
 def handle_store_token(event):
-    """Store user token for 3LO session binding."""
+    """3LO 세션 바인딩을 위해 사용자 토큰을 저장합니다."""
     body = event.get("body", "{}")
     if event.get("isBase64Encoded"):
         import base64
@@ -43,7 +43,7 @@ def handle_store_token(event):
 
 
 def handle_oauth_callback(event):
-    """Handle 3LO OAuth callback and call CompleteResourceTokenAuth."""
+    """3LO OAuth 콜백을 처리하고 CompleteResourceTokenAuth를 호출합니다."""
     params = event.get("queryStringParameters", {}) or {}
     session_id = params.get("session_id", "")
 
@@ -53,8 +53,8 @@ def handle_oauth_callback(event):
     if not USER_TOKEN.get("value"):
         return json_response(500, {"error": "No user token stored"})
 
-    # Call AgentCore CompleteResourceTokenAuth
-    # The correct boto3 service is 'bedrock-agentcore' (not 'bedrock-agentcore-identity')
+    # AgentCore CompleteResourceTokenAuth 호출
+    # 올바른 boto3 서비스는 'bedrock-agentcore'임('bedrock-agentcore-identity'가 아님)
     try:
         agentcore_client = boto3.client("bedrock-agentcore", region_name=REGION)
         agentcore_client.complete_resource_token_auth(

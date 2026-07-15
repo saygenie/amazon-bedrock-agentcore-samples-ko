@@ -191,7 +191,7 @@
                 const response = await fetch('/api/recordings');
                 const data = await response.json();
                 
-                // Check if response has error
+                // 응답의 오류 여부 확인
                 if (data.error) {
                     console.error('Server returned error:', data.error);
                     document.getElementById('recordingsList').innerHTML = 
@@ -200,7 +200,7 @@
                     return;
                 }
                 
-                // Make sure recordings is an array
+                // recordings가 배열인지 확인
                 recordings = Array.isArray(data) ? data : (data.recordings || []);
                 
                 const listEl = document.getElementById('recordingsList');
@@ -212,10 +212,10 @@
                     return;
                 }
                 
-                // CHANGED: Use string concatenation instead of template literals
+                // 변경: 템플릿 리터럴 대신 문자열 연결 사용
                 countEl.textContent = '(' + recordings.length + ')';
                 
-                // CHANGED: Create HTML using map with string concatenation
+                // 변경: map과 문자열 연결로 HTML 생성
                 listEl.innerHTML = recordings.map(function(recording, index) {
                     return '<div class="recording-item" data-index="' + index + '" onclick="loadRecording(' + index + ')">' +
                         '<div class="date">' + recording.date + '</div>' +
@@ -239,7 +239,7 @@
             const minutes = Math.floor(seconds / 60);
             const hours = Math.floor(minutes / 60);
             
-            // CHANGED: Use string concatenation instead of template literals
+            // 변경: 템플릿 리터럴 대신 문자열 연결 사용
             if (hours > 0) {
                 return hours + 'h ' + (minutes % 60) + 'm';
             } else if (minutes > 0) {
@@ -255,14 +255,14 @@
             document.querySelectorAll('.recording-item').forEach(el => {
                 el.classList.remove('active');
             });
-            // CHANGED: Use string concatenation
+            // 변경: 문자열 연결 사용
             document.querySelector('[data-index="' + index + '"]').classList.add('active');
             
             const playerEl = document.getElementById('player');
             playerEl.innerHTML = '<div class="empty-state"><div class="loading"></div>Downloading recording...</div>';
             
             try {
-                // Safely dispose of the existing player first
+                // 먼저 기존 플레이어를 안전하게 해제
                 if (currentPlayer) {
                     try {
                         if (typeof currentPlayer.destroy === 'function') {
@@ -276,7 +276,7 @@
                     currentPlayer = null;
                 }
                 
-                // CHANGED: Use string concatenation
+                // 변경: 문자열 연결 사용
                 const response = await fetch('/api/download/' + recording.id);
                 const result = await response.json();
                 
@@ -290,7 +290,7 @@
                     throw new Error('Recording contains no events');
                 }
                 
-                // CHANGED: Use string concatenation for logging
+                // 변경: 로깅에 문자열 연결 사용
                 console.log('Loaded ' + events.length + ' events. First event type: ' + events[0].type);
                 
                 playerEl.innerHTML = '';
@@ -302,7 +302,7 @@
                 const width = Math.min(playerEl.offsetWidth, 1200);
                 const height = Math.min(playerEl.offsetHeight, 800);
                 
-                // CHANGED: Use string concatenation
+                // 변경: 문자열 연결 사용
                 console.log('Creating player with dimensions ' + width + 'x' + height);
                 
                 currentPlayer = new rrwebPlayer({
@@ -320,18 +320,18 @@
                 
             } catch (e) {
                 console.error('Failed to load recording:', e);
-                // CHANGED: Use string concatenation
+                // 변경: 문자열 연결 사용
                 playerEl.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
             }
         }
         
-        // Initialize
+        // 초기화
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Session Replay Viewer loaded');
             loadRecordings();
         });
         
-        // Auto-refresh recordings list periodically
+        // 녹화 목록 주기적 자동 새로 고침
         setInterval(loadRecordings, 30000);
     </script>
 </body>

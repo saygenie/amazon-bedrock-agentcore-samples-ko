@@ -6,10 +6,10 @@ import requests
 
 
 def get_agent_status(agent_name: str, cwd: str = "mcpservers") -> dict:
-    """Run `agentcore status --json` and return the resource entry for the named agent.
+    """`agentcore status --json`을 실행하고 지정한 agent의 리소스 항목을 반환합니다.
 
-    Uses `JSONDecoder.raw_decode` to ignore the trailing ANSI cursor-show
-    escape that Ink leaks on stdout even in --json mode.
+    --json 모드에서도 Ink가 stdout에 남기는 후행 ANSI cursor-show escape를
+    무시하기 위해 `JSONDecoder.raw_decode`를 사용합니다.
     """
     result = subprocess.run(
         ["agentcore", "status", "--json"],
@@ -27,11 +27,10 @@ def get_agent_status(agent_name: str, cwd: str = "mcpservers") -> dict:
 
 
 def deploy_cognito_stack(cfn, stack_name: str, template_path: str) -> dict:
-    """Idempotently deploy the Cognito CloudFormation stack; return its outputs.
+    """Cognito CloudFormation 스택을 멱등하게 배포하고 출력을 반환합니다.
 
-    Creates the stack if missing, attempts an update if it's already in a
-    `*_COMPLETE` state (swallowing "no updates" errors), and raises if the
-    stack is in any non-terminal state.
+    스택이 없으면 생성하고, 이미 `*_COMPLETE` 상태이면 업데이트를 시도하며
+    "no updates" 오류는 무시합니다. 스택이 종료 상태가 아니면 오류를 발생시킵니다.
     """
     with open(template_path) as f:
         template_body = f.read()
@@ -51,7 +50,7 @@ def deploy_cognito_stack(cfn, stack_name: str, template_path: str) -> dict:
         cfn.create_stack(
             StackName=stack_name,
             TemplateBody=template_body,
-            Capabilities=[],  # stack has no IAM resources
+            Capabilities=[],  # 스택에 IAM 리소스가 없음
             OnFailure="DELETE",
         )
         cfn.get_waiter("stack_create_complete").wait(StackName=stack_name)
@@ -80,7 +79,7 @@ def deploy_cognito_stack(cfn, stack_name: str, template_path: str) -> dict:
 
 
 def delete_iam_role(role_name: str) -> None:
-    """Delete an IAM role plus any attached managed and inline policies. Idempotent."""
+    """IAM role과 연결된 관리형·인라인 정책을 삭제합니다. 멱등성을 보장합니다."""
     iam = boto3.client("iam")
     try:
         for p in iam.list_attached_role_policies(RoleName=role_name)[
@@ -101,9 +100,9 @@ def get_token(
     client_secret: str,
     scope_string: str,
 ) -> dict:
-    """Mint a client_credentials access token from `token_endpoint` (the
-    Cognito hosted-UI `/oauth2/token` URL — read this from the stack's
-    `TokenEndpoint` output)."""
+    """`token_endpoint`에서 client_credentials access token을 발급합니다.
+    `token_endpoint`는 Cognito hosted UI의 `/oauth2/token` URL이며 스택의
+    `TokenEndpoint` 출력에서 읽습니다."""
     try:
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         data = {
@@ -124,14 +123,14 @@ def get_token(
 
 def create_agentcore_gateway_role_with_region(gateway_name, region):
     """
-    Create an IAM role for AgentCore Gateway with explicit region specification.
+    리전을 명시하여 AgentCore Gateway용 IAM role을 생성합니다.
 
-    Args:
-        gateway_name: Name of the gateway
-        region: AWS region where the gateway will be deployed
+    인자:
+        gateway_name: gateway 이름
+        region: gateway를 배포할 AWS 리전
 
-    Returns:
-        IAM role response
+    반환:
+        IAM role 응답
     """
     iam_client = boto3.client("iam")
     agentcore_gateway_role_name = f"agentcore-{gateway_name}-role"
@@ -231,10 +230,10 @@ def delete_gateway(gateway_client, gatewayId):
 
 
 def interactive_input_form(params):
-    """Schema-driven prompt-via-input() callback. Each field in
-    `requestedSchema.properties` becomes one `input()` prompt with hints
-    derived from the schema (enum options, integer ranges, boolean y/N).
-    Type `d` to decline or `c` to cancel at any prompt.
+    """스키마 기반 prompt-via-input() callback입니다.
+    `requestedSchema.properties`의 각 필드는 스키마에서 파생된 힌트(enum 선택지,
+    정수 범위, boolean y/N)가 있는 하나의 `input()` prompt가 됩니다.
+    어느 prompt에서든 거절하려면 `d`, 취소하려면 `c`를 입력합니다.
     """
     message = params.get("message") or "Please provide input"
     schema = params.get("requestedSchema") or {}
@@ -293,21 +292,20 @@ def bedrock_sampling(
     model_id: str = "global.anthropic.claude-haiku-4-5-20251001-v1:0",
     region: str | None = None,
 ):
-    """Real sampling callback — delegates to Amazon Bedrock via the Converse
-    API. Pass directly to `GatewayMCPClient.call_tool_streaming(
+    """Converse API를 통해 Amazon Bedrock에 위임하는 실제 sampling callback입니다.
+    `GatewayMCPClient.call_tool_streaming(
     sampling_callback=...)`.
 
-    Translates MCP `sampling/createMessage` params into Bedrock Converse
-    inputs, then translates the response back into a `CreateMessageResult`-
-    shaped dict.
+    MCP `sampling/createMessage` params를 Bedrock Converse 입력으로 변환한 다음
+    응답을 `CreateMessageResult` 형태의 dict로 다시 변환합니다.
 
-    The IAM principal running this notebook must have `bedrock:InvokeModel`
-    on `model_id`.
+    이 Notebook을 실행하는 IAM principal에는 `model_id`에 대한
+    `bedrock:InvokeModel` 권한이 있어야 합니다.
     """
     bedrock = boto3.client("bedrock-runtime", region_name=region)
 
-    # MCP sends `messages` as either a string (when the server passes
-    # `messages="..."` to `ctx.sample`) or a list of {role, content} dicts.
+    # MCP는 `messages`를 문자열(서버가 `ctx.sample`에 `messages="..."`를 전달할 때)
+    # 또는 {role, content} dict 목록으로 전송
     raw_messages = params.get("messages")
     if isinstance(raw_messages, str):
         raw_messages = [
@@ -352,7 +350,7 @@ def bedrock_sampling(
 
 
 def show(label, outcome):
-    """Pretty-print whatever `call_tool_streaming` returned."""
+    """`call_tool_streaming`이 반환한 값을 보기 좋게 출력합니다."""
     result = outcome.get("result") or {}
     error = outcome.get("error")
     print(f"--- {label} ---")

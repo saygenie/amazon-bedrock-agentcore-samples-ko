@@ -38,8 +38,8 @@ export class EksClusterStack extends cdk.Stack {
       ],
     });
 
-    // Allow cross-stack Lambdas to assume the kubectl role
-    // (needed when other stacks use fromClusterAttributes to deploy manifests)
+    // 스택 간 Lambda가 kubectl 역할을 수임하도록 허용
+    // 다른 스택에서 fromClusterAttributes로 manifest를 배포할 때 필요
     const kubectlRole = this.cluster.kubectlRole! as iam.Role;
     kubectlRole.assumeRolePolicy!.addStatements(
       new iam.PolicyStatement({
@@ -48,8 +48,8 @@ export class EksClusterStack extends cdk.Stack {
       }),
     );
 
-    // Allow kubectl Lambdas from child stacks to reach the EKS API
-    // (fromClusterAttributes creates new Lambdas whose SGs aren't auto-added)
+    // 하위 스택의 kubectl Lambda가 EKS API에 접근하도록 허용
+    // fromClusterAttributes는 Security Group이 자동 추가되지 않는 새 Lambda를 생성함
     this.cluster.clusterSecurityGroup.addIngressRule(
       ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
       ec2.Port.tcp(443),
@@ -65,16 +65,16 @@ export class EksClusterStack extends cdk.Stack {
     });
 
     // --- AWS Load Balancer Controller ---
-    // Required for NLB creation via Kubernetes Service annotations
+    // Kubernetes Service annotation을 통한 NLB 생성에 필요
     const lbControllerSa = this.cluster.addServiceAccount("LbControllerSa", {
       name: "aws-load-balancer-controller",
       namespace: "kube-system",
     });
 
-    // IAM policy derived from the official AWS Load Balancer Controller docs:
+    // 공식 AWS Load Balancer Controller 문서에서 가져온 IAM 정책:
     // https://kubernetes-sigs.github.io/aws-load-balancer-controller/
-    // Wildcard resources are required because the controller manages NLBs/ALBs
-    // whose ARNs are not known at deploy time.
+    // Controller가 배포 시점에 ARN을 알 수 없는 NLB/ALB를 관리하므로
+    // wildcard 리소스가 필요함
     const lbControllerPolicy = new iam.Policy(this, "LbControllerPolicy", {
       statements: [
         new iam.PolicyStatement({
@@ -194,7 +194,7 @@ export class EksClusterStack extends cdk.Stack {
     });
     lbControllerChart.node.addDependency(lbControllerSa);
 
-    // --- NGINX Ingress Controller (no Service — NLB is created in McpEksStack) ---
+    // --- NGINX Ingress Controller(Service 없음 - NLB는 McpEksStack에서 생성) ---
     const nginxIngressChart = this.cluster.addHelmChart("NginxIngress", {
       chart: "ingress-nginx",
       repository: "https://kubernetes.github.io/ingress-nginx",
@@ -203,9 +203,9 @@ export class EksClusterStack extends cdk.Stack {
       createNamespace: true,
       values: {
         controller: {
-          // Disable the default LoadBalancer Service — the NLB is created
-          // explicitly in McpEksStack with numeric targetPort to avoid
-          // named-port resolution issues with the AWS LB Controller.
+          // 기본 LoadBalancer Service 비활성화 - AWS LB Controller의 named-port
+          // 확인 문제를 피하기 위해 McpEksStack에서 숫자 targetPort로
+          // NLB를 명시적으로 생성함
           service: {
             enabled: false,
           },

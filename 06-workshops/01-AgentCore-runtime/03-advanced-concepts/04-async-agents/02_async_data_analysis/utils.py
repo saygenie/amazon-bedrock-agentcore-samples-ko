@@ -13,29 +13,29 @@ from typing import Optional
 
 
 def generate_unique_agent_name(base_name: str = "async_data_analysis_agent") -> str:
-    """Generate a unique agent name that complies with AWS constraints.
+    """AWS 제약 조건을 준수하는 고유 Agent 이름을 생성합니다.
 
-    AWS Pattern: [a-zA-Z][a-zA-Z0-9_]{0,47}
-    - Must start with letter
-    - Only letters, numbers, underscores
-    - Max 48 characters total
+    AWS 패턴: [a-zA-Z][a-zA-Z0-9_]{0,47}
+    - 문자로 시작해야 함
+    - 문자, 숫자, 밑줄만 허용
+    - 전체 최대 48자
     """
-    # Use shorter timestamp and UUID to fit within 48 char limit
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # Use underscore instead of hyphen
-    short_uuid = str(uuid.uuid4()).replace("-", "")[:8]  # Remove hyphens from UUID
+    # 48자 제한에 맞도록 더 짧은 타임스탬프와 UUID 사용
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # 하이픈 대신 밑줄 사용
+    short_uuid = str(uuid.uuid4()).replace("-", "")[:8]  # UUID에서 하이픈 제거
 
-    # Create base name that fits AWS constraints
+    # AWS 제약 조건에 맞는 기본 이름 생성
     if base_name.startswith("async_data_analysis_agent"):
-        # Shorten base name to fit within limits
+        # 제한에 맞도록 기본 이름 축약
         base = "async_data_agent"
     else:
-        base = base_name[:15]  # Limit base name length
+        base = base_name[:15]  # 기본 이름 길이 제한
 
     unique_name = f"{base}_{timestamp}_{short_uuid}"
 
-    # Ensure it fits within 48 character limit
+    # 48자 제한에 맞는지 확인
     if len(unique_name) > 48:
-        # Truncate if necessary
+        # 필요한 경우 자르기
         available_chars = 48 - len(f"_{timestamp}_{short_uuid}")
         base = base[:available_chars]
         unique_name = f"{base}_{timestamp}_{short_uuid}"
@@ -44,7 +44,7 @@ def generate_unique_agent_name(base_name: str = "async_data_analysis_agent") -> 
 
 
 def update_agent_name_in_config(config_path: str = ".bedrock_agentcore.yaml", new_name: str = None):
-    """Update agent name in configuration to use unique name."""
+    """구성에서 고유 이름을 사용하도록 Agent 이름을 업데이트합니다."""
     try:
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
@@ -52,28 +52,28 @@ def update_agent_name_in_config(config_path: str = ".bedrock_agentcore.yaml", ne
         if not new_name:
             new_name = generate_unique_agent_name()
 
-        # Update default agent name
+        # 기본 Agent 이름 업데이트
         config["default_agent"] = new_name
 
-        # Update agent configuration
+        # Agent 구성 업데이트
         if "agents" in config:
             old_agents = dict(config["agents"])
             config["agents"] = {}
 
             for old_name, agent_config in old_agents.items():
-                # Use the new unique name
+                # 새 고유 이름 사용
                 config["agents"][new_name] = agent_config
                 config["agents"][new_name]["name"] = new_name
 
-                # Reset agent IDs for fresh deployment
+                # 새 배포를 위해 Agent ID 재설정
                 if "bedrock_agentcore" in agent_config:
                     agent_config["bedrock_agentcore"]["agent_id"] = None
                     agent_config["bedrock_agentcore"]["agent_arn"] = None
                     agent_config["bedrock_agentcore"]["agent_session_id"] = None
 
-                break  # Only update the first agent
+                break  # 첫 번째 Agent만 업데이트
 
-        # Write back the updated configuration
+        # 업데이트된 구성을 다시 쓰기
         with open(config_path, "w") as f:
             yaml.dump(config, f, default_flow_style=False)
 
@@ -86,12 +86,12 @@ def update_agent_name_in_config(config_path: str = ".bedrock_agentcore.yaml", ne
 
 
 def reset_agent_configuration(config_path: str = ".bedrock_agentcore.yaml"):
-    """Dynamically reset agent configuration to allow fresh deployment."""
+    """새 배포가 가능하도록 Agent 구성을 동적으로 재설정합니다."""
     try:
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
 
-        # Reset agent-specific fields
+        # Agent별 필드 재설정
         if "agents" in config:
             for agent_name, agent_config in config["agents"].items():
                 if "bedrock_agentcore" in agent_config:
@@ -99,7 +99,7 @@ def reset_agent_configuration(config_path: str = ".bedrock_agentcore.yaml"):
                     agent_config["bedrock_agentcore"]["agent_arn"] = None
                     agent_config["bedrock_agentcore"]["agent_session_id"] = None
 
-        # Write back the updated configuration
+        # 업데이트된 구성을 다시 쓰기
         with open(config_path, "w") as f:
             yaml.dump(config, f, default_flow_style=False)
 
@@ -112,7 +112,7 @@ def reset_agent_configuration(config_path: str = ".bedrock_agentcore.yaml"):
 
 
 def get_agent_status(config_path: str = ".bedrock_agentcore.yaml"):
-    """Check current agent deployment status."""
+    """현재 Agent 배포 상태를 확인합니다."""
     try:
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
@@ -138,7 +138,7 @@ def get_agent_status(config_path: str = ".bedrock_agentcore.yaml"):
 
 
 def ensure_fresh_deployment(config_path: str = ".bedrock_agentcore.yaml"):
-    """Ensure configuration is ready for fresh deployment."""
+    """구성이 새 배포를 수행할 준비가 되었는지 확인합니다."""
     status = get_agent_status(config_path)
 
     for agent_name, info in status.items():
@@ -153,7 +153,7 @@ def ensure_fresh_deployment(config_path: str = ".bedrock_agentcore.yaml"):
 
 
 class SecureCodeInterpreter:
-    """Secure CodeInterpreter with network isolation and restricted S3 access."""
+    """네트워크 격리와 제한된 S3 접근을 사용하는 Secure CodeInterpreter입니다."""
 
     def __init__(self, region: str, allowed_s3_buckets: Optional[list] = None):
         self.region = region
@@ -163,10 +163,10 @@ class SecureCodeInterpreter:
         self.execution_role_arn = None
 
     def create_restricted_execution_role(self, role_name: str) -> str:
-        """Create IAM role with minimal S3 permissions for specific buckets only."""
+        """특정 버킷에 대한 최소 S3 권한만 있는 IAM 역할을 생성합니다."""
         iam_client = boto3.client("iam")
 
-        # Create trust policy for CodeInterpreter
+        # CodeInterpreter용 신뢰 정책 생성
         trust_policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -178,7 +178,7 @@ class SecureCodeInterpreter:
             ],
         }
 
-        # Create minimal S3 policy for allowed buckets only
+        # 허용된 버킷만 대상으로 최소 S3 정책 생성
         s3_resources = []
         if self.allowed_s3_buckets:
             for bucket in self.allowed_s3_buckets:
@@ -200,14 +200,14 @@ class SecureCodeInterpreter:
         }
 
         try:
-            # Create role
+            # 역할 생성
             role_response = iam_client.create_role(
                 RoleName=role_name,
                 AssumeRolePolicyDocument=json.dumps(trust_policy),
                 Description="Restricted execution role for secure CodeInterpreter",
             )
 
-            # Attach policy
+            # 정책 연결
             iam_client.put_role_policy(
                 RoleName=role_name,
                 PolicyName="RestrictedS3Access",
@@ -219,18 +219,18 @@ class SecureCodeInterpreter:
             return role_arn
 
         except iam_client.exceptions.EntityAlreadyExistsException:
-            # Role exists, get ARN
+            # 역할이 있으면 ARN 가져오기
             role_response = iam_client.get_role(RoleName=role_name)
             return role_response["Role"]["Arn"]
 
     def create_secure_code_interpreter(self, name: str) -> str:
-        """Create CodeInterpreter with sandbox mode (no internet access)."""
+        """Sandbox 모드(인터넷 접근 없음)로 CodeInterpreter를 생성합니다."""
 
-        # Create restricted execution role
+        # 제한된 실행 역할 생성
         role_name = f"secure-code-interpreter-{name}-role"
         self.execution_role_arn = self.create_restricted_execution_role(role_name)
 
-        # Wait for role to be available
+        # 역할을 사용할 수 있을 때까지 대기
         time.sleep(10)
 
         try:
@@ -239,7 +239,7 @@ class SecureCodeInterpreter:
                 description="Secure CodeInterpreter with network isolation",
                 executionRoleArn=self.execution_role_arn,
                 networkConfiguration={
-                    "networkMode": "SANDBOX"  # No internet access, only S3 and DNS
+                    "networkMode": "SANDBOX"  # 인터넷 접근 없이 S3와 DNS만 허용
                 },
             )
 
@@ -255,13 +255,13 @@ class SecureCodeInterpreter:
             raise
 
     def get_code_interpreter_client(self):
-        """Get CodeInterpreter client configured for secure execution."""
+        """보안 실행용으로 구성된 CodeInterpreter 클라이언트를 가져옵니다."""
         if not self.code_interpreter_id:
             raise ValueError("CodeInterpreter not created. Call create_secure_code_interpreter first.")
 
         from bedrock_agentcore.tools.code_interpreter_client import CodeInterpreter
 
-        # Use custom CodeInterpreter with restricted configuration
+        # 제한된 구성을 사용하는 사용자 지정 CodeInterpreter 사용
         return CodeInterpreter(region=self.region, code_interpreter_id=self.code_interpreter_id)
 
 
@@ -403,14 +403,14 @@ def create_agentcore_role(agent_name):
 
     assume_role_policy_document_json = json.dumps(assume_role_policy_document)
     role_policy_document = json.dumps(role_policy)
-    # Create IAM Role for the Lambda function
+    # Lambda 함수용 IAM 역할 생성
     try:
         agentcore_iam_role = iam_client.create_role(
             RoleName=agentcore_role_name,
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-        # Pause to make sure role is created
+    # 역할 생성을 확인하기 위해 잠시 대기
         time.sleep(10)
     except iam_client.exceptions.EntityAlreadyExistsException:
         print("Role already exists -- deleting and creating it again")
@@ -426,7 +426,7 @@ def create_agentcore_role(agent_name):
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-    # Attach the AWSLambdaBasicExecutionRole policy
+    # AWSLambdaBasicExecutionRole 정책 연결
     print(f"attaching role policy {agentcore_role_name}")
     try:
         iam_client.put_role_policy(

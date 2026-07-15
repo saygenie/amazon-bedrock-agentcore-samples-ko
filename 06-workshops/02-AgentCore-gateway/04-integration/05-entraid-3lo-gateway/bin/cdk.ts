@@ -6,7 +6,7 @@ import { CdkEntraIdStack } from "../infra/cdk-stack";
 
 const app = new cdk.App();
 
-// Stack name from context — allows multiple independent deployments
+// context에서 가져오는 스택 이름 - 여러 독립 배포를 지원
 const stackName = app.node.tryGetContext("stackName") || "CdkStackIdeMcpEntraId";
 
 new CdkEntraIdStack(app, stackName, {

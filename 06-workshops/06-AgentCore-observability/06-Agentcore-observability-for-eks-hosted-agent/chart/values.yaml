@@ -1,5 +1,5 @@
-# Default values for strands-agents-travel
-# This is a YAML-formatted file.
+# strands-agents-travel의 기본값
+# YAML 형식의 파일입니다.
 
 replicaCount: 1
 
@@ -13,12 +13,12 @@ nameOverride: ""
 fullnameOverride: ""
 
 serviceAccount:
-  # Specifies whether a service account should be created
+  # service account 생성 여부 지정
   create: true
-  # Annotations to add to the service account
+  # service account에 추가할 annotation
   annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
+  # 사용할 service account 이름
+  # 설정하지 않고 create가 true이면 fullname template으로 이름 생성
   name: ""
 
 podAnnotations: {}
@@ -84,7 +84,7 @@ topologySpreadConstraints: []
 
 podDisruptionBudget:
   enabled: false
-  # Only one of maxUnavailable and minAvailable can be specified
+  # maxUnavailable과 minAvailable 중 하나만 지정 가능
   # minAvailable: 1    # Can be an absolute number or a percentage (e.g., "50%")
   # maxUnavailable: 1  # Can be an absolute number or a percentage (e.g., "50%")
 

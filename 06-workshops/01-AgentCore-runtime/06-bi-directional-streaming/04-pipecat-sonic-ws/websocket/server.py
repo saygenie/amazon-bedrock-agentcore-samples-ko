@@ -1,17 +1,17 @@
 """
-Pipecat Voice Agent WebSocket Server (Nova Sonic)
+Pipecat 음성 에이전트 WebSocket 서버(Nova Sonic)
 
-FastAPI server with IMDS credential management and WebSocket endpoint.
-Uses Amazon Nova Sonic for native speech-to-speech via Pipecat's
-AWSNovaSonicLLMService — no separate STT or TTS needed.
+IMDS 자격 증명 관리 기능과 WebSocket 엔드포인트를 갖춘 FastAPI 서버입니다.
+Pipecat의 AWSNovaSonicLLMService를 통해 Amazon Nova Sonic의 네이티브
+음성 대 음성 기능을 사용하므로 별도의 STT 또는 TTS가 필요하지 않습니다.
 
-Follows the same server pattern as 01-bedrock-sonic-ws/02-strands-ws/03-langchain-transcribe-polly-ws agents
-(FastAPI + IMDS credentials + /ws endpoint) so it works with the
-standard HTML client and AgentCore deployment.
+표준 HTML 클라이언트 및 AgentCore 배포와 호환되도록
+01-bedrock-sonic-ws/02-strands-ws/03-langchain-transcribe-polly-ws 에이전트와 동일한
+서버 패턴(FastAPI + IMDS 자격 증명 + /ws 엔드포인트)을 따릅니다.
 
-Based on:
+참고 자료:
 - pipecat/examples/foundational/40-aws-nova-sonic.py
-- existing workspace server patterns
+- 기존 워크스페이스 서버 패턴
 """
 
 import asyncio
@@ -54,14 +54,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# IMDS credential helpers (same pattern as other sample servers)
+# IMDS 자격 증명 도우미(다른 샘플 서버와 동일한 패턴)
 # ---------------------------------------------------------------------------
 
 _credential_refresh_task = None
 
 
 def get_imdsv2_token():
-    """Get IMDSv2 token for secure metadata access."""
+    """안전한 메타데이터 액세스를 위한 IMDSv2 토큰을 가져옵니다."""
     try:
         resp = requests.put(
             "http://169.254.169.254/latest/api/token",
@@ -76,7 +76,7 @@ def get_imdsv2_token():
 
 
 def get_credentials_from_imds():
-    """Retrieve IAM role credentials from EC2 IMDS."""
+    """EC2 IMDS에서 IAM 역할 자격 증명을 가져옵니다."""
     result = {
         "success": False,
         "credentials": None,
@@ -124,7 +124,7 @@ def get_credentials_from_imds():
 
 
 async def refresh_credentials_periodically():
-    """Background task to refresh IMDS credentials before expiry."""
+    """IMDS 자격 증명이 만료되기 전에 갱신하는 백그라운드 작업입니다."""
     while True:
         try:
             result = get_credentials_from_imds()
@@ -138,11 +138,11 @@ async def refresh_credentials_periodically():
                 logger.warning("Credential refresh failed")
         except Exception:
             logger.warning("Credential refresh error")
-        await asyncio.sleep(300)  # Refresh every 5 minutes
+        await asyncio.sleep(300)  # 5분마다 갱신
 
 
 # ---------------------------------------------------------------------------
-# System prompt
+# 시스템 프롬프트
 # ---------------------------------------------------------------------------
 
 SYSTEM_INSTRUCTION = (
@@ -153,7 +153,7 @@ SYSTEM_INSTRUCTION = (
 
 
 # ---------------------------------------------------------------------------
-# Tool callbacks
+# 도구 콜백
 # ---------------------------------------------------------------------------
 
 
@@ -199,7 +199,7 @@ async def get_mortgage_rates(params: FunctionCallParams):
 
 
 # ---------------------------------------------------------------------------
-# Tool schemas
+# 도구 스키마
 # ---------------------------------------------------------------------------
 
 tools = ToolsSchema(
@@ -241,7 +241,7 @@ tools = ToolsSchema(
 
 
 # ---------------------------------------------------------------------------
-# FastAPI app
+# FastAPI 앱
 # ---------------------------------------------------------------------------
 
 from contextlib import asynccontextmanager  # noqa: E402
@@ -250,7 +250,7 @@ from contextlib import asynccontextmanager  # noqa: E402
 @asynccontextmanager
 async def lifespan(app_instance):
     global _credential_refresh_task
-    # Try IMDS credentials (AgentCore environment)
+    # IMDS 자격 증명 시도(AgentCore 환경)
     result = get_credentials_from_imds()
     if result["success"]:
         creds = result["credentials"]
@@ -399,7 +399,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 # ---------------------------------------------------------------------------
-# Entry point
+# 진입점
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":

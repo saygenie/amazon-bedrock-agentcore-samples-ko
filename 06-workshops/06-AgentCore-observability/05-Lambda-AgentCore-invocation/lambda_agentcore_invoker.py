@@ -7,20 +7,20 @@ from botocore.exceptions import ClientError
 
 def lambda_handler(event, context):
     """
-    Lambda function to invoke AgentCore Runtime agent.
+    AgentCore Runtime 에이전트를 호출하는 Lambda 함수입니다.
 
-    Expected event format:
+    예상 이벤트 형식:
     {
         "prompt": "Your question here",
         "sessionId": "optional-session-id"
     }
     """
 
-    # Initialize boto3 client
+    # boto3 클라이언트 초기화
     bedrock_agentcore_client = boto3.client("bedrock-agentcore")
 
     try:
-        # Get environment variables
+        # 환경 변수 가져오기
         runtime_arn = os.environ.get("RUNTIME_ARN")
 
         print("Lambda function started")
@@ -37,7 +37,7 @@ def lambda_handler(event, context):
                 ),
             }
 
-        # Parse input
+        # 입력 파싱
         if isinstance(event, str):
             event = json.loads(event)
 
@@ -53,10 +53,10 @@ def lambda_handler(event, context):
         print(f"Processing prompt: {prompt}")
         print(f"Session ID: {session_id}")
 
-        # Prepare payload for AgentCore
+        # AgentCore용 페이로드 준비
         payload = json.dumps({"prompt": prompt})
 
-        # Invoke AgentCore Runtime
+        # AgentCore Runtime 호출
         print("Invoking AgentCore Runtime...")
         response = bedrock_agentcore_client.invoke_agent_runtime(
             agentRuntimeArn=runtime_arn, runtimeSessionId=session_id, payload=payload
@@ -64,13 +64,13 @@ def lambda_handler(event, context):
 
         print("Response received from AgentCore")
 
-        # Parse response - handle StreamingBody
+        # 응답 파싱: StreamingBody 처리
         agent_response = None
 
         if "response" in response:
             response_body = response["response"]
 
-            # Handle StreamingBody
+            # StreamingBody 처리
             if hasattr(response_body, "read"):
                 raw_data = response_body.read()
                 if isinstance(raw_data, bytes):

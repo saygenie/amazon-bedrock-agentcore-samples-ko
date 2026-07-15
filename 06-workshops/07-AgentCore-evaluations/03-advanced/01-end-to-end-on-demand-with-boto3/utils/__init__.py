@@ -1,4 +1,4 @@
-"""AgentCore Evaluation Utility."""
+"""AgentCore Evaluation 유틸리티입니다."""
 
 from .evaluation_client import EvaluationClient
 from .models import EvaluationResults, EvaluationResult

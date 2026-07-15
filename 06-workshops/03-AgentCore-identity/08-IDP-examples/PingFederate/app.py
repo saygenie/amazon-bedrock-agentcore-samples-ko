@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""CDK application entry point."""
+"""CDK 애플리케이션 진입점입니다."""
 
 import aws_cdk as cdk
 
@@ -21,14 +21,14 @@ env = cdk.Environment(
     region=config.aws_region,
 )
 
-# Stack 1: VPC (separate stack for clean deletion — Lattice ENIs can take 8 hours to release)
+# 스택 1: VPC(깔끔한 삭제를 위해 별도 구성, Lattice ENI 해제에는 최대 8시간 소요 가능)
 vpc_stack = VpcStack(
     app,
     "PrivateIdpVpcStack",
     env=env,
 )
 
-# Stack 2: PingFederate IdP (ECS Fargate, internal ALB, public ACM cert)
+# 스택 2: PingFederate IdP(ECS Fargate, 내부 ALB, 퍼블릭 ACM 인증서)
 ping_stack = PingFederateStack(
     app,
     "PrivateIdpPingFederateStack",
@@ -38,14 +38,14 @@ ping_stack = PingFederateStack(
 )
 ping_stack.add_dependency(vpc_stack)
 
-# Stack 3: Gateway infrastructure (MCP Echo Lambda + IAM role)
+# 스택 3: Gateway 인프라(MCP Echo Lambda + IAM 역할)
 gateway_infra_stack = GatewayInfraStack(
     app,
     "PrivateIdpGatewayInfraStack",
     env=env,
 )
 
-# Stack 4: VPC Lattice (optional — only with --self-managed-lattice flag)
+# 스택 4: VPC Lattice(선택 사항, --self-managed-lattice 플래그를 지정한 경우에만 사용)
 if config.deploy_lattice:
     lattice_stack = LatticeStack(
         app,

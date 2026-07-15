@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""FastAPI application for agent runtime."""
+"""에이전트 런타임용 FastAPI 애플리케이션."""
 
 import logging
 

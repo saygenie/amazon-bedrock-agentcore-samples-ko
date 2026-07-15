@@ -1,23 +1,23 @@
-# 02 — AgentCore Gateway Integration
+# 02 — AgentCore Gateway 통합
 
-Wire a harness agent to an **AgentCore Gateway** so it can reach external MCP tool servers through a managed proxy — with centralized auth, routing, and observability.
+AgentCore Harness 에이전트를 **AgentCore Gateway**에 연결하여 중앙 집중식 인증, 라우팅, 관찰성을 제공하는 관리형 프록시를 통해 외부 MCP 도구 서버에 접근할 수 있도록 합니다.
 
-## What is AgentCore Gateway?
+## AgentCore Gateway란?
 
-Gateway is a managed service that sits between your agent and external tool servers. Instead of the agent calling an MCP endpoint directly, it calls the Gateway, which:
+AgentCore Gateway는 에이전트와 외부 도구 서버 사이에 위치하는 관리형 서비스입니다. 에이전트는 MCP 엔드포인트를 직접 호출하는 대신 AgentCore Gateway를 호출하며, AgentCore Gateway는 다음 작업을 수행합니다.
 
-- Handles **authentication** centrally (IAM, OAuth, API keys)
-- Applies **routing rules** to direct traffic to the right target
-- Emits **observability** data (every tool call is traced in CloudWatch)
-- Lets you **swap tool backends** without changing the agent config
+- **인증**을 중앙에서 처리(IAM, OAuth, API 키)
+- 트래픽을 올바른 대상으로 전달하는 **라우팅 규칙** 적용
+- **관찰성** 데이터 생성(모든 도구 호출을 CloudWatch에서 추적)
+- 에이전트 구성을 변경하지 않고 **도구 백엔드 교체**
 
-## What's in this folder
+## 폴더 구성
 
-| File | Type | What it does |
+| 파일 | 유형 | 설명 |
 |---|---|---|
-| [`02_agentcore_gateway_integration.py`](02_agentcore_gateway_integration.py) | CLI script | Full lifecycle demo — creates an IAM role, Gateway, MCP target, routing rule, harness wired to the Gateway, invokes the agent (which discovers & calls tools via the Gateway), then cleans up. |
+| [`02_agentcore_gateway_integration.py`](02_agentcore_gateway_integration.py) | CLI 스크립트 | 전체 수명 주기 데모입니다. IAM 역할, AgentCore Gateway, MCP 대상, 라우팅 규칙, AgentCore Gateway에 연결된 AgentCore Harness를 생성하고, AgentCore Gateway를 통해 도구를 검색하고 호출하는 에이전트를 호출한 후 리소스를 정리합니다. |
 
-## End-to-end flow (from the script)
+## 엔드 투 엔드 흐름(스크립트 기준)
 
 ```
 1. Create IAM execution role (reuses helper/iam.py)
@@ -29,25 +29,25 @@ Gateway is a managed service that sits between your agent and external tool serv
 7. Cleanup                  → delete harness, target, Gateway, IAM role
 ```
 
-## How to run
+## 실행 방법
 
-### Main script
+### 기본 스크립트
 
 ```bash
-# Default — uses Exa MCP search as the target
+# 기본값 - Exa MCP search를 대상으로 사용
 python 02_agentcore_gateway_integration.py
 
-# Custom MCP endpoint
+# 사용자 지정 MCP endpoint
 python 02_agentcore_gateway_integration.py \
     --mcp-endpoint https://your-mcp-server.example.com/mcp \
     --target-name my-tools
 
-# Keep resources after the demo
+# 데모 후 리소스 유지
 python 02_agentcore_gateway_integration.py --skip-cleanup
 
-# Use an existing IAM role (skip role creation)
+# 기존 IAM 역할 사용(역할 생성 건너뛰기)
 python 02_agentcore_gateway_integration.py --role-arn arn:aws:iam::123456789012:role/MyRole
 
-# See all options
+# 모든 옵션 보기
 python 02_agentcore_gateway_integration.py --help
 ```

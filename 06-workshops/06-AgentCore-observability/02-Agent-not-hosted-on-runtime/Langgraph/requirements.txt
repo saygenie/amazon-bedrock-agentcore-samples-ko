@@ -1,4 +1,4 @@
-# Langgraph Requirements for Observability
+# Observability용 LangGraph 종속성
 boto3
 botocore
 langchain[aws]

@@ -1,4 +1,4 @@
-"""Lab 04: Prevention Agent - AgentCore Runtime & Gateway Deployment helpers"""
+"""Lab 04: Prevention Agent - AgentCore Runtime 및 Gateway 배포 헬퍼"""
 
 from .agentcore_runtime_deployer import (
     AgentCoreRuntimeDeployer,

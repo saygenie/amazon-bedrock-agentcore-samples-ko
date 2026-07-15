@@ -1,12 +1,12 @@
 """
-LangChain Voice Agent – session & agent logic.
+LangChain Voice Agent의 세션 및 Agent 로직입니다.
 
-Implements the "sandwich" architecture (STT → Agent → TTS) for voice agents.
-Uses Amazon Transcribe Streaming for STT, a LangChain agent with Bedrock
-Nova 2 Lite (extended thinking) for reasoning, and Amazon Polly for TTS.
+Voice Agent용 "sandwich" 아키텍처(STT → Agent → TTS)를 구현합니다.
+STT에는 Amazon Transcribe Streaming, 추론에는 Amazon Bedrock Nova 2 Lite
+(extended thinking)를 사용하는 LangChain Agent, TTS에는 Amazon Polly를 사용합니다.
 
-Split from server.py following the strands pattern: server.py owns FastAPI /
-IMDS / endpoints; agent.py owns the WebSocket session and agent construction.
+Strands 패턴에 따라 server.py에서 분리했습니다. server.py는 FastAPI, IMDS 및
+엔드포인트를 담당하고 agent.py는 WebSocket 세션과 Agent 구성을 담당합니다.
 """
 
 import logging
@@ -31,12 +31,12 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Voice Agent Event types (sandwich pipeline events)
+# Voice Agent 이벤트 유형(sandwich 파이프라인 이벤트)
 # ---------------------------------------------------------------------------
 
 
 class VoiceAgentEvent:
-    """Base event flowing through the STT > Agent > TTS pipeline."""
+    """STT > Agent > TTS 파이프라인을 통과하는 기본 이벤트입니다."""
 
     def __init__(self, event_type: str, **kwargs):
         self.type = event_type
@@ -44,35 +44,35 @@ class VoiceAgentEvent:
 
 
 class STTChunkEvent(VoiceAgentEvent):
-    """Partial transcript from STT."""
+    """STT의 부분 Transcript입니다."""
 
     def __init__(self, transcript: str):
         super().__init__("stt_chunk", transcript=transcript)
 
 
 class STTOutputEvent(VoiceAgentEvent):
-    """Final transcript from STT."""
+    """STT의 최종 Transcript입니다."""
 
     def __init__(self, transcript: str):
         super().__init__("stt_output", transcript=transcript)
 
 
 class AgentChunkEvent(VoiceAgentEvent):
-    """Streamed text chunk from the LangChain agent."""
+    """LangChain Agent의 스트리밍 텍스트 청크입니다."""
 
     def __init__(self, text: str):
         super().__init__("agent_chunk", text=text)
 
 
 class TTSChunkEvent(VoiceAgentEvent):
-    """Audio chunk from TTS."""
+    """TTS의 오디오 청크입니다."""
 
     def __init__(self, audio: bytes):
         super().__init__("tts_chunk", audio=audio)
 
 
 # ---------------------------------------------------------------------------
-# System prompt
+# system prompt
 # ---------------------------------------------------------------------------
 
 DEFAULT_SYSTEM_PROMPT = (
@@ -85,22 +85,22 @@ DEFAULT_SYSTEM_PROMPT = (
 
 
 def get_system_prompt() -> str:
-    """Get the default system prompt."""
+    """기본 system prompt를 가져옵니다."""
     return DEFAULT_SYSTEM_PROMPT
 
 
 # ---------------------------------------------------------------------------
-# LangChain Agent setup
+# LangChain Agent 설정
 # ---------------------------------------------------------------------------
 
 
 def build_agent(system_prompt: str | None = None, region: str = "us-east-1"):
-    """Create a LangChain agent with memory, using Bedrock Nova 2 Lite with extended thinking."""
+    """Amazon Bedrock Nova 2 Lite의 extended thinking과 Memory를 사용하는 LangChain Agent를 생성합니다."""
     from langchain_aws import ChatBedrockConverse
 
     prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
 
-    # Placeholder tools — in production these would call MCP gateway endpoints
+    # 자리 표시자 도구 - 프로덕션에서는 MCP Gateway 엔드포인트를 호출함
     @tool
     def get_account_balance(account_id: str) -> str:
         """Get the balance for a customer account."""
@@ -120,7 +120,7 @@ def build_agent(system_prompt: str | None = None, region: str = "us-east-1"):
         """Get current mortgage rates."""
         return "Current rates: 30-year fixed 6.75%, 15-year fixed 5.99%, 5/1 ARM 6.25%."
 
-    # Nova 2 Lite with extended thinking via Bedrock Converse API
+    # Amazon Bedrock Converse API를 통한 Nova 2 Lite extended thinking
     llm = ChatBedrockConverse(
         model_id="us.amazon.nova-2-lite-v1:0",
         region_name=region,
@@ -142,14 +142,14 @@ def build_agent(system_prompt: str | None = None, region: str = "us-east-1"):
 
 
 # ---------------------------------------------------------------------------
-# Pipeline stages (sandwich architecture – reference implementations)
+# 파이프라인 단계(sandwich 아키텍처 참조 구현)
 # ---------------------------------------------------------------------------
 
 
 async def stt_stream(
     audio_stream: AsyncIterator[bytes],
 ) -> AsyncIterator[VoiceAgentEvent]:
-    """STT stage: Audio bytes → VoiceAgentEvents (stt_chunk / stt_output)."""
+    """STT 단계: 오디오 바이트 → VoiceAgentEvent(stt_chunk/stt_output)."""
     region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")  # noqa: F841
 
     audio_buffer = bytearray()
@@ -177,7 +177,7 @@ async def agent_stream(
     agent,
     thread_id: str,
 ) -> AsyncIterator[VoiceAgentEvent]:
-    """Agent stage: passes through upstream events, adds agent_chunk on stt_output."""
+    """Agent 단계: 상위 이벤트를 전달하고 stt_output에 agent_chunk를 추가합니다."""
     async for event in event_stream:
         yield event
         if event.type == "stt_output":
@@ -194,7 +194,7 @@ async def agent_stream(
 async def tts_stream(
     event_stream: AsyncIterator[VoiceAgentEvent],
 ) -> AsyncIterator[VoiceAgentEvent]:
-    """TTS stage: synthesizes agent text into audio via Amazon Polly."""
+    """TTS 단계: Amazon Polly를 통해 Agent 텍스트를 오디오로 합성합니다."""
     region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
     voice_id = os.getenv("POLLY_VOICE_ID", "Joanna")
     polly = boto3.client("polly", region_name=region)
@@ -238,12 +238,12 @@ async def tts_stream(
 
 
 # ---------------------------------------------------------------------------
-# Amazon Transcribe Streaming helper
+# Amazon Transcribe Streaming 헬퍼
 # ---------------------------------------------------------------------------
 
 
 async def transcribe_audio(pcm_bytes: bytes, region: str, sample_rate: int) -> str | None:
-    """Transcribe PCM audio bytes using Amazon Transcribe Streaming API."""
+    """Amazon Transcribe Streaming API를 사용해 PCM 오디오 바이트를 전사합니다."""
     if len(pcm_bytes) < 1600:
         return None
 
@@ -292,18 +292,17 @@ async def transcribe_audio(pcm_bytes: bytes, region: str, sample_rate: int) -> s
 
 
 # ---------------------------------------------------------------------------
-# WebSocket session handler
+# WebSocket 세션 핸들러
 # ---------------------------------------------------------------------------
 
 
 async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: list):
-    """Handle a single WebSocket voice session.
+    """단일 WebSocket 음성 세션을 처리합니다.
 
-    Uses a simple message loop instead of the full sandwich pipeline so that
-    both text_input and audio_input messages are handled without blocking
-    each other.  The sandwich pipeline (stt → agent → tts) is conceptually
-    preserved: audio goes through STT then agent then TTS, while text skips
-    STT and goes straight to agent → TTS.
+    text_input과 audio_input 메시지가 서로를 차단하지 않도록 전체 sandwich
+    파이프라인 대신 단순한 메시지 루프를 사용합니다. 개념적으로 sandwich
+    파이프라인(STT → Agent → TTS)은 유지됩니다. 오디오는 STT, Agent, TTS를
+    차례로 거치고 텍스트는 STT를 건너뛰어 바로 Agent → TTS로 이동합니다.
     """
     logger.info(f"🔌 New WebSocket connection from {websocket.client}")
     logger.info("⏳ Waiting for config event from client...")
@@ -312,7 +311,7 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
     audio_chunk_count = 0
 
     try:
-        # Wait for config
+        # 구성 대기
         config = await _wait_for_config(websocket)
         if config is None:
             logger.warning("❌ No config received, closing connection")
@@ -343,10 +342,10 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
         )
         logger.info("📤 Sent system ready message to client")
 
-        # --- helpers -------------------------------------------------------
+        # --- 헬퍼 ----------------------------------------------------------
 
         async def run_agent_and_respond(text: str):
-            """Send text through the agent, stream chunks back, then synthesize TTS."""
+            """텍스트를 Agent에 전달하고 청크를 스트리밍한 뒤 TTS를 합성합니다."""
             logger.info(f"{'=' * 60}")
             logger.info(f'🧠 Agent processing input: "{text[:120]}"')
 
@@ -360,7 +359,7 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
                     stream_mode="messages",
                 )
                 async for msg, metadata in stream:
-                    # Filter out reasoning_content blocks from Nova 2 extended thinking.
+                    # Nova 2 extended thinking의 reasoning_content 블록 필터링
                     if hasattr(msg, "content") and isinstance(msg.content, list):
                         for block in msg.content:
                             if isinstance(block, dict):
@@ -392,11 +391,11 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
                 await websocket.send_json({"type": "error", "message": str(e)})
                 return
 
-            # TTS — synthesize the full response with Polly
-            # AgentCore WebSocket proxy has a 32KB per-frame limit, so we
-            # chunk the audio into pieces that stay safely under that limit.
-            # 16KB raw PCM → ~21KB base64 + JSON overhead ≈ ~22KB per frame.
-            TTS_CHUNK_SIZE = 16000  # bytes of raw PCM per frame
+            # TTS - 전체 응답을 Amazon Polly로 합성
+            # AgentCore WebSocket Proxy에는 프레임당 32KB 제한이 있으므로
+            # 오디오를 이 제한보다 충분히 작은 조각으로 분할함
+            # 16KB 원시 PCM → 약 21KB base64 + JSON 오버헤드 ≈ 프레임당 약 22KB
+            TTS_CHUNK_SIZE = 16000  # 프레임당 원시 PCM 바이트
             if clean_full.strip():
                 logger.info(f"   🔊 Synthesizing TTS with Polly (voice={voice_id}, rate={output_sr}Hz)")
                 logger.info(f'   📝 TTS text ({len(clean_full)} chars): "{clean_full[:120]}..."')
@@ -429,7 +428,7 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
                 logger.warning("   ⚠️ Agent returned empty response, skipping TTS")
             logger.info("=" * 60)
 
-        # --- main message loop ---------------------------------------------
+        # --- 기본 메시지 루프 ----------------------------------------------
 
         audio_buffer = bytearray()
         silence_chunks = 0
@@ -463,8 +462,8 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
             if msg_type != "audio_input":
                 logger.info(f"📥 Message #{msg_count}: type={msg_type}, keys={list(message.keys())}")
 
-            # AgentCore's WebSocket proxy echoes back server-sent messages.
-            # Skip any message types that this server sends to avoid processing our own output.
+            # AgentCore WebSocket Proxy는 서버가 보낸 메시지를 다시 전송함
+            # 자체 출력을 처리하지 않도록 이 서버가 보내는 메시지 유형은 건너뜀
             SERVER_SENT_TYPES = {
                 "tts_audio",
                 "agent_chunk",
@@ -501,7 +500,7 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
                 audio_chunk_count += 1
                 audio_buffer.extend(chunk)
 
-                # Energy-based silence detection for 16-bit signed PCM
+                # 16-bit signed PCM의 에너지 기반 무음 감지
                 num_samples = len(chunk) // 2
                 if num_samples > 0:
                     samples = struct.unpack(f"<{num_samples}h", chunk[: num_samples * 2])
@@ -552,7 +551,7 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
 
 
 async def _wait_for_config(websocket: WebSocket) -> dict | None:
-    """Wait for the initial config event from the client."""
+    """클라이언트의 초기 구성 이벤트를 기다립니다."""
     while True:
         message = await websocket.receive_json()
         if message.get("type") == "config":

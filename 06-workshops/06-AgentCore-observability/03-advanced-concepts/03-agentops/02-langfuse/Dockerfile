@@ -2,7 +2,7 @@ FROM public.ecr.aws/docker/library/python:3.12-slim-trixie
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
-# All environment variables in one layer
+# 모든 환경 변수를 하나의 레이어에 설정
 ENV UV_SYSTEM_PYTHON=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_NO_PROGRESS=1 \
@@ -14,17 +14,17 @@ ENV UV_SYSTEM_PYTHON=1 \
 
 
 COPY agents/requirements.txt agents/requirements.txt
-# Install from requirements file
+# requirements 파일에서 설치
 RUN uv pip install -r agents/requirements.txt
 
 
 
 
 
-# Signal that this is running in Docker for host binding logic
+# 호스트 바인딩 로직에서 Docker 실행 환경임을 알림
 ENV DOCKER_CONTAINER=1
 
-# Create non-root user
+# non-root 사용자 생성
 RUN useradd -m -u 1000 bedrock_agentcore
 USER bedrock_agentcore
 
@@ -32,9 +32,9 @@ EXPOSE 9000
 EXPOSE 8000
 EXPOSE 8080
 
-# Copy entire project (respecting .dockerignore)
+# 전체 프로젝트 복사(.dockerignore 적용)
 COPY . .
 
-# Use the full module path
+# 전체 모듈 경로 사용
 
 CMD ["python", "-m", "agents.strands_claude"]

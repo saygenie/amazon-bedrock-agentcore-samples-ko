@@ -1,7 +1,7 @@
 """
-SRE AI Agent - Streamlit Chat Application
-A chat interface for the Strands supervisor agent with streaming support.
-Self-sufficient version with all dependencies inlined.
+SRE AI Agent - Streamlit 채팅 애플리케이션
+스트리밍을 지원하는 Strands supervisor agent용 채팅 인터페이스입니다.
+모든 종속성을 인라인으로 포함한 독립 실행형 버전입니다.
 """
 
 import streamlit as st
@@ -15,16 +15,16 @@ import boto3
 
 
 # ============================================================================
-# MCP CLIENT SETUP FUNCTIONS (inlined from mcp_client_setup.py)
+# MCP 클라이언트 설정 함수(mcp_client_setup.py에서 인라인으로 가져옴)
 # ============================================================================
 
 
 def load_gateway_config():
     """
-    Load Gateway configuration from gateway_config.json
+    gateway_config.json에서 Gateway 구성을 불러옵니다.
 
-    Returns:
-        dict: Gateway configuration
+    반환:
+        dict: Gateway 구성
     """
     with open("gateway_config.json", "r") as f:
         return json.load(f)
@@ -32,13 +32,13 @@ def load_gateway_config():
 
 def get_access_token(config):
     """
-    Get OAuth access token from Cognito using direct boto3 call
+    boto3를 직접 호출해 Cognito에서 OAuth 액세스 토큰을 가져옵니다.
 
-    Args:
-        config: Gateway configuration dict
+    인자:
+        config: Gateway 구성 딕셔너리
 
-    Returns:
-        str: Access token
+    반환:
+        str: 액세스 토큰
     """
     client_info = config["client_info"]
     cognito = boto3.client("cognito-idp", region_name=config["region"])
@@ -59,27 +59,27 @@ def get_access_token(config):
 
 def create_mcp_client(gateway_url, access_token):
     """
-    Create MCP client with OAuth authentication
+    OAuth 인증을 사용하는 MCP 클라이언트를 생성합니다.
 
-    Args:
-        gateway_url: Gateway MCP endpoint URL
-        access_token: OAuth access token from Cognito
+    인자:
+        gateway_url: Gateway MCP 엔드포인트 URL
+        access_token: Cognito의 OAuth 액세스 토큰
 
-    Returns:
-        MCPClient: Configured MCP client
+    반환:
+        MCPClient: 구성된 MCP 클라이언트
     """
     return MCPClient(lambda: streamablehttp_client(gateway_url, headers={"Authorization": f"Bearer {access_token}"}))
 
 
 def get_all_tools(mcp_client):
     """
-    Retrieve all tools from Gateway with pagination support
+    페이지네이션을 지원하며 Gateway의 모든 도구를 조회합니다.
 
-    Args:
-        mcp_client: MCPClient instance
+    인자:
+        mcp_client: MCPClient 인스턴스
 
-    Returns:
-        list: All available MCP tools
+    반환:
+        list: 사용 가능한 모든 MCP 도구
     """
     tools = []
     pagination_token = None
@@ -96,28 +96,28 @@ def get_all_tools(mcp_client):
 
 
 # ============================================================================
-# SUPERVISOR AGENT FUNCTIONS (inlined from supervisor_agent.py)
+# SUPERVISOR AGENT 함수(supervisor_agent.py에서 인라인으로 가져옴)
 # ============================================================================
 
 
 def create_supervisor_agent(model_id, tools, region="us-west-2"):
     """
-    Create Strands supervisor agent with streaming enabled
+    스트리밍이 활성화된 Strands supervisor agent를 생성합니다.
 
-    Args:
-        model_id: Bedrock model identifier or inference profile ARN
-        tools: List of MCP tools
-        region: AWS region
+    인자:
+        model_id: Bedrock 모델 식별자 또는 inference profile ARN
+        tools: MCP 도구 목록
+        region: AWS 리전
 
-    Returns:
-        Agent: Configured Strands agent
+    반환:
+        Agent: 구성된 Strands agent
     """
-    # Use cross-region inference profile for Claude 3.7 Sonnet
+    # Claude 3.7 Sonnet용 cross-region inference profile 사용
     inference_profile = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
 
     model = BedrockModel(
         model_id=inference_profile,
-        streaming=True,  # Enable streaming
+        streaming=True,  # 스트리밍 활성화
     )
 
     system_prompt = """
@@ -176,7 +176,7 @@ Always provide:
     return Agent(model=model, tools=tools, system_prompt=system_prompt)
 
 
-# Page configuration
+# 페이지 구성
 st.set_page_config(
     page_title="SRE AI Agent",
     page_icon="🤖",
@@ -184,7 +184,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for better styling
+# 더 나은 스타일을 위한 사용자 지정 CSS
 st.markdown(
     """
 <style>
@@ -227,25 +227,25 @@ st.markdown(
 
 
 def initialize_agent():
-    """Initialize the agent and store in session state"""
+    """Agent를 초기화하고 세션 상태에 저장합니다."""
     if "agent_initialized" not in st.session_state:
         with st.spinner("🔧 Initializing SRE AI Agent..."):
             try:
-                # Load configuration
+                # 구성 불러오기
                 config = load_gateway_config()
                 st.session_state.config = config
 
-                # Get OAuth token
+                # OAuth 토큰 가져오기
                 access_token = get_access_token(config)
                 st.session_state.access_token = access_token
 
-                # Extract email from JWT token
+                # JWT 토큰에서 이메일 추출
                 import base64
 
                 try:
-                    # Decode JWT payload (second part)
+                    # JWT 페이로드 디코딩(두 번째 부분)
                     payload = access_token.split(".")[1]
-                    # Add padding if needed
+                    # 필요한 경우 패딩 추가
                     payload += "=" * (4 - len(payload) % 4)
                     decoded = base64.b64decode(payload)
                     token_data = json.loads(decoded)
@@ -253,21 +253,21 @@ def initialize_agent():
                 except Exception:
                     st.session_state.user_email = config["client_info"]["username"]
 
-                # Create MCP client
+                # MCP 클라이언트 생성
                 try:
                     mcp_client = create_mcp_client(config["gateway_url"], access_token)
                     st.session_state.mcp_client = mcp_client
 
-                    # Initialize MCP client context
+                    # MCP 클라이언트 컨텍스트 초기화
                     st.session_state.mcp_client.__enter__()
 
-                    # Get tools
+                    # 도구 가져오기
                     tools = get_all_tools(mcp_client)
                     st.session_state.tools = tools
                 except Exception as mcp_error:
                     raise Exception(f"MCP client initialization failed: {str(mcp_error)}")
 
-                # Create agent
+                # Agent 생성
                 model_id = "anthropic.claude-3-7-sonnet-20250219-v1:0"
                 agent = create_supervisor_agent(model_id, tools, config["region"])
                 st.session_state.agent = agent
@@ -289,14 +289,14 @@ def initialize_agent():
 
 def stream_agent_response(prompt: str, message_placeholder) -> str:
     """
-    Stream agent response using callback handler
+    콜백 핸들러를 사용해 Agent 응답을 스트리밍합니다.
 
-    Args:
-        prompt: User input prompt
-        message_placeholder: Streamlit placeholder for updating display
+    인자:
+        prompt: 사용자 입력 prompt
+        message_placeholder: 화면 업데이트용 Streamlit placeholder
 
-    Returns:
-        str: Complete response text
+    반환:
+        str: 전체 응답 텍스트
     """
     agent = st.session_state.agent
     response_data = {
@@ -308,31 +308,31 @@ def stream_agent_response(prompt: str, message_placeholder) -> str:
     }
 
     def streaming_callback(**kwargs):
-        """Callback handler for streaming events - runs in agent thread"""
+        """Agent 스레드에서 실행되는 스트리밍 이벤트 콜백 핸들러입니다."""
         import time
 
-        # Handle text streaming
+        # 텍스트 스트리밍 처리
         if "data" in kwargs:
             data = kwargs["data"]
 
-            # Detect if we're in tool input construction phase
+            # 도구 입력 구성 단계인지 감지
             if data.strip().startswith("{") or data.strip().startswith('"'):
                 response_data["in_tool_construction"] = True
-                return  # Skip JSON construction
+                return  # JSON 구성 건너뛰기
             elif response_data["in_tool_construction"] and not data.strip().endswith("}"):
-                return  # Still in JSON construction
+                return  # 아직 JSON 구성 중
             else:
                 response_data["in_tool_construction"] = False
                 response_data["text"] += data
                 response_data["last_update"] = time.time()
 
-        # Handle tool usage - show when tool execution starts (has toolUseId)
+        # 도구 사용 처리: 도구 실행이 시작되면 표시(toolUseId가 있는 경우)
         elif "current_tool_use" in kwargs:
             tool_use = kwargs["current_tool_use"]
             tool_id = tool_use.get("toolUseId")
             tool_name = tool_use.get("name")
 
-            # Only show when we have both ID and name (tool is starting execution)
+            # ID와 이름이 모두 있을 때만 표시(도구 실행 시작)
             if tool_id and tool_name and tool_id not in response_data["tools_shown"]:
                 response_data["tools_shown"].add(tool_id)
                 response_data["tool_start_times"][tool_id] = time.time()
@@ -341,11 +341,11 @@ def stream_agent_response(prompt: str, message_placeholder) -> str:
                 response_data["last_update"] = time.time()
                 response_data["in_tool_construction"] = False
 
-        # Handle tool completion (when message is created after tool use)
+        # 도구 완료 처리(도구 사용 후 메시지가 생성될 때)
         elif "message" in kwargs:
             message = kwargs["message"]
             if message.get("role") == "user":
-                # Check for tool results in the message
+                # 메시지에서 도구 결과 확인
                 content = message.get("content", [])
                 for item in content:
                     if isinstance(item, dict) and item.get("type") == "tool_result":
@@ -361,20 +361,20 @@ def stream_agent_response(prompt: str, message_placeholder) -> str:
         import time
         import threading
 
-        # Start agent in background thread
+        # 백그라운드 스레드에서 Agent 시작
         agent_thread = threading.Thread(target=lambda: agent(prompt, callback_handler=streaming_callback))
         agent_thread.start()
 
-        # Update UI from main thread while agent runs
+        # Agent 실행 중 메인 스레드에서 UI 업데이트
         while agent_thread.is_alive():
             if response_data["text"]:
                 message_placeholder.markdown(response_data["text"] + "▌")
             time.sleep(0.1)
 
-        # Wait for thread to complete
+        # 스레드 완료 대기
         agent_thread.join()
 
-        # Display final response without cursor
+        # 커서 없이 최종 응답 표시
         final_response = response_data["text"]
         message_placeholder.markdown(final_response)
         return final_response
@@ -388,16 +388,16 @@ def stream_agent_response(prompt: str, message_placeholder) -> str:
 
 
 def main():
-    """Main application function"""
+    """메인 애플리케이션 함수입니다."""
 
-    # Header
+    # 헤더
     st.markdown('<div class="main-header">🤖 SRE AI Agent</div>', unsafe_allow_html=True)
     st.markdown("---")
 
-    # Initialize agent
+    # Agent 초기화
     initialize_agent()
 
-    # Sidebar
+    # 사이드바
     with st.sidebar:
         st.header("ℹ️ About")
         st.markdown("""
@@ -413,7 +413,7 @@ def main():
 
         st.markdown("---")
 
-        # Status information
+        # 상태 정보
         if st.session_state.get("agent_initialized"):
             st.markdown(
                 '<div class="status-box status-success">✅ Agent Ready</div>',
@@ -425,7 +425,7 @@ def main():
             st.text(f"Gateway: {config['gateway_id']}")
             st.text(f"Region: {config['region']}")
 
-            # Show logged in user from JWT token
+            # JWT 토큰의 로그인 사용자 표시
             st.markdown("**Logged in as:**")
             user_email = st.session_state.get("user_email", "Unknown")
             st.text(f"👤 {user_email}")
@@ -446,41 +446,41 @@ def main():
 
         st.markdown("---")
 
-        # Clear chat button
+        # 채팅 지우기 버튼
         if st.button("🗑️ Clear Chat History"):
             st.session_state.messages = []
             st.rerun()
 
-    # Initialize chat history
+    # 채팅 기록 초기화
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display chat messages
+    # 채팅 메시지 표시
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Chat input
+    # 채팅 입력
     if st.session_state.get("agent_initialized"):
         if prompt := st.chat_input(
             "Ask about your infrastructure (e.g., 'What issues do you see in the CRM application?')..."
         ):
-            # Add user message to chat history
+            # 채팅 기록에 사용자 메시지 추가
             st.session_state.messages.append({"role": "user", "content": prompt})
 
-            # Display user message
+            # 사용자 메시지 표시
             with st.chat_message("user"):
                 st.markdown(prompt)
 
-            # Display assistant response with streaming
+            # Assistant 응답을 스트리밍으로 표시
             with st.chat_message("assistant"):
                 message_placeholder = st.empty()
 
-                # Stream the response using callback handler
+                # 콜백 핸들러를 사용해 응답 스트리밍
                 with st.spinner("🤔 Thinking..."):
                     full_response = stream_agent_response(prompt, message_placeholder)
 
-            # Add assistant response to chat history
+            # 채팅 기록에 Assistant 응답 추가
             st.session_state.messages.append({"role": "assistant", "content": full_response})
     else:
         st.error("⚠️ Agent not initialized. Please check the sidebar for details.")

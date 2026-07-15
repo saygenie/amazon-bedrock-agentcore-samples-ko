@@ -1,30 +1,30 @@
 <!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Self-Managed Amazon VPC Lattice
+# 자체 관리형 Amazon VPC Lattice
 
-You create the VPC Lattice resource gateway and resource configuration yourself, then provide the resource configuration identifier to AgentCore. Use this option for cross-account connectivity, if you already have VPC Lattice resources set up, or if you need fine-grained control over the Lattice configuration.
+VPC Lattice Resource Gateway와 Resource Configuration을 직접 생성한 다음 Resource Configuration 식별자를 AgentCore에 제공합니다. 교차 계정 연결이 필요하거나, VPC Lattice 리소스가 이미 설정되어 있거나, Lattice 구성을 세밀하게 제어해야 할 때 이 옵션을 사용합니다.
 
-![arch](./images/create-target.png)
+![대상 생성](./images/create-target.png)
 
-## When to use self-managed Lattice
+## Self-managed Lattice 사용 시점
 
-- You already have VPC Lattice resources configured
-- You need **cross-account connectivity** (resource in a different account than the gateway)
-- You need to share a resource configuration across multiple gateway targets
-- You require control over the Lattice resource lifecycle (e.g., number of IPs per ENI, subnet placement)
+- VPC Lattice 리소스가 이미 구성되어 있는 경우
+- **교차 계정 연결**이 필요한 경우(Gateway와 다른 계정의 리소스)
+- 여러 Gateway 대상에서 Resource Configuration을 공유해야 하는 경우
+- Lattice 리소스 수명 주기(예: ENI당 IP 수, subnet 배치)를 제어해야 하는 경우
 
-## Prerequisites
+## 사전 요구 사항
 
-Before creating a gateway target with a self-managed private endpoint, complete the following steps.
+self-managed private endpoint를 사용하는 Gateway 대상을 생성하기 전에 다음 단계를 완료합니다.
 
-- Make sure you have correct IAM permissions for [AgentCore Gateway managed VPC resource](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/vpc-egress-private-endpoints.html#lattice-vpc-egress-self-managed-lattice)
+- [AgentCore Gateway managed VPC resource](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/vpc-egress-private-endpoints.html#lattice-vpc-egress-self-managed-lattice)에 필요한 올바른 IAM 권한이 있는지 확인하세요.
 
-### Step 1: Create a Resource Gateway
+### 1단계: Resource Gateway 생성
 
-![rg](./images/resource-gateway.png)
+![Resource Gateway](./images/resource-gateway.png)
 
-Create a [VPC Lattice Resource Gateway](https://docs.aws.amazon.com/vpc/latest/privatelink/resource-gateway.html) in the VPC that contains your private resource:
+private resource가 포함된 VPC에 [VPC Lattice Resource Gateway](https://docs.aws.amazon.com/vpc/latest/privatelink/resource-gateway.html)를 생성합니다.
 
 ```bash
 aws vpc-lattice create-resource-gateway \
@@ -36,18 +36,18 @@ aws vpc-lattice create-resource-gateway \
 ```
 
 
-This provisions one ENI per subnet, governed by the security groups you specified. By default, each ENI gets 1 IP address. You can configure up to 62 IPs per ENI using the `--ip-addresses-per-eni` parameter.
+지정한 security group의 제어를 받는 ENI를 각 subnet에 하나씩 프로비저닝합니다. 기본적으로 각 ENI에는 IP 주소가 하나씩 할당됩니다. `--ip-addresses-per-eni` 파라미터를 사용해 ENI당 최대 62개의 IP를 구성할 수 있습니다.
 
-Note the `resourceGatewayId` from the response.
+응답의 `resourceGatewayId`를 기록합니다.
 
-### Step 2: Create a Resource Configuration
+### 2단계: Resource Configuration 생성
 
-![rc](./images/resource-config.png)
+![Resource Configuration](./images/resource-config.png)
 
 
-Create a [Resource Configuration](https://docs.aws.amazon.com/vpc/latest/privatelink/resource-configuration.html) that defines the specific endpoint AgentCore is allowed to reach through the Resource Gateway:
+AgentCore가 Resource Gateway를 통해 연결할 수 있는 특정 엔드포인트를 정의하는 [Resource Configuration](https://docs.aws.amazon.com/vpc/latest/privatelink/resource-configuration.html)을 생성합니다.
 
-**For a domain name target:**
+**도메인 이름 대상:**
 
 ```bash
 aws vpc-lattice create-resource-configuration \
@@ -63,7 +63,7 @@ aws vpc-lattice create-resource-configuration \
   --port-ranges "443"
 ```
 
-**For an IP address target:**
+**IP 주소 대상:**
 
 ```bash
 aws vpc-lattice create-resource-configuration \
@@ -78,17 +78,17 @@ aws vpc-lattice create-resource-configuration \
   --port-ranges "443"
 ```
 
-The `--port-ranges` parameter restricts which ports the Resource Gateway ENIs can forward traffic to, providing an additional layer of access control alongside your security groups.
+`--port-ranges` 파라미터는 Resource Gateway ENI가 트래픽을 전달할 수 있는 포트를 제한하여 security group과 함께 추가 액세스 제어 계층을 제공합니다.
 
-Note the `resourceConfigurationArn` from the response.
+응답의 `resourceConfigurationArn`을 기록합니다.
 
-### Step 3 (Cross-account only): Share via AWS RAM
+### 3단계(교차 계정만 해당): AWS RAM을 통해 공유
 
-![ram](./images/ram.png)
+![AWS RAM](./images/ram.png)
 
-If the resource is in a different account than the AgentCore gateway, share the resource configuration using [AWS Resource Access Manager](https://docs.aws.amazon.com/ram/latest/userguide/what-is.html):
+리소스가 AgentCore Gateway와 다른 계정에 있다면 [AWS Resource Access Manager](https://docs.aws.amazon.com/ram/latest/userguide/what-is.html)를 사용해 Resource Configuration을 공유합니다.
 
-**In the resource owner account:**
+**리소스 소유자 계정:**
 
 ```bash
 aws ram create-resource-share \
@@ -97,20 +97,20 @@ aws ram create-resource-share \
   --principals <gateway-owner-account-id>
 ```
 
-**In the gateway owner account (accept the share):**
+**Gateway 소유자 계정(공유 수락):**
 
 ```bash
 aws ram accept-resource-share-invitation \
   --resource-share-invitation-arn <invitation-arn>
 ```
 
-Once accepted, the shared resource configuration ARN is visible in the gateway owner account.
+공유를 수락하면 Gateway 소유자 계정에서 공유된 Resource Configuration ARN을 확인할 수 있습니다.
 
-## API Reference
+## API 참조
 
-![ram-target](./images/ram-target.png)
+![AWS RAM 대상](./images/ram-target.png)
 
-To create a gateway target with a self-managed private endpoint, include `privateEndpoint.selfManagedLatticeResource` in the [CreateGatewayTarget](https://docs.aws.amazon.com/bedrock-agentcore-control/latest/APIReference/API_CreateGatewayTarget.html) request:
+self-managed private endpoint를 사용하는 Gateway 대상을 생성하려면 [CreateGatewayTarget](https://docs.aws.amazon.com/bedrock-agentcore-control/latest/APIReference/API_CreateGatewayTarget.html) 요청에 `privateEndpoint.selfManagedLatticeResource`를 포함합니다.
 
 ```json
 {
@@ -122,27 +122,27 @@ To create a gateway target with a self-managed private endpoint, include `privat
 }
 ```
 
-### Parameters
+### 파라미터
 
-| Parameter | Required | Description |
+| 파라미터 | 필수 | 설명 |
 |-----------|----------|-------------|
-| `resourceConfigurationIdentifier` | Yes | The ARN or ID of the VPC Lattice resource configuration. |
+| `resourceConfigurationIdentifier` | 예 | VPC Lattice Resource Configuration의 ARN 또는 ID입니다. |
 
-AgentCore uses your credentials (via Forward Access Sessions) to associate the resource configuration with the AgentCore service network.
+AgentCore는 Forward Access Sessions를 통해 사용자의 자격 증명을 사용하여 Resource Configuration을 AgentCore service network에 연결합니다.
 
-### What happens after creation
+### 생성 후 동작
 
-- AgentCore associates the resource configuration with its service network
-- The `Get` API response includes `resourceAssociationArn` in the `privateEndpointManagedResources` field
-- If you create multiple targets pointing to the same resource configuration, AgentCore reuses the existing service network resource association
+- AgentCore가 Resource Configuration을 service network에 연결합니다.
+- `Get` API 응답의 `privateEndpointManagedResources` 필드에 `resourceAssociationArn`이 포함됩니다.
+- 동일한 Resource Configuration을 가리키는 여러 대상을 생성하면 AgentCore가 기존 Service Network Resource Association을 재사용합니다.
 
-## Labs
+## 실습
 
-| Notebook | Description |
+| 노트북 | 설명 |
 |----------|-------------|
-| [01-getting-started.ipynb](./01-getting-started.ipynb) | Create a self-managed Resource Gateway and Resource Configuration, then connect to AgentCore Gateway. |
-| [02-cross-account.ipynb](./02-cross-account.ipynb) | Share a Resource Configuration across accounts using AWS RAM. |
+| [01-getting-started.ipynb](./01-getting-started.ipynb) | self-managed Resource Gateway 및 Resource Configuration을 생성한 다음 AgentCore Gateway에 연결합니다. |
+| [02-cross-account.ipynb](./02-cross-account.ipynb) | AWS RAM을 사용해 계정 간에 Resource Configuration을 공유합니다. |
 
-## License
+## 라이선스
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](../LICENSE.txt) file for details.
+이 프로젝트는 Apache License 2.0에 따라 라이선스가 부여됩니다. 자세한 내용은 [LICENSE](../LICENSE.txt) 파일을 참조하세요.

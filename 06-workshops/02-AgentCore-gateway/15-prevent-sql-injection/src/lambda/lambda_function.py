@@ -1,36 +1,34 @@
 """
-SQL Injection Prevention Interceptor (Gateway REQUEST Interceptor)
+SQL Injection 방지 인터셉터(Gateway 요청 인터셉터)
 
-Purpose
-- Intercepts MCP tools/call requests and evaluates tool arguments before they reach
-  backend database tools.
-- Provides deterministic, tool-level enforcement to prevent unsafe SQL execution.
-- Fails closed: blocks requests when suspicious patterns are detected or when validation
-  and analysis fail.
+목적
+- MCP tools/call 요청을 가로채 도구 인자가 백엔드 데이터베이스 도구에 도달하기 전에 평가합니다.
+- 안전하지 않은 SQL 실행을 방지하는 결정론적 도구 수준 제어를 제공합니다.
+- fail closed 방식으로 동작하여 의심스러운 패턴이 탐지되거나 검증 및 분석이 실패하면 요청을 차단합니다.
 
-Scope
-- Operates on tool arguments (tool inputs), not on the original user prompt.
-- Executes at the tool boundary, before any database interaction occurs.
-- Intended to prevent the agent or caller from passing raw or unsafe SQL content to
-  database-facing tools.
+범위
+- 원래 사용자 prompt가 아닌 도구 인자(도구 입력)를 대상으로 동작합니다.
+- 데이터베이스 상호작용 전에 도구 경계에서 실행됩니다.
+- 에이전트나 호출자가 원시 또는 안전하지 않은 SQL 콘텐츠를 데이터베이스 도구에
+  전달하지 못하게 합니다.
 
-Extensibility
-Because this control is implemented as AWS Lambda, you can integrate:
-- Schema and contract validation libraries
-- Policy engines and authorization checks (tenant, role, action allow lists)
-- Internal security services and compliance logic
-- Third-party paid security services via SDKs or API calls (e.g., risk scoring, DLP,
-  threat intelligence, API security platforms)
-- Centralized logging and monitoring systems for audit and incident response
+확장성
+이 제어는 AWS Lambda로 구현되어 다음 항목을 통합할 수 있습니다.
+- 스키마 및 계약 검증 라이브러리
+- policy engine 및 권한 부여 검사(tenant, 역할, 작업 allow list)
+- 내부 보안 서비스 및 규정 준수 로직
+- SDK 또는 API 호출을 통한 서드 파티 유료 보안 서비스(예: 위험 점수, DLP,
+  위협 인텔리전스, API 보안 플랫폼)
+- 감사 및 인시던트 대응용 중앙 집중식 로깅·모니터링 시스템
 
-Production Considerations
-This implementation uses heuristic pattern detection to identify common SQL injection
-techniques. For production systems, avoid accepting raw SQL from agents and prefer:
-- Structured tool contracts (query templates or JSON intent with typed parameters)
-- Allow-listed operations, tables, and fields
-- Strict schema validation and bounds checking
-- Tenant isolation and least-privilege access
-- Parameterized queries / prepared statements in the database layer
+프로덕션 고려 사항
+이 구현은 일반적인 SQL Injection 기법을 식별하기 위해 휴리스틱 패턴 탐지를 사용합니다.
+프로덕션 시스템에서는 에이전트의 원시 SQL을 허용하지 말고 다음 방식을 우선 사용합니다.
+- 구조화된 도구 계약(query template 또는 typed parameter가 있는 JSON intent)
+- allow list에 등록된 작업, 테이블 및 필드
+- 엄격한 스키마 검증 및 범위 검사
+- tenant 격리 및 최소 권한 접근
+- 데이터베이스 계층의 parameterized query / prepared statement
 """
 
 import re

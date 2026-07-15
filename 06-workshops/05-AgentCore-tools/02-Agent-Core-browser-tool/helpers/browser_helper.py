@@ -10,7 +10,7 @@ REGION = session.region_name
 
 
 def get_signed_headers(ws_url):
-    """Get SigV4 signed headers for WebSocket connection."""
+    """WebSocket 연결을 위한 SigV4 서명 헤더를 가져온다."""
     credentials = session.get_credentials()
     https_url = ws_url.replace("wss://", "https://")
     parsed = urlparse(https_url)

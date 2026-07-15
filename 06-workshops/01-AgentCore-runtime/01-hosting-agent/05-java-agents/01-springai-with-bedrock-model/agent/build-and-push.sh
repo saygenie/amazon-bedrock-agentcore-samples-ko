@@ -3,22 +3,22 @@
 #######################################################################
 # build-and-push.sh
 #
-# Build Docker image and push to Amazon ECR
+# Docker 이미지를 빌드하여 Amazon ECR에 푸시
 #
-# This script builds the Spring Boot agent application as a Docker
-# image and pushes it to Amazon ECR.
+# 이 스크립트는 Spring Boot 에이전트 애플리케이션을 Docker 이미지로
+# 빌드하여 Amazon ECR에 푸시합니다.
 #######################################################################
 
 set -e
 
-# Colors for output
+# 출력용 색상
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m' # 색상 없음
 
 #######################################################################
-# Usage
+# 사용법
 #######################################################################
 usage() {
     cat << EOF
@@ -50,7 +50,7 @@ EOF
 }
 
 #######################################################################
-# Logging functions
+# 로깅 함수
 #######################################################################
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -65,7 +65,7 @@ log_error() {
 }
 
 #######################################################################
-# Parse arguments
+# 인수 파싱
 #######################################################################
 AWS_REGION=""
 ECR_URI=""
@@ -101,7 +101,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 #######################################################################
-# Validate required arguments
+# 필수 인수 검증
 #######################################################################
 if [[ -z "$AWS_REGION" ]]; then
     log_error "AWS region is required (-r, --region)"
@@ -114,11 +114,11 @@ if [[ -z "$ECR_URI" ]]; then
 fi
 
 #######################################################################
-# Validate prerequisites
+# 필수 조건 검증
 #######################################################################
 log_info "Validating prerequisites..."
 
-# Check Docker is installed and running
+# Docker 설치 및 실행 여부 확인
 if ! command -v docker &> /dev/null; then
     log_error "Docker is not installed. Please install Docker first."
     exit 1
@@ -129,7 +129,7 @@ if ! docker info &> /dev/null; then
     exit 1
 fi
 
-# Check AWS CLI is installed
+# AWS CLI 설치 여부 확인
 if ! command -v aws &> /dev/null; then
     log_error "AWS CLI is not installed. Please install AWS CLI first."
     exit 1
@@ -138,14 +138,14 @@ fi
 log_info "Prerequisites validated successfully"
 
 #######################################################################
-# Build Docker image
+# Docker 이미지 빌드
 #######################################################################
 FULL_IMAGE_URI="${ECR_URI}:${IMAGE_TAG}"
 
 log_info "Building Docker image..."
 log_info "  Image: $FULL_IMAGE_URI"
 
-# Get the directory where this script is located
+# 이 스크립트가 있는 디렉터리 확인
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 docker build \
@@ -155,7 +155,7 @@ docker build \
 log_info "Docker image built successfully"
 
 #######################################################################
-# Push to ECR (unless build-only mode)
+# 빌드 전용 모드가 아니면 ECR에 푸시
 #######################################################################
 if [[ "$BUILD_ONLY" == true ]]; then
     log_info "Build-only mode: Skipping ECR push"
@@ -165,10 +165,10 @@ fi
 
 log_info "Logging into Amazon ECR..."
 
-# Extract ECR registry from URI (everything before the first /)
+# URI에서 ECR 레지스트리 추출(첫 번째 / 앞부분)
 ECR_REGISTRY="${ECR_URI%%/*}"
 
-# Login to ECR
+# ECR에 로그인
 aws ecr get-login-password --region "$AWS_REGION" | \
     docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
@@ -182,7 +182,7 @@ docker push "$FULL_IMAGE_URI"
 log_info "Image pushed successfully to ECR"
 
 #######################################################################
-# Summary
+# 요약
 #######################################################################
 echo ""
 log_info "=========================================="

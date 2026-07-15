@@ -1,9 +1,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Minimal MCP server on Lambda — gateway target for the inbound auth demo.
+"""인바운드 인증 데모의 Gateway 대상인 최소 구성의 Lambda 기반 MCP 서버입니다.
 
-Exposes two tools (get_time, echo) via the MCP Streamable HTTP protocol.
-Deployed by CDK as part of the PingFederate sample.
+MCP Streamable HTTP 프로토콜을 통해 두 도구(get_time, echo)를 노출합니다.
+PingFederate 샘플의 일부로 CDK에서 배포합니다.
 """
 
 import json

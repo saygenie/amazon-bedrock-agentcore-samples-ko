@@ -5,7 +5,7 @@ import botocore.exceptions
 
 
 def assume_role(role_arn, session_name="my-session"):
-    """Assume an IAM role and return temporary credentials."""
+    """IAM 역할을 수임하고 임시 자격 증명을 반환합니다."""
     sts = boto3.client("sts")
     response = sts.assume_role(
         RoleArn=role_arn,
@@ -18,7 +18,7 @@ def assume_role(role_arn, session_name="my-session"):
 
 
 def assume_role_only(AWS_REGION, role_arn, session_name="test-session"):
-    """Assume an IAM role"""
+    """IAM 역할을 수임합니다."""
     sts_client = boto3.client("sts", region_name=AWS_REGION)
     response = sts_client.assume_role(
         RoleArn=role_arn,
@@ -28,13 +28,13 @@ def assume_role_only(AWS_REGION, role_arn, session_name="test-session"):
 
 
 def pp(response):
-    """Pretty-print API response, stripping ResponseMetadata."""
+    """API 응답에서 ResponseMetadata를 제외하고 보기 좋게 출력합니다."""
     data = {k: v for k, v in response.items() if k != "ResponseMetadata"}
     print(json.dumps(data, indent=2, default=str))
 
 
 def wait_for_record_ready(publisher_cp_client, registry_id, record_id, interval=5, timeout=120):
-    """Poll GetRegistryRecord until the record exits CREATING/UPDATING status."""
+    """레코드가 CREATING/UPDATING 상태를 벗어날 때까지 GetRegistryRecord를 폴링합니다."""
     deadline = time.time() + timeout
     while True:
         resp = publisher_cp_client.get_registry_record(registryId=registry_id, recordId=record_id)
@@ -51,15 +51,15 @@ print("Helper functions defined: pp, wait_for_record_ready")
 
 
 def filter_pending_records(records):
-    """Return only records with status PENDING_APPROVAL."""
+    """상태가 PENDING_APPROVAL인 레코드만 반환합니다."""
     return [r for r in records if r.get("status") == "PENDING_APPROVAL"]
 
 
 def list_records_with_ids(client, registry_id, **kwargs):
-    """Wrapper around list_registry_records that extracts recordId from raw HTTP response.
+    """원시 HTTP 응답에서 recordId를 추출하는 list_registry_records 래퍼입니다.
 
-    The preview SDK model uses 'registryRecordId' but the service returns 'recordId'.
-    This function parses the raw JSON to get the actual record IDs.
+    프리뷰 SDK 모델은 'registryRecordId'를 사용하지만 서비스는 'recordId'를 반환합니다.
+    이 함수는 원시 JSON을 파싱하여 실제 레코드 ID를 가져옵니다.
     """
     import json as _json
 
@@ -82,19 +82,19 @@ def list_records_with_ids(client, registry_id, **kwargs):
 
 
 def get_or_select_registry(cp_client, registry_id=None, AWS_REGION="us-west-2"):
-    """List registries and return (registry_id, registry_arn) for a READY registry.
+    """레지스트리를 나열하고 READY 레지스트리의 (registry_id, registry_arn)을 반환합니다.
 
-    Args:
-        cp_client: Bedrock AgentCore control plane client.
-        registry_id: Optional specific registry ID to use. If None, picks the first READY one.
-        aws_region: AWS region (used in error messages).
+    매개변수:
+        cp_client: Bedrock AgentCore 컨트롤 플레인 클라이언트.
+        registry_id: 사용할 특정 레지스트리 ID. None이면 첫 번째 READY 레지스트리를 선택합니다.
+        aws_region: AWS 리전(오류 메시지에 사용).
 
-    Returns:
-        Tuple of (registry_id, registry_arn).
+    반환값:
+        (registry_id, registry_arn) 튜플.
 
-    Raises:
-        ValueError: If specified registry not found or not READY.
-        RuntimeError: If no READY registry exists.
+    예외:
+        ValueError: 지정한 레지스트리를 찾을 수 없거나 READY 상태가 아닌 경우.
+        RuntimeError: READY 레지스트리가 없는 경우.
     """
     try:
         resp = cp_client.list_registries()
@@ -135,7 +135,7 @@ def get_or_select_registry(cp_client, registry_id=None, AWS_REGION="us-west-2"):
 
 
 def build_trust_policy(sagemaker_role_arn):
-    """Build a trust policy allowing both the SageMaker role and AgentCore service."""
+    """SageMaker 역할과 AgentCore 서비스를 모두 허용하는 신뢰 정책을 생성합니다."""
     return {
         "Version": "2012-10-17",
         "Statement": [
@@ -154,7 +154,7 @@ def build_trust_policy(sagemaker_role_arn):
 
 
 def build_permissions_policy(actions):
-    """Build a permissions policy for the given actions."""
+    """주어진 작업에 대한 권한 정책을 생성합니다."""
     return {
         "Version": "2012-10-17",
         "Statement": [
@@ -168,7 +168,7 @@ def build_permissions_policy(actions):
 
 
 def create_or_update_persona_role(iam_client, role_name, policy_name, actions, trust_policy, ACCOUNT_ID):
-    """Create an IAM role or update it if it already exists."""
+    """IAM 역할을 생성하고, 이미 존재하면 업데이트합니다."""
     try:
         resp = iam_client.create_role(
             RoleName=role_name,
@@ -185,7 +185,7 @@ def create_or_update_persona_role(iam_client, role_name, policy_name, actions, t
             PolicyDocument=json.dumps(trust_policy),
         )
 
-    # Attach/update the inline permissions policy
+    # 인라인 권한 정책 연결 또는 업데이트
     iam_client.put_role_policy(
         RoleName=role_name,
         PolicyName=policy_name,
@@ -196,14 +196,14 @@ def create_or_update_persona_role(iam_client, role_name, policy_name, actions, t
 
 
 def extract_role_arn(caller_arn):
-    """Get the actual IAM role ARN from the caller identity.
+    """호출자 자격 증명에서 실제 IAM 역할 ARN을 가져옵니다.
 
-    The assumed-role ARN format loses the role path (e.g., /service-role/).
-    We extract the role name and look it up via IAM to get the full ARN.
+    수임한 역할의 ARN 형식에서는 역할 경로(예: /service-role/)가 사라집니다.
+    역할 이름을 추출하고 IAM에서 조회하여 전체 ARN을 가져옵니다.
     """
     if ":assumed-role/" in caller_arn:
         role_name = caller_arn.split(":")[-1].split("/")[1]
-        # Look up the actual role to get the full ARN with path
+        # 실제 역할을 조회하여 경로가 포함된 전체 ARN 가져오기
         iam = boto3.client("iam")
         role_info = iam.get_role(RoleName=role_name)
         return role_info["Role"]["Arn"]

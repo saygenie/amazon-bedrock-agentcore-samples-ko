@@ -16,7 +16,7 @@ function App() {
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [shortTermMemories, setShortTermMemories] = useState([]);
   const [longTermMemories, setLongTermMemories] = useState([]);
-  // Global configuration for both memory types
+  // 두 Memory 유형의 전역 구성
   const [globalConfig, setGlobalConfig] = useState({ memory_id: '', actor_id: '' });
   const [availableNamespaces, setAvailableNamespaces] = useState([]);
   const [isConfigured, setIsConfigured] = useState(false);
@@ -24,21 +24,21 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Short-term memory filter states
+  // Short-term Memory 필터 상태
   const [eventTypeFilter, setEventTypeFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [sortBy, setSortBy] = useState('timestamp');
   const [sortOrder, setSortOrder] = useState('desc');
   const [contentSearch, setContentSearch] = useState('');
 
-  // Long-term memory filter states
+  // Long-term Memory 필터 상태
   const [ltSearchQuery, setLtSearchQuery] = useState('');
   const [ltSortOrder, setLtSortOrder] = useState('desc');
 
   const refreshData = () => {
     setLoading(true);
     setLastUpdated(new Date());
-    setTimeout(() => setLoading(false), 1000); // Simulate refresh
+    setTimeout(() => setLoading(false), 1000); // 새로 고침 시뮬레이션
   };
 
   const handleShortTermMemoryFetch = (memories) => {
@@ -46,7 +46,7 @@ function App() {
     console.log('Short-term memories fetched:', memories);
     console.log('Current filters:', { eventTypeFilter, roleFilter, contentSearch });
 
-    // Debug: Show what types and roles are actually in the data
+    // 디버그: 데이터에 실제로 포함된 type과 role 표시
     const types = [...new Set(memories.map(m => m.type))];
     const roles = [...new Set(memories.map(m => m.role))];
     console.log('Available types in data:', types);
@@ -63,7 +63,7 @@ function App() {
     setError('');
     console.log('Global memory configuration updated:', config);
 
-    // Discover namespaces for long-term memory to validate the Memory ID
+    // Memory ID 검증을 위해 Long-term Memory namespace 검색
     try {
       const response = await fetch('http://localhost:8000/api/agentcore/listNamespaces', {
         method: 'POST',
@@ -91,7 +91,7 @@ function App() {
         throw new Error(errorMessage);
       }
       
-      // Configuration is valid, update state
+      // 구성이 유효하므로 상태 업데이트
       setGlobalConfig(config);
       setIsConfigured(true);
       setHasBeenConfigured(true);
@@ -104,10 +104,10 @@ function App() {
     } catch (err) {
       console.error('❌ Memory configuration error:', err);
       
-      // Parse specific error messages from backend
+      // 백엔드에서 구체적인 오류 메시지 파싱
       let errorMessage = 'Failed to validate memory configuration';
       
-      // Handle fetch API errors (not axios)
+      // fetch API 오류 처리(axios 아님)
       if (err.message && err.message.includes('Failed to fetch')) {
         errorMessage = 'Unable to connect to backend server. Please ensure the backend is running.';
       } else if (err.message) {
@@ -116,7 +116,7 @@ function App() {
       
       setError(errorMessage);
       
-      // Don't update configuration if validation failed
+      // 검증에 실패하면 구성 업데이트하지 않음
       setIsConfigured(false);
       setHasBeenConfigured(false);
     } finally {
@@ -164,7 +164,7 @@ function App() {
 
 
 
-            {/* Search and Filter Controls */}
+            {/* 검색 및 필터 컨트롤 */}
             <div className="results-controls">
               <div className="search-control">
                 <Search size={16} className="search-icon" />
@@ -313,7 +313,7 @@ function App() {
               </div>
             </div>
 
-            {/* Search and Sort Controls */}
+            {/* 검색 및 정렬 컨트롤 */}
             <div className="results-controls">
               <div className="search-control">
                 <Search size={16} className="search-icon" />
@@ -412,7 +412,7 @@ function App() {
             </div>
           </div>
 
-          {/* Memory Configuration in Header */}
+          {/* 헤더의 Memory 구성 */}
           <div className="header-config">
             <div className="config-field-inline">
               <label>Memory ID <span className="required-asterisk">*</span></label>
@@ -440,7 +440,7 @@ function App() {
             <button
               onClick={async () => {
                 if (hasBeenConfigured) {
-                  // Reconfigure: Clear everything and reset
+                  // 재구성: 모든 항목을 지우고 초기화
                   setGlobalConfig({ memory_id: '', actor_id: '' });
                   setHasBeenConfigured(false);
                   setIsConfigured(false);
@@ -449,7 +449,7 @@ function App() {
                   setAvailableNamespaces([]);
                   setError('');
                 } else {
-                  // Configure: Validate and update
+                  // 구성: 검증 후 업데이트
                   if (globalConfig.memory_id.trim() && globalConfig.actor_id.trim()) {
                     await handleGlobalConfigUpdate(globalConfig);
                   }
@@ -486,7 +486,7 @@ function App() {
             </button>
           </div>
 
-          {/* Error Display */}
+          {/* 오류 표시 */}
           {error && (
             <div className="error-banner-modern">
               <div className="error-icon">⚠️</div>
@@ -496,12 +496,12 @@ function App() {
         </header>
 
         <>
-          {/* Sidebar Layout */}
+          {/* 사이드바 레이아웃 */}
           {(globalConfig.memory_id.trim() && globalConfig.actor_id.trim()) && (
             <div className="dashboard-layout">
-              {/* Sidebar */}
+              {/* 사이드바 */}
               <div className="sidebar">
-                {/* Memory Type Selection */}
+                {/* Memory 유형 선택 */}
                 <div className="sidebar-section">
                   <div className="sidebar-section-header">
                     <MessageSquare size={16} />
@@ -522,7 +522,7 @@ function App() {
                   </div>
                 </div>
 
-                {/* Query Parameters */}
+                {/* 쿼리 파라미터 */}
                 <div className="sidebar-section">
                   <div className="sidebar-section-header">
                     <Search size={16} />
@@ -546,7 +546,7 @@ function App() {
                 </div>
               </div>
 
-              {/* Main Content Area */}
+              {/* 기본 콘텐츠 영역 */}
               <div className="main-area">
                 {(globalConfig.memory_id.trim() && globalConfig.actor_id.trim()) ? (
                   <div className="results-container">

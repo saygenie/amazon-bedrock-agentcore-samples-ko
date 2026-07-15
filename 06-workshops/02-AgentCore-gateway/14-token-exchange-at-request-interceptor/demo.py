@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI demo for AgentCore Gateway token exchange at request interceptor."""
+"""AgentCore Gateway 요청 인터셉터의 토큰 교환 CLI 데모입니다."""
 
 import argparse
 import base64
@@ -16,7 +16,7 @@ from strands.tools.mcp.mcp_client import MCPClient
 from mcp.client.streamable_http import streamablehttp_client
 
 
-# -- ANSI styling -------------------------------------------------------------
+# -- ANSI 스타일 --------------------------------------------------------------
 
 RESET = "\033[0m"
 BOLD = "\033[1m"
@@ -80,11 +80,11 @@ def jwt_client_id(token: str) -> str:
     return claims.get("client_id", "unknown")
 
 
-# -- Token provider ------------------------------------------------------------
+# -- 토큰 provider -------------------------------------------------------------
 
 
 class CognitoM2MTokenProvider:
-    """Acquires and caches a Cognito client_credentials token, refreshing on demand."""
+    """Cognito client_credentials 토큰을 가져와 캐시하고 필요할 때 갱신합니다."""
 
     def __init__(
         self,
@@ -168,7 +168,7 @@ class CognitoM2MTokenProvider:
         return self._fetch_token()
 
 
-# -- Terraform output loader --------------------------------------------------
+# -- Terraform 출력 로더 ------------------------------------------------------
 
 
 def load_terraform_outputs(tf_dir: str) -> dict:
@@ -186,7 +186,7 @@ def load_terraform_outputs(tf_dir: str) -> dict:
     return {k: v["value"] for k, v in raw.items()}
 
 
-# -- Demo steps ----------------------------------------------------------------
+# -- 데모 단계 ------------------------------------------------------------------
 
 
 def demo_config(cfg: dict) -> None:
@@ -348,7 +348,7 @@ def demo_agent(cfg: dict, prompt: str) -> None:
         # verbose=True,
     )
 
-    # -- 5a: attempt without a token to demonstrate the 401 -----------------
+    # -- 5a: 401 응답을 확인하기 위해 토큰 없이 시도 -----------------------
     section("Attempting gateway connection without a token")
     resp = requests.post(
         gateway_url,
@@ -363,7 +363,7 @@ def demo_agent(cfg: dict, prompt: str) -> None:
     else:
         print(f"  {YELLOW}Unexpected: {resp.text[:200]}{RESET}")
 
-    # -- 5b: acquire token via M2M and connect ------------------------------
+    # -- 5b: M2M을 통해 토큰을 가져와 연결 ---------------------------------
     section("Acquiring M2M token via client_credentials flow")
     access_token = token_provider.refresh()
 
@@ -372,7 +372,7 @@ def demo_agent(cfg: dict, prompt: str) -> None:
     print(f"  {DIM}This is the GATEWAY client. The API Gateway will NOT accept this token.{RESET}")
     print(f"  {DIM}The interceptor will exchange it for a DOWNSTREAM client token.{RESET}")
 
-    # -- 5c: connect and run agent ------------------------------------------
+    # -- 5c: 연결 후 에이전트 실행 -----------------------------------------
     section("Connecting agent to gateway")
 
     def create_transport():
@@ -402,7 +402,7 @@ def demo_agent(cfg: dict, prompt: str) -> None:
         print(f"  {GREEN}{str(response)}{RESET}")
 
 
-# -- Main ---------------------------------------------------------------------
+# -- 메인 ---------------------------------------------------------------------
 
 
 def main():
@@ -430,7 +430,7 @@ def main():
     cfg = load_terraform_outputs(args.tf_dir)
     demo_config(cfg)
 
-    # Single token provider used across all steps
+    # 모든 단계에서 하나의 토큰 provider 사용
     token_provider = CognitoM2MTokenProvider(
         token_endpoint=cfg["cognito_token_endpoint"],
         client_id=cfg["cognito_gateway_client_id"],

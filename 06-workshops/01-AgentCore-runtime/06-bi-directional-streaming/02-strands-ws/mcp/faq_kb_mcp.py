@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-AnyBank FAQ Knowledge Base MCP Server
+AnyBank FAQ 지식 기반 MCP 서버
 
-Provides FAQ retrieval from AnyBank knowledge base via Model Context Protocol.
-The knowledge base contains comprehensive FAQ information from anybank-faq.md covering:
-- General Banking (accounts, safety, closures)
-- Online & Mobile Banking (security, deposits, bill pay)
-- Fees & Charges (monthly fees, overdrafts, ATMs, wires)
-- Debit & Credit Cards (delivery, fraud, international use)
-- Mortgages (affordability, pre-approval, documents, timeline)
-- Security & Fraud (protection, suspicious activity, liability)
-- Customer Service (contact methods, hours, complaints)
-- Account Access (authorization, beneficiaries, international)
+Model Context Protocol을 통해 AnyBank Knowledge Base에서 FAQ를 조회합니다.
+Knowledge Base에는 anybank-faq.md의 다음 항목을 다루는 포괄적인 FAQ 정보가 있습니다.
+- 일반 은행 업무(계좌, 안전, 해지)
+- Online & Mobile Banking(보안, 입금, 청구서 결제)
+- 수수료 및 비용(월 수수료, 초과 인출, ATM, 송금)
+- Debit & Credit Card(배송, 사기, 해외 사용)
+- Mortgage(구매 여력, 사전 승인, 문서, 일정)
+- 보안 및 사기(보호, 의심스러운 활동, 책임)
+- Customer Service(연락 방법, 운영 시간, 불만)
+- 계좌 접근(권한 부여, 수익자, 해외)
 
-Supports both retrieve (search only) and retrieve_and_generate (RAG with LLM).
+retrieve(검색 전용)와 retrieve_and_generate(LLM을 사용한 RAG)를 모두 지원합니다.
 """
 
 import asyncio
@@ -29,10 +29,10 @@ from mcp.types import Tool, TextContent
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create MCP server
+# MCP Server 생성
 server = Server("anybank-faq-kb")
 
-# Configuration from environment
+# 환경에서 구성 가져오기
 AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 KNOWLEDGE_BASE_ID = os.getenv("KNOWLEDGE_BASE_ID")
 DEFAULT_MODEL_ARN = os.getenv(
@@ -40,12 +40,12 @@ DEFAULT_MODEL_ARN = os.getenv(
     f"arn:aws:bedrock:{AWS_REGION}::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0",
 )
 
-# Initialize Bedrock Agent Runtime client
+# Amazon Bedrock Agent Runtime Client 초기화
 bedrock_agent_runtime = None
 
 
 def get_bedrock_client():
-    """Lazy initialization of Bedrock client"""
+    """Amazon Bedrock Client를 지연 초기화합니다."""
     global bedrock_agent_runtime
     if bedrock_agent_runtime is None:
         bedrock_agent_runtime = boto3.client("bedrock-agent-runtime", region_name=AWS_REGION)
@@ -53,7 +53,7 @@ def get_bedrock_client():
 
 
 # ============================================================================
-# Tool Functions
+# 도구 함수
 # ============================================================================
 
 
@@ -103,7 +103,7 @@ def retrieve_from_knowledge_base(
         for result in response.get("retrievalResults", []):
             score = result.get("score", 0)
 
-            # Filter by minimum score
+            # 최소 점수로 필터링
             if score < min_score:
                 continue
 
@@ -111,11 +111,11 @@ def retrieve_from_knowledge_base(
             location = result.get("location", {})
             metadata = result.get("metadata", {})
 
-            # Extract S3 location if available
+            # 사용 가능한 경우 S3 위치 추출
             s3_location = location.get("s3Location", {})
             uri = s3_location.get("uri") or metadata.get("x-amz-bedrock-kb-source-uri", "")
 
-            # Extract page number if available
+            # 사용 가능한 경우 페이지 번호 추출
             page_number = metadata.get("x-amz-bedrock-kb-document-page-number")
             if isinstance(page_number, float) and page_number.is_integer():
                 page_number = int(page_number)
@@ -211,11 +211,11 @@ def retrieve_and_generate(
                 location = reference.get("location", {})
                 metadata = reference.get("metadata", {})
 
-                # Extract S3 location
+                # S3 위치 추출
                 s3_location = location.get("s3Location", {})
                 uri = s3_location.get("uri") or metadata.get("x-amz-bedrock-kb-source-uri", "")
 
-                # Extract page number
+                # 페이지 번호 추출
                 page_number = metadata.get("x-amz-bedrock-kb-document-page-number")
                 if isinstance(page_number, float) and page_number.is_integer():
                     page_number = int(page_number)
@@ -250,7 +250,7 @@ def retrieve_and_generate(
 
 
 # ============================================================================
-# MCP Server Configuration
+# MCP Server 구성
 # ============================================================================
 
 TOOLS = [
@@ -368,7 +368,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 
 async def main():
-    """Run the MCP server"""
+    """MCP Server를 실행합니다."""
     logger.info("=" * 70)
     logger.info("Starting AnyBank FAQ Knowledge Base MCP Server")
     logger.info("=" * 70)

@@ -13,7 +13,7 @@ from boto3.session import Session
 
 
 def suppress_warnings():
-    """Suppress noisy dependency warnings for clean notebook output."""
+    """Notebook 출력을 깔끔하게 유지하도록 불필요한 종속성 경고를 숨긴다."""
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", message=".*urllib3.*")
@@ -26,7 +26,7 @@ suppress_warnings()
 
 sts_client = boto3.client("sts")
 
-# Get AWS account details
+# AWS 계정 세부 정보 가져오기
 REGION = boto3.session.Session().region_name
 
 username = "testuser"
@@ -98,24 +98,24 @@ def get_cognito_client_secret() -> str:
 
 def read_config(file_path: str) -> Dict[str, Any]:
     """
-    Read configuration from a file path. Supports JSON, YAML, and YML formats.
+    파일 경로에서 설정을 읽는다. JSON, YAML 및 YML 형식을 지원한다.
 
-    Args:
-        file_path (str): Path to the configuration file
+    인수:
+        file_path (str): 설정 파일 경로
 
-    Returns:
-        Dict[str, Any]: Configuration data as a dictionary
+    반환:
+        Dict[str, Any]: 딕셔너리 형태의 설정 데이터
 
-    Raises:
-        FileNotFoundError: If the file doesn't exist
-        ValueError: If the file format is not supported or invalid
-        yaml.YAMLError: If YAML parsing fails
-        json.JSONDecodeError: If JSON parsing fails
+    예외:
+        FileNotFoundError: 파일이 없는 경우
+        ValueError: 파일 형식이 지원되지 않거나 유효하지 않은 경우
+        yaml.YAMLError: YAML 파싱에 실패한 경우
+        json.JSONDecodeError: JSON 파싱에 실패한 경우
     """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Configuration file not found: {file_path}")
 
-    # Get file extension to determine format
+    # 형식을 판별하기 위해 파일 확장자 가져오기
     _, ext = os.path.splitext(file_path.lower())
 
     try:
@@ -125,15 +125,15 @@ def read_config(file_path: str) -> Dict[str, Any]:
             elif ext in [".yaml", ".yml"]:
                 return yaml.safe_load(file)
             else:
-                # Try to auto-detect format by attempting JSON first, then YAML
+                # JSON을 먼저 시도한 다음 YAML을 시도하여 형식 자동 감지
                 content = file.read()
                 file.seek(0)
 
-                # Try JSON first
+                # JSON 먼저 시도
                 try:
                     return json.loads(content)
                 except json.JSONDecodeError:
-                    # Try YAML
+                    # YAML 시도
                     try:
                         return yaml.safe_load(content)
                     except yaml.YAMLError:
@@ -150,7 +150,7 @@ def read_config(file_path: str) -> Dict[str, Any]:
 
 
 def save_customer_support_secret(secret_value):
-    """Save a secret in AWS Secrets Manager."""
+    """AWS Secrets Manager에 보안 암호를 저장한다."""
     boto_session = Session()
     region = boto_session.region_name
     secrets_client = boto3.client("secretsmanager", region_name=region)
@@ -172,7 +172,7 @@ def save_customer_support_secret(secret_value):
 
 
 def get_customer_support_secret():
-    """Get a secret value from AWS Secrets Manager."""
+    """AWS Secrets Manager에서 보안 암호 값을 가져온다."""
     boto_session = Session()
     region = boto_session.region_name
     secrets_client = boto3.client("secretsmanager", region_name=region)
@@ -185,7 +185,7 @@ def get_customer_support_secret():
 
 
 def delete_customer_support_secret():
-    """Delete a secret from AWS Secrets Manager."""
+    """AWS Secrets Manager에서 보안 암호를 삭제한다."""
     boto_session = Session()
     region = boto_session.region_name
     secrets_client = boto3.client("secretsmanager", region_name=region)
@@ -201,10 +201,10 @@ def delete_customer_support_secret():
 def get_or_create_cognito_pool(refresh_token=False):
     boto_session = Session()
     region = boto_session.region_name
-    # Initialize Cognito client
+    # Cognito 클라이언트 초기화
     cognito_client = boto3.client("cognito-idp", region_name=region)
     try:
-        # check for existing cognito pool
+        # 기존 Cognito 풀 확인
         cognito_config_str = get_customer_support_secret()
         cognito_config = json.loads(cognito_config_str)
         if refresh_token:
@@ -216,12 +216,12 @@ def get_or_create_cognito_pool(refresh_token=False):
         print("No existing cognito config found. Creating a new one..")
 
     try:
-        # Create User Pool
+        # 사용자 풀 생성
         user_pool_response = cognito_client.create_user_pool(
             PoolName="MCPServerPool", Policies={"PasswordPolicy": {"MinimumLength": 8}}
         )
         pool_id = user_pool_response["UserPool"]["Id"]
-        # Create App Client
+        # 앱 클라이언트 생성
         app_client_response = cognito_client.create_user_pool_client(
             UserPoolId=pool_id,
             ClientName="MCPServerPoolClient",
@@ -236,7 +236,7 @@ def get_or_create_cognito_pool(refresh_token=False):
         client_id = app_client_response["UserPoolClient"]["ClientId"]
         client_secret = app_client_response["UserPoolClient"]["ClientSecret"]
 
-        # Create User
+        # 사용자 생성
         cognito_client.admin_create_user(
             UserPoolId=pool_id,
             Username=username,
@@ -244,7 +244,7 @@ def get_or_create_cognito_pool(refresh_token=False):
             MessageAction="SUPPRESS",
         )
 
-        # Set Permanent Password
+        # 영구 암호 설정
         cognito_client.admin_set_user_password(
             UserPoolId=pool_id,
             Username=username,
@@ -256,7 +256,7 @@ def get_or_create_cognito_pool(refresh_token=False):
         key = bytes(client_secret, "utf-8")
         secret_hash = base64.b64encode(hmac.new(key, message, digestmod=hashlib.sha256).digest()).decode()
 
-        # Authenticate User and get Access Token
+        # 사용자를 인증하고 액세스 토큰 가져오기
         auth_response = cognito_client.initiate_auth(
             ClientId=client_id,
             AuthFlow="USER_PASSWORD_AUTH",
@@ -268,12 +268,12 @@ def get_or_create_cognito_pool(refresh_token=False):
         )
         bearer_token = auth_response["AuthenticationResult"]["AccessToken"]
         discovery_url = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/openid-configuration"
-        # Output the required values
+        # 필수 값 출력
         print(f"Pool id: {pool_id}")
         print(f"Discovery URL: {discovery_url}")
         print(f"Client ID: {client_id}")
         print(f"Bearer Token: {bearer_token}")
-        # Return values if needed for further processing
+        # 추가 처리에 필요한 경우 값 반환
         cognito_config = {
             "pool_id": pool_id,
             "client_id": client_id,
@@ -297,31 +297,31 @@ def get_or_create_cognito_pool(refresh_token=False):
 
 def cleanup_cognito_resources(pool_id):
     """
-    Delete Cognito resources including users, app clients, and user pool
+    사용자, 앱 클라이언트 및 사용자 풀을 포함한 Cognito 리소스를 삭제한다.
     """
     try:
-        # Initialize Cognito client using the same session configuration
+        # 동일한 세션 설정을 사용하여 Cognito 클라이언트 초기화
         boto_session = Session()
         region = boto_session.region_name
         cognito_client = boto3.client("cognito-idp", region_name=region)
 
         if pool_id:
             try:
-                # List and delete all app clients
+                # 모든 앱 클라이언트 나열 및 삭제
                 clients_response = cognito_client.list_user_pool_clients(UserPoolId=pool_id, MaxResults=60)
 
                 for client in clients_response["UserPoolClients"]:
                     print(f"Deleting app client: {client['ClientName']}")
                     cognito_client.delete_user_pool_client(UserPoolId=pool_id, ClientId=client["ClientId"])
 
-                # List and delete all users
+                # 모든 사용자 나열 및 삭제
                 users_response = cognito_client.list_users(UserPoolId=pool_id, AttributesToGet=["email"])
 
                 for user in users_response.get("Users", []):
                     print(f"Deleting user: {user['Username']}")
                     cognito_client.admin_delete_user(UserPoolId=pool_id, Username=user["Username"])
 
-                # Delete the user pool
+                # 사용자 풀 삭제
                 print(f"Deleting user pool: {pool_id}")
                 cognito_client.delete_user_pool(UserPoolId=pool_id)
 
@@ -347,9 +347,9 @@ def cleanup_cognito_resources(pool_id):
 def reauthenticate_user(client_id, client_secret):
     boto_session = Session()
     region = boto_session.region_name
-    # Initialize Cognito client
+    # Cognito 클라이언트 초기화
     cognito_client = boto3.client("cognito-idp", region_name=region)
-    # Authenticate User and get Access Token
+    # 사용자를 인증하고 액세스 토큰 가져오기
 
     message = bytes(username + client_id, "utf-8")
     key = bytes(client_secret, "utf-8")
@@ -374,7 +374,7 @@ def create_agentcore_runtime_execution_role():
     region = boto_session.region_name
     account_id = get_aws_account_id()
 
-    # Trust relationship policy
+    # 신뢰 관계 정책
     trust_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -391,7 +391,7 @@ def create_agentcore_runtime_execution_role():
         ],
     }
 
-    # IAM policy document
+    # IAM 정책 문서
     policy_document = {
         "Version": "2012-10-17",
         "Statement": [
@@ -499,14 +499,14 @@ def create_agentcore_runtime_execution_role():
     }
 
     try:
-        # Check if role already exists
+        # 역할이 이미 있는지 확인
         role_arn = None
         try:
             existing_role = iam.get_role(RoleName=role_name)
             print(f"ℹ️ Role {role_name} already exists")
             role_arn = existing_role["Role"]["Arn"]
         except iam.exceptions.NoSuchEntityException:
-            # Create IAM role
+            # IAM 역할 생성
             role_response = iam.create_role(
                 RoleName=role_name,
                 AssumeRolePolicyDocument=json.dumps(trust_policy),
@@ -517,14 +517,14 @@ def create_agentcore_runtime_execution_role():
 
         print(f"Role ARN: {role_arn}")
 
-        # Check if policy already exists, create if not
+        # 정책이 이미 있는지 확인하고, 없으면 생성
         policy_arn = f"arn:aws:iam::{account_id}:policy/{policy_name}"
 
         try:
             iam.get_policy(PolicyArn=policy_arn)
             print(f"ℹ️ Policy {policy_name} already exists")
         except iam.exceptions.NoSuchEntityException:
-            # Create policy
+            # 정책 생성
             policy_response = iam.create_policy(
                 PolicyName=policy_name,
                 PolicyDocument=json.dumps(policy_document),
@@ -533,7 +533,7 @@ def create_agentcore_runtime_execution_role():
             print(f"✅ Created policy: {policy_name}")
             policy_arn = policy_response["Policy"]["Arn"]
 
-        # Attach policy to role
+        # 역할에 정책 연결
         try:
             iam.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
             print("✅ Attached policy to role")
@@ -563,21 +563,21 @@ def delete_agentcore_runtime_execution_role():
         account_id = boto3.client("sts").get_caller_identity()["Account"]
         policy_arn = f"arn:aws:iam::{account_id}:policy/{policy_name}"
 
-        # Detach policy from role
+        # 역할에서 정책 분리
         try:
             iam.detach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
             print("✅ Detached policy from role")
         except Exception:
             pass
 
-        # Delete role
+        # 역할 삭제
         try:
             iam.delete_role(RoleName=role_name)
             print(f"✅ Deleted role: {role_name}")
         except Exception:
             pass
 
-        # Delete policy
+        # 정책 삭제
         try:
             iam.delete_policy(PolicyArn=policy_arn)
             print(f"✅ Deleted policy: {policy_name}")
@@ -591,7 +591,7 @@ def delete_agentcore_runtime_execution_role():
 
 
 def agentcore_memory_cleanup(memory_id: str = None):
-    """List all memories and their associated strategies"""
+    """모든 Memory와 연결된 전략을 나열한다."""
     control_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
     if memory_id:
         response = control_client.delete_memory(memoryId=memory_id)
@@ -599,16 +599,16 @@ def agentcore_memory_cleanup(memory_id: str = None):
     else:
         next_token = None
         while True:
-            # Build request parameters
+            # 요청 파라미터 구성
             params = {}
             if next_token:
                 params["nextToken"] = next_token
 
-            # List memories
+            # Memory 나열
             try:
                 response = control_client.list_memories(**params)
 
-                # Process each memory
+                # 각 Memory 처리
                 for memory in response.get("memories", []):
                     memory_id = memory.get("id")
                     print(f"\nMemory ID: {memory_id}")
@@ -618,7 +618,7 @@ def agentcore_memory_cleanup(memory_id: str = None):
                     print(f"✅ Successfully deleted memory: {memory_id}")
 
                 response = control_client.list_memories(**params)
-                # Process each memory status
+                # 각 Memory 상태 처리
                 for memory in response.get("memories", []):
                     memory_id = memory.get("id")
                     print(f"\nMemory ID: {memory_id}")
@@ -626,7 +626,7 @@ def agentcore_memory_cleanup(memory_id: str = None):
 
             except Exception as e:
                 print(f"⚠️  Error getting memory details: {e}")
-            # Check for more results
+            # 추가 결과 확인
             next_token = response.get("nextToken")
             if not next_token:
                 break
@@ -643,7 +643,7 @@ def gateway_target_cleanup(gateway_id: str = None):
         gateway_id = response["items"][0]["gatewayId"]
     print(f"🗑️  Deleting all targets for gateway: {gateway_id}")
 
-    # List and delete all targets
+    # 모든 대상 나열 및 삭제
     list_response = gateway_client.list_gateway_targets(gatewayIdentifier=gateway_id, maxResults=100)
 
     targets_deleted = False
@@ -654,12 +654,12 @@ def gateway_target_cleanup(gateway_id: str = None):
         print(f"   ✅ Target {target_id} deleted")
         targets_deleted = True
 
-    # Wait for target deletions to propagate
+    # 대상 삭제가 반영될 때까지 대기
     if targets_deleted:
         print("⏳ Waiting for target deletions to propagate...")
         time.sleep(5)
 
-    # Delete the gateway
+    # Gateway 삭제
     print(f"🗑️  Deleting gateway: {gateway_id}")
     gateway_client.delete_gateway(gatewayIdentifier=gateway_id)
     print(f"✅ Gateway {gateway_id} deleted successfully")
@@ -667,7 +667,7 @@ def gateway_target_cleanup(gateway_id: str = None):
 
 def runtime_resource_cleanup(runtime_arn: str = None):
     try:
-        # Initialize AWS clients
+        # AWS 클라이언트 초기화
         agentcore_control_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
         ecr_client = boto3.client("ecr", region_name=REGION)
         if runtime_arn:
@@ -675,14 +675,14 @@ def runtime_resource_cleanup(runtime_arn: str = None):
             response = agentcore_control_client.delete_agent_runtime(agentRuntimeId=runtime_id)
             print(f"  ✅ Agent runtime deleted: {response['status']}")
         else:
-            # Delete the AgentCore Runtime
+            # AgentCore Runtime 삭제
             # print("  🗑️  Deleting AgentCore Runtime...")
             runtimes = agentcore_control_client.list_agent_runtimes()
             for runtime in runtimes["agentRuntimes"]:
                 response = agentcore_control_client.delete_agent_runtime(agentRuntimeId=runtime["agentRuntimeId"])
                 print(f"  ✅ Agent runtime deleted: {response['status']}")
 
-        # Delete the ECR repository
+        # ECR 리포지토리 삭제
         print("  🗑️  Deleting ECR repository...")
         repositories = ecr_client.describe_repositories()
         for repo in repositories["repositories"]:
@@ -695,13 +695,13 @@ def runtime_resource_cleanup(runtime_arn: str = None):
 
 
 def delete_observability_resources():
-    # Configuration
+    # 설정
     log_group_name = "agents/customer-support-assistant-logs"
     log_stream_name = "default"
 
     logs_client = boto3.client("logs", region_name=REGION)
 
-    # Delete log stream first (must be done before deleting log group)
+    # 로그 그룹보다 먼저 로그 스트림 삭제
     try:
         print(f"  🗑️  Deleting log stream '{log_stream_name}'...")
         logs_client.delete_log_stream(logGroupName=log_group_name, logStreamName=log_stream_name)
@@ -712,7 +712,7 @@ def delete_observability_resources():
         else:
             print(f"  ⚠️  Error deleting log stream: {e}")
 
-    # Delete log group
+    # 로그 그룹 삭제
     try:
         print(f"  🗑️  Deleting log group '{log_group_name}'...")
         logs_client.delete_log_group(logGroupName=log_group_name)
@@ -725,7 +725,7 @@ def delete_observability_resources():
 
 
 def local_file_cleanup():
-    # List of files to clean up
+    # 정리할 파일 목록
     files_to_delete = [
         "Dockerfile",
         ".dockerignore",
@@ -766,7 +766,7 @@ def policy_engine_cleanup(policy_engine_id: str = None):
 
     print(f"🗑️  Deleting all policies for policy engine: {policy_engine_id}")
 
-    # List and delete all policies
+    # 모든 정책 나열 및 삭제
     list_response = policy_client.list_policies(policyEngineId=policy_engine_id, maxResults=100)
 
     policies_deleted = False
@@ -777,12 +777,12 @@ def policy_engine_cleanup(policy_engine_id: str = None):
         print(f"   ✅ Policy {policy_id} deleted")
         policies_deleted = True
 
-    # Wait for policy deletions to propagate before deleting the engine
+    # 엔진을 삭제하기 전에 정책 삭제가 반영될 때까지 대기
     if policies_deleted:
         print("⏳ Waiting for policy deletions to propagate...")
-        time.sleep(5)  # 5 seconds is usually sufficient
+        time.sleep(5)  # 일반적으로 5초면 충분함
 
-    # Delete the policy engine
+    # Policy Engine 삭제
     print(f"🗑️  Deleting policy engine: {policy_engine_id}")
     policy_client.delete_policy_engine(policyEngineId=policy_engine_id)
     print(f"✅ Policy engine {policy_engine_id} deleted successfully")

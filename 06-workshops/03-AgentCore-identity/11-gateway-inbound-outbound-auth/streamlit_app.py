@@ -1,11 +1,11 @@
 """
-Streamlit UI for AgentCore Identity Sample 11 — Gateway Inbound + Outbound Auth.
+AgentCore Identity Sample 11(Gateway 인바운드 + 아웃바운드 인증)용 Streamlit UI입니다.
 
-Provides a two-screen experience:
-  Screen 1 — Centered login card (no sidebar)
-  Screen 2 — Chat dashboard with sidebar status + preset prompts
+두 개의 화면을 제공합니다.
+  화면 1: 가운데 정렬된 로그인 카드(사이드바 없음)
+  화면 2: 사이드바 상태 및 사전 설정 프롬프트가 있는 채팅 대시보드
 
-Run:
+실행:
     streamlit run streamlit_app.py
 """
 
@@ -17,7 +17,7 @@ import boto3
 import streamlit as st
 
 # ---------------------------------------------------------------------------
-# Page config
+# 페이지 구성
 # ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="Sample 11: Gateway Auth",
@@ -29,12 +29,12 @@ SAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 # ---------------------------------------------------------------------------
-# Helper functions (reused from invoke.py patterns)
+# 보조 함수(invoke.py 패턴 재사용)
 # ---------------------------------------------------------------------------
 
 
 def _find_in_json(obj, key):
-    """Recursively search for a key in nested JSON."""
+    """중첩된 JSON에서 키를 재귀적으로 검색합니다."""
     if isinstance(obj, dict):
         if key in obj:
             return obj[key]
@@ -51,7 +51,7 @@ def _find_in_json(obj, key):
 
 
 def _find_project_dir() -> str:
-    """Find the agentcore project subdirectory."""
+    """agentcore 프로젝트 하위 디렉터리를 찾습니다."""
     for entry in os.listdir(SAMPLE_DIR):
         candidate = os.path.join(SAMPLE_DIR, entry)
         if os.path.isdir(candidate) and os.path.isdir(os.path.join(candidate, "agentcore")):
@@ -61,7 +61,7 @@ def _find_project_dir() -> str:
 
 @st.cache_data(ttl=300)
 def load_cognito_config() -> dict:
-    """Load cognito_config.json from the sample directory."""
+    """샘플 디렉터리에서 cognito_config.json을 불러옵니다."""
     path = os.path.join(SAMPLE_DIR, "cognito_config.json")
     with open(path) as f:
         return json.load(f)
@@ -69,9 +69,9 @@ def load_cognito_config() -> dict:
 
 @st.cache_data(ttl=120, show_spinner="Resolving agent ARN...")
 def resolve_agent_arn() -> str:
-    """Read the deployed agent ARN from deployed-state.json.
+    """deployed-state.json에서 배포된 에이전트 ARN을 읽습니다.
 
-    Searches for runtimeArn recursively to work across CLI versions.
+    CLI 버전에 관계없이 동작하도록 runtimeArn을 재귀적으로 검색합니다.
     """
     project_dir = _find_project_dir()
     state_file = os.path.join(project_dir, "agentcore", ".cli", "deployed-state.json")
@@ -87,9 +87,9 @@ def resolve_agent_arn() -> str:
 
 @st.cache_data(ttl=120, show_spinner="Resolving gateway URL...")
 def resolve_gateway_url() -> str:
-    """Attempt to read the gateway URL from deployed-state.json.
+    """deployed-state.json에서 Gateway URL 읽기를 시도합니다.
 
-    Searches for gatewayUrl recursively to work across CLI versions.
+    CLI 버전에 관계없이 동작하도록 gatewayUrl을 재귀적으로 검색합니다.
     """
     try:
         project_dir = _find_project_dir()
@@ -107,7 +107,7 @@ def resolve_gateway_url() -> str:
 
 
 def get_bearer_token(config: dict) -> str:
-    """Authenticate against Cognito and return an access token."""
+    """Cognito로 인증하고 액세스 토큰을 반환합니다."""
     cognito = boto3.client("cognito-idp", region_name=config["region"])
     auth = cognito.initiate_auth(
         ClientId=config["user_client_id"],
@@ -121,12 +121,12 @@ def get_bearer_token(config: dict) -> str:
 
 
 def _format_response(text: str) -> str:
-    """Clean up agent response text for display."""
+    """표시할 에이전트 응답 텍스트를 정리합니다."""
     return text.replace("\\n", "\n").strip('"')
 
 
 def parse_event_stream(response: dict) -> str:
-    """Parse the streaming event response into plain text."""
+    """스트리밍 이벤트 응답을 일반 텍스트로 파싱합니다."""
     parts: list[str] = []
     for event in response.get("response", []):
         raw = event if isinstance(event, bytes) else event.get("chunk", {}).get("bytes", b"")
@@ -155,9 +155,9 @@ def parse_event_stream(response: dict) -> str:
 
 def invoke_agent(agent_arn: str, region: str, prompt: str, bearer_token: str | None = None) -> dict:
     """
-    Invoke the AgentCore Runtime agent.
+    AgentCore Runtime 에이전트를 호출합니다.
 
-    Returns a dict with keys: text, status_code, elapsed, auth_header, error.
+    text, status_code, elapsed, auth_header, error 키가 있는 dict를 반환합니다.
     """
     client = boto3.client("bedrock-agentcore", region_name=region)
     auth_header = None
@@ -205,14 +205,14 @@ def invoke_agent(agent_arn: str, region: str, prompt: str, bearer_token: str | N
 
 
 def _truncate_arn(arn: str, max_len: int = 50) -> str:
-    """Shorten an ARN for display, keeping the meaningful tail."""
+    """의미 있는 뒷부분을 유지하면서 표시할 ARN을 줄입니다."""
     if len(arn) <= max_len:
         return arn
     return arn[:20] + "..." + arn[-(max_len - 23) :]
 
 
 # ---------------------------------------------------------------------------
-# Session state defaults
+# 세션 상태 기본값
 # ---------------------------------------------------------------------------
 for key, default in {
     "logged_in": False,
@@ -227,7 +227,7 @@ for key, default in {
         st.session_state[key] = default
 
 # ---------------------------------------------------------------------------
-# Load config (required for both screens)
+# 구성 불러오기(두 화면 모두에 필요)
 # ---------------------------------------------------------------------------
 try:
     config = load_cognito_config()
@@ -237,10 +237,10 @@ except FileNotFoundError:
 
 
 # ===================================================================
-# SCREEN 1 — Login (full page, centered, no sidebar)
+# 화면 1: 로그인(전체 페이지, 가운데 정렬, 사이드바 없음)
 # ===================================================================
 if not st.session_state.logged_in:
-    # Hide the sidebar on the login screen
+    # 로그인 화면에서 사이드바 숨기기
     st.markdown(
         """
         <style>
@@ -251,10 +251,10 @@ if not st.session_state.logged_in:
         unsafe_allow_html=True,
     )
 
-    # Vertical spacer
+    # 세로 여백
     st.markdown("<div style='padding-top: 6vh'></div>", unsafe_allow_html=True)
 
-    # Centered card using column ratio
+    # 열 비율을 사용해 카드 가운데 정렬
     _left, center, _right = st.columns([1, 2, 1])
 
     with center:
@@ -294,17 +294,17 @@ if not st.session_state.logged_in:
                 with st.spinner("Authenticating with Cognito..."):
                     token = get_bearer_token(login_config)
                 st.session_state.jwt_token = token
-                st.session_state.bearer_input = token  # pre-fill token field
+                st.session_state.bearer_input = token  # 토큰 필드 미리 채우기
                 st.session_state.logged_in = True
                 st.session_state.username = username
 
-                # Resolve agent ARN eagerly on login
+                # 로그인 시 에이전트 ARN을 미리 확인
                 try:
                     st.session_state.agent_arn = resolve_agent_arn()
                 except Exception:
                     st.session_state.agent_arn = None
 
-                # Resolve gateway URL eagerly on login
+                # 로그인 시 Gateway URL을 미리 확인
                 try:
                     st.session_state.gateway_url = resolve_gateway_url()
                 except Exception:
@@ -318,21 +318,21 @@ if not st.session_state.logged_in:
 
 
 # ===================================================================
-# SCREEN 2 — Dashboard (after login)
+# 화면 2: 대시보드(로그인 후)
 # ===================================================================
 
 agent_arn = st.session_state.agent_arn
 gateway_url = st.session_state.gateway_url
 
 # ---------------------------------------------------------------------------
-# Sidebar (compact status)
+# 사이드바(간결한 상태 표시)
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.markdown(f":green-background[Signed in as **{st.session_state.username}**]")
 
-    st.markdown("")  # small gap
+    st.markdown("")  # 작은 여백
 
-    # Agent ARN
+    # 에이전트 ARN
     if agent_arn:
         st.caption(f"**Agent ARN**\n`{_truncate_arn(agent_arn)}`")
     else:
@@ -341,7 +341,7 @@ with st.sidebar:
     # Gateway URL
     st.caption(f"**Gateway**\n`{gateway_url or 'N/A'}`")
 
-    # Region
+    # 리전
     st.caption(f"**Region**\n`{config.get('region', 'N/A')}`")
 
     if st.button("Sign Out", use_container_width=True):
@@ -360,7 +360,7 @@ with st.sidebar:
 
     st.divider()
 
-    # Bearer token — auto-filled after login, user can clear to test 403
+    # bearer token은 로그인 후 자동으로 채워지며, 403 테스트를 위해 사용자가 지울 수 있음
     st.markdown("**Bearer Token**")
     st.caption("Auto-filled after login. Clear it to test 403 rejection.")
     bearer_input = st.text_area(
@@ -375,7 +375,7 @@ with st.sidebar:
         st.markdown(":red-background[No token — requests will get 403]")
 
 # ---------------------------------------------------------------------------
-# Main area
+# 기본 영역
 # ---------------------------------------------------------------------------
 st.markdown("#### Gateway Inbound + Outbound Auth")
 st.markdown("""
@@ -390,12 +390,12 @@ st.caption(
     "Clear the Bearer Token in the sidebar to see a 403 rejection. The agent has zero knowledge of upstream credentials — the Gateway handles everything."
 )
 
-# Chat history
+# 채팅 기록
 for msg in st.session_state.chat_history:
     with st.chat_message(msg["role"]):
         st.markdown(_format_response(msg["content"]))
 
-# Preset buttons
+# 사전 설정 버튼
 presets = [
     "What tools do you have?",
     "Get current time",
@@ -409,14 +409,14 @@ for i, preset in enumerate(presets):
 
 
 def _send_prompt(prompt: str):
-    """Send a prompt to the agent and update chat history."""
+    """에이전트에 프롬프트를 보내고 채팅 기록을 업데이트합니다."""
     if not agent_arn:
         st.error("Agent ARN not resolved. Deploy the agent first.")
         return
 
     st.session_state.chat_history.append({"role": "user", "content": prompt})
 
-    # Use the token the user pasted (empty = no auth = 403)
+    # 사용자가 붙여 넣은 토큰 사용(빈 값 = 인증 없음 = 403)
     token = st.session_state.get("bearer_input", "").strip() or None
 
     with st.spinner("Invoking agent..."):
@@ -440,18 +440,18 @@ def _send_prompt(prompt: str):
         )
 
 
-# Handle preset click
+# 사전 설정 클릭 처리
 if preset_clicked:
     _send_prompt(preset_clicked)
     st.rerun()
 
-# Free text input
+# 자유 텍스트 입력
 user_input = st.chat_input("Ask the agent...")
 if user_input:
     _send_prompt(user_input)
     st.rerun()
 
-# Status panel
+# 상태 패널
 if st.session_state.last_request_info:
     info = st.session_state.last_request_info
     with st.expander("Last Request Details", expanded=False):

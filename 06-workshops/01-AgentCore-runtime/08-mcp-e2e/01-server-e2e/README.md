@@ -1,59 +1,59 @@
-# Full Example of MCP Stateless Server
+# MCP Stateless Server 전체 예제
 
-## Overview
+## 개요
 
-This tutorial demonstrates how to build a complete MCP (Model Context Protocol) server with all three core capabilities and deploy it to Amazon Bedrock AgentCore Runtime.
+이 자습서에서는 세 가지 핵심 기능을 모두 갖춘 완전한 MCP(Model Context Protocol) 서버를 구축하고 Amazon Bedrock AgentCore Runtime에 배포하는 방법을 보여 줍니다.
 
-The [MCP spec](https://modelcontextprotocol.io/specification/2025-11-25/server) defines the building blocks for adding context to language models via MCP. These operations enable rich interactions between clients, servers, and language models:
-- **Prompts**: Pre-defined templates or instructions that guide language model interactions
-- **Resources**: Structured data or content that provides additional context to the model
-- **Tools**: Executable functions that allow models to perform actions or retrieve information
+[MCP 사양](https://modelcontextprotocol.io/specification/2025-11-25/server)은 MCP를 통해 language model에 context를 추가하는 구성 요소를 정의합니다. 이러한 작업을 통해 클라이언트, 서버, language model 간의 풍부한 상호 작용이 가능합니다.
+- **Prompts**: Language model 상호 작용을 안내하는 미리 정의된 template 또는 지침
+- **Resources**: 모델에 추가 context를 제공하는 구조화된 데이터 또는 콘텐츠
+- **Tools**: 모델이 작업을 수행하거나 정보를 검색할 수 있게 하는 실행 함수
 
-## Prerequisites
+## 사전 요구 사항
 
-Before starting this tutorial, ensure you have:
-- AWS CLI configured with appropriate permissions
-- Python 3.13+ installed
-- Jupyter Notebook environment set up
-- Access to Amazon Bedrock AgentCore
+자습서를 시작하기 전에 다음 항목을 준비하세요.
+- 적절한 권한으로 구성된 AWS CLI
+- Python 3.13+ 설치
+- Jupyter Notebook 환경 설정
+- Amazon Bedrock AgentCore 액세스
 
-## Getting Started
+## 시작하기
 
-To get started with this tutorial, open and follow the step-by-step guide in the Jupyter notebook:
+이 자습서를 시작하려면 Jupyter Notebook을 열고 단계별 가이드를 따르세요.
 
-**[📓 01_full_mcp_server_e2e](01_full_mcp_server_e2e.ipynb)**
+**[01_full_mcp_server_e2e](01_full_mcp_server_e2e.ipynb)**
 
-The notebook contains all the code examples, configurations, and detailed instructions needed to complete this tutorial.
+Notebook에는 자습서를 완료하는 데 필요한 모든 코드 예제, 구성, 세부 지침이 포함되어 있습니다.
 
-## What You'll Learn
+## 학습 내용
 
-In this tutorial, you will learn:
+이 자습서에서는 다음 내용을 학습합니다.
 
-* How to create an MCP server with tools, prompts and resources
-* How to deploy to AgentCore Runtime
-* How to invoke your deployed server
+* Tool, prompt, resource가 포함된 MCP 서버를 생성하는 방법
+* AgentCore Runtime에 배포하는 방법
+* 배포된 서버를 호출하는 방법
 
-### Tutorial Details
+### 자습서 세부 정보
 
-| Information         | Details                                                   |
+| 정보                | 세부 정보                                                 |
 |:--------------------|:----------------------------------------------------------|
-| Tutorial type       | Hosting Tools, Prompts and Resources on Runtime           |
-| Tool type           | MCP server                                                |
-| Tutorial components | Hosting on AgentCore Runtime, Creating an MCP server      |
-| Tutorial vertical   | Cross-vertical                                            |
-| Example complexity  | Medium                                                    |
-| SDK used            | Amazon BedrockAgentCore Python SDK and MCP Client         |
+| 자습서 유형         | Runtime에서 Tool, Prompt, Resource 호스팅                 |
+| 도구 유형           | MCP 서버                                                  |
+| 자습서 구성 요소    | AgentCore Runtime에서 호스팅, MCP 서버 생성               |
+| 자습서 분야         | 여러 산업 분야                                            |
+| 예제 난이도         | 중간                                                      |
+| 사용 SDK            | Amazon BedrockAgentCore Python SDK 및 MCP Client          |
 
-### Tutorial Architecture
+### 자습서 아키텍처
 
-In this tutorial, we will describe how to deploy this example to AgentCore Runtime.
+이 자습서에서는 이 예제를 AgentCore Runtime에 배포하는 방법을 설명합니다.
 
 <img src="img/architecture.png" style="width: 80%;">
 
-In this tutorial notebook, you will build one agent. First, you will deploy the agent on AgentCore Runtime with four tools. Then, you will update it to add prompts. Finally, you will update it again to deploy resources.
+이 자습서 Notebook에서는 하나의 에이전트를 구축합니다. 먼저 네 개의 도구와 함께 에이전트를 AgentCore Runtime에 배포합니다. 그런 다음 prompt를 추가하도록 업데이트하고, 마지막으로 resource를 배포하도록 다시 업데이트합니다.
 
 
-### Tutorial Key Features
+### 자습서 주요 기능
 
-* Hosting Complete MCP Server (Stateless)
-* Using Tools, Resources, and Prompts from the MCP Spec
+* 완전한 MCP 서버 호스팅(Stateless)
+* MCP 사양의 Tool, Resource, Prompt 사용

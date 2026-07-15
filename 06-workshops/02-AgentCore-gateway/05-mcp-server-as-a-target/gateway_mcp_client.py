@@ -1,28 +1,26 @@
-"""Lightweight raw-HTTP client for AgentCore Gateway's MCP endpoint.
+"""AgentCore Gateway의 MCP 엔드포인트를 위한 경량 raw HTTP 클라이언트입니다.
 
-Used by the prompts/resources/streaming/sessions/elicitation demos in the
-notebooks in this directory so the cells can stay focused on the MCP method
-being demonstrated rather than transport plumbing (bearer auth,
-MCP-Protocol-Version negotiation, JSON-RPC envelope, cross-target
-pagination, SSE streaming, session id management).
+이 디렉터리의 Notebook에 있는 prompt/resource/streaming/session/elicitation
+데모에서 사용합니다. 셀이 전송 처리(bearer 인증, MCP-Protocol-Version 협상,
+JSON-RPC envelope, target 간 pagination, SSE streaming, session ID 관리)보다
+시연 중인 MCP 메서드에 집중할 수 있게 합니다.
 
-SDK clients (Strands MCPClient, the official mcp client) negotiate the
-protocol version automatically; raw `requests.post` does not — hence the
-explicit `MCP-Protocol-Version` header. The default matches the version
-the gateway is created with in `01-mcp-server-target.ipynb` (Step 2.3).
+SDK 클라이언트(Strands MCPClient, 공식 mcp 클라이언트)는 프로토콜 버전을
+자동으로 협상하지만 raw `requests.post`는 그렇지 않으므로 명시적인
+`MCP-Protocol-Version` 헤더를 사용합니다. 기본값은
+`01-mcp-server-target.ipynb` 2.3단계에서 gateway를 생성할 때 사용한 버전과
+일치합니다.
 
-Pagination note: `tools/list` (and the other list methods) page **per
-target**. With one DEFAULT target plus one DYNAMIC target attached to the
-same gateway, the first call returns one target's items plus a
-`nextCursor`; calling again with that cursor returns the next target's
-items, and so on. The `list_all_*` helpers below follow `nextCursor`
-until exhausted and return the merged list.
+Pagination 참고: `tools/list` 및 기타 목록 메서드는 **target별로** 페이지를
+나눕니다. 같은 gateway에 DEFAULT target 하나와 DYNAMIC target 하나를 연결하면
+첫 호출은 한 target의 항목과 `nextCursor`를 반환하고, 해당 cursor로 다시 호출하면
+다음 target의 항목을 반환하는 식으로 진행됩니다. 아래 `list_all_*` 헬퍼는
+소진될 때까지 `nextCursor`를 따라가 병합된 목록을 반환합니다.
 
-Streaming note: tools that emit `notifications/progress`, log messages, or
-elicitation/sampling requests are read via `stream_tool_call(...)`, a
-generator that yields each parsed JSON-RPC frame from the SSE response.
-The buffered `call_tool` only works for tools that return a single result
-without server-emitted intermediate frames.
+Streaming 참고: `notifications/progress`, 로그 메시지 또는 elicitation/sampling
+요청을 내보내는 도구는 SSE 응답에서 파싱한 각 JSON-RPC frame을 생성하는
+generator인 `stream_tool_call(...)`로 읽습니다. 버퍼링된 `call_tool`은 서버가
+중간 frame을 내보내지 않고 단일 결과를 반환하는 도구에만 사용할 수 있습니다.
 """
 
 from __future__ import annotations
@@ -36,7 +34,7 @@ DEFAULT_PROTOCOL_VERSION = "2025-11-25"
 
 
 class GatewayMCPClient:
-    """Tiny client wrapping JSON-RPC POSTs to the gateway's MCP endpoint."""
+    """gateway의 MCP 엔드포인트로 보내는 JSON-RPC POST를 감싸는 소형 클라이언트입니다."""
 
     def __init__(
         self,
@@ -45,17 +43,17 @@ class GatewayMCPClient:
         protocol_version: str = DEFAULT_PROTOCOL_VERSION,
         session_id: Optional[str] = None,
     ) -> None:
-        """Construct a client.
+        """클라이언트를 생성합니다.
 
-        ``session_id`` (optional) — a client-supplied ``Mcp-Session-Id`` to
-        echo on every request. Useful when the upstream MCP server runs
-        ``stateless_http=True`` (no server-issued session id) but you still
-        want AgentCore Runtime to pin the request to a specific microvm.
-        Pair it with a target ``metadataConfiguration`` that allowlists
-        ``Mcp-Session-Id`` for both request and response headers.
+        ``session_id``(선택 사항)는 모든 요청에 되돌려 보낼 클라이언트 제공
+        ``Mcp-Session-Id``입니다. 업스트림 MCP 서버가 ``stateless_http=True``로
+        실행되어 서버 발급 session ID가 없지만, AgentCore Runtime이 요청을 특정
+        microvm에 고정하게 할 때 유용합니다. 요청과 응답 헤더 모두에서
+        ``Mcp-Session-Id``를 허용하는 target ``metadataConfiguration``과 함께
+        사용합니다.
 
-        If ``initialize()`` is later called and the gateway returns a
-        session id, the captured value replaces this one.
+        나중에 ``initialize()``를 호출하여 gateway가 session ID를 반환하면
+        캡처된 값이 이 값을 대체합니다.
         """
         self.gateway_url = gateway_url
         self._get_token = get_token
@@ -67,8 +65,7 @@ class GatewayMCPClient:
         return self._session_id
 
     def set_session_id(self, session_id: Optional[str]) -> None:
-        """Override the client-side ``Mcp-Session-Id`` that gets echoed on
-        every subsequent request."""
+        """이후 모든 요청에 되돌려 보낼 클라이언트 측 ``Mcp-Session-Id``를 재정의합니다."""
         self._session_id = session_id
 
     def _headers(
@@ -101,12 +98,11 @@ class GatewayMCPClient:
     def rpc_raw(
         self, method: str, params: Optional[Dict[str, Any]] = None
     ) -> requests.Response:
-        """Like :meth:`_rpc` but returns the raw ``requests.Response`` so the
-        caller can inspect HTTP status, response headers, and the un-parsed
-        body. Useful for diagnostic / error-contract probes (missing or
-        invalid `Mcp-Session-Id`, etc.) where a non-2xx status is expected
-        and ``response.json()`` would either succeed (with an error body) or
-        fail to parse — in either case, the status code is the signal.
+        """:meth:`_rpc`와 비슷하지만 raw ``requests.Response``를 반환하여 호출자가
+        HTTP 상태, 응답 헤더, 파싱하지 않은 본문을 검사할 수 있게 합니다.
+        2xx 이외의 상태가 예상되고 ``response.json()``이 오류 본문과 함께 성공하거나
+        파싱에 실패할 수 있는 진단/오류 계약 검사(누락되거나 유효하지 않은
+        `Mcp-Session-Id` 등)에 유용합니다. 어느 경우든 상태 코드가 신호입니다.
         """
         payload: Dict[str, Any] = {
             "jsonrpc": "2.0",
@@ -120,7 +116,7 @@ class GatewayMCPClient:
         )
 
     def _paginate(self, method: str, items_key: str) -> List[Dict[str, Any]]:
-        """Follow ``result.nextCursor`` across pages and return merged items."""
+        """페이지마다 ``result.nextCursor``를 따라가 병합된 항목을 반환합니다."""
         items: List[Dict[str, Any]] = []
         cursor: Optional[str] = None
         while True:
@@ -132,17 +128,17 @@ class GatewayMCPClient:
             if not cursor:
                 return items
 
-    # --- Lifecycle ------------------------------------------------------
+    # --- 수명 주기 ------------------------------------------------------
 
     def initialize(
         self,
         capabilities: Optional[Dict[str, Any]] = None,
         client_info: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Send `initialize` then `notifications/initialized`.
+        """`initialize`를 보낸 다음 `notifications/initialized`를 보냅니다.
 
-        Captures `Mcp-Session-Id` from the response header (set on
-        session-enabled gateways) so subsequent requests echo it back.
+        이후 요청에서 되돌려 보낼 수 있도록 응답 헤더에서 `Mcp-Session-Id`를
+        캡처합니다(session이 활성화된 gateway에서 설정).
         """
         body = {
             "jsonrpc": "2.0",
@@ -162,7 +158,7 @@ class GatewayMCPClient:
         if sid:
             self._session_id = sid
 
-        # `notifications/initialized` (no response body expected)
+        # `notifications/initialized`(응답 본문 없음)
         requests.post(
             self.gateway_url,
             headers=self._headers(),
@@ -182,21 +178,20 @@ class GatewayMCPClient:
             "result": result,
         }
 
-    # --- Tools ----------------------------------------------------------
+    # --- 도구 -----------------------------------------------------------
 
     def list_tools(self, cursor: Optional[str] = None) -> Dict[str, Any]:
         params = {"cursor": cursor} if cursor else None
         return self._rpc("tools/list", params)
 
     def list_all_tools(self) -> List[Dict[str, Any]]:
-        """Return tools from every target, following per-target pagination."""
+        """target별 pagination을 따라 모든 target의 도구를 반환합니다."""
         return self._paginate("tools/list", "tools")
 
     def call_tool(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Buffered tool invocation. Only safe for tools that return a single
-        result with no server-emitted intermediate frames. For tools that
-        emit progress, logging, elicitation, or sampling, use
-        :meth:`stream_tool_call` instead.
+        """버퍼링된 도구 호출입니다. 서버가 중간 frame을 내보내지 않고 단일 결과를
+        반환하는 도구에만 사용할 수 있습니다. progress, logging, elicitation 또는
+        sampling을 내보내는 도구에는 :meth:`stream_tool_call`을 사용합니다.
         """
         return self._rpc("tools/call", {"name": name, "arguments": arguments})
 
@@ -206,14 +201,13 @@ class GatewayMCPClient:
         arguments: Dict[str, Any],
         request_id: Any = "tools-call-request",
     ) -> Dict[str, Any]:
-        """Buffered tool invocation forcing `Accept: application/json` only.
+        """`Accept: application/json`만 강제하는 버퍼링된 도구 호출입니다.
 
-        Demonstrates backward-compatibility with non-streaming clients on a
-        gateway that has streaming enabled — the gateway returns a single
-        JSON document instead of an SSE stream.
+        streaming이 활성화된 gateway에서 비 streaming 클라이언트와의 하위 호환성을
+        보여 줍니다. gateway는 SSE stream 대신 단일 JSON document를 반환합니다.
 
-        Returns a dict with `http_status`, `content_type`, and `body` (raw
-        response text — the caller can `json.loads` if appropriate).
+        `http_status`, `content_type`, `body`가 있는 dict를 반환합니다. `body`는 raw
+        응답 텍스트이며, 적절한 경우 호출자가 `json.loads`를 사용할 수 있습니다.
         """
         body = {
             "jsonrpc": "2.0",
@@ -240,22 +234,21 @@ class GatewayMCPClient:
         progress_token: Optional[str] = None,
         request_id: Any = "tools-call-request",
     ) -> Iterator[Dict[str, Any]]:
-        """Generator yielding parsed JSON-RPC frames from a streaming tools/call.
+        """streaming tools/call에서 파싱한 JSON-RPC frame을 생성하는 generator입니다.
 
-        Yields, in arrival order:
+        도착 순서대로 다음 항목을 생성합니다.
           - `notifications/progress` messages (when `progress_token` is set)
           - `notifications/message` log frames
           - `elicitation/create` / `sampling/createMessage` server-initiated requests
           - `notifications/elicitation/complete` server notifications
-          - the final tool-result frame keyed by `request_id`
+          - `request_id`를 키로 하는 최종 도구 결과 frame
 
-        Handles both transports the gateway can use:
-          - `Content-Type: text/event-stream` — yields each `data:` line as a frame.
-          - `Content-Type: application/json` — yields the single buffered JSON
-            body (e.g., when the gateway returns a one-shot error response
-            instead of opening an SSE channel).
+        gateway가 사용할 수 있는 두 전송 방식을 모두 처리합니다.
+          - `Content-Type: text/event-stream`: 각 `data:` 행을 frame으로 생성
+          - `Content-Type: application/json`: 버퍼링된 단일 JSON 본문을 생성
+            (예: gateway가 SSE channel을 여는 대신 일회성 오류 응답을 반환하는 경우)
 
-        After the matching response frame is yielded the generator exits.
+        일치하는 응답 frame을 생성한 후 generator가 종료됩니다.
         """
         params: Dict[str, Any] = {"name": name, "arguments": arguments}
         if progress_token is not None:
@@ -275,7 +268,7 @@ class GatewayMCPClient:
         ) as resp:
             ct = resp.headers.get("content-type", "")
             if ct.startswith("application/json"):
-                # Single buffered JSON document (no SSE).
+                # 버퍼링된 단일 JSON document(SSE 없음)
                 try:
                     yield resp.json()
                 except ValueError:
@@ -290,9 +283,9 @@ class GatewayMCPClient:
                     continue
 
     def _post_response(self, request_id: Any, result: Dict[str, Any]) -> int:
-        """POST a JSON-RPC response back to the gateway. Used to reply to
-        server-initiated requests (`elicitation/create`, `sampling/createMessage`)
-        that arrive on the SSE stream of an in-flight `tools/call`.
+        """JSON-RPC 응답을 gateway에 POST로 돌려보냅니다. 진행 중인 `tools/call`의
+        SSE stream으로 도착하는 서버 시작 요청(`elicitation/create`,
+        `sampling/createMessage`)에 응답하는 데 사용합니다.
         """
         r = requests.post(
             self.gateway_url,
@@ -316,26 +309,26 @@ class GatewayMCPClient:
         progress_token: Optional[str] = None,
         request_id: Any = "tools-call-streaming",
     ) -> Dict[str, Any]:
-        """Call a tool and dispatch any server-initiated requests to callbacks.
+        """도구를 호출하고 서버 시작 요청을 callback으로 전달합니다.
 
-        Callbacks (all optional, all sync):
+        Callback은 모두 선택 사항이며 동기 방식입니다.
 
           - ``elicitation_callback(params: dict) -> dict``
-            Invoked when the server emits ``elicitation/create``. Should
-            return a dict like ``{"action": "accept", "content": {...}}`` for
-            form mode, or ``{"action": "accept"}`` for URL mode.
+            서버가 ``elicitation/create``를 내보낼 때 호출됩니다. form mode에는
+            ``{"action": "accept", "content": {...}}`` 같은 dict를, URL mode에는
+            ``{"action": "accept"}``를 반환해야 합니다.
           - ``sampling_callback(params: dict) -> dict``
-            Invoked when the server emits ``sampling/createMessage``. Should
-            return a ``CreateMessageResult``-shaped dict
+            서버가 ``sampling/createMessage``를 내보낼 때 호출됩니다.
+            ``CreateMessageResult`` 형태의 dict를 반환해야 합니다.
             (``{"role": "assistant", "content": {...}, "model": "..."}``).
           - ``progress_callback(params: dict) -> None``
-            Invoked for each ``notifications/progress`` frame.
+            각 ``notifications/progress`` frame에서 호출됩니다.
           - ``notification_callback(method: str, params: dict) -> None``
-            Invoked for any other ``notifications/*`` (e.g. ``message``,
+            기타 ``notifications/*``에서 호출됩니다(예: ``message``,
             ``elicitation/complete``).
 
-        Returns ``{"result": ..., "error": ...}`` for the final response keyed
-        by ``request_id``.
+        ``request_id``를 키로 하는 최종 응답에 대해
+        ``{"result": ..., "error": ...}``를 반환합니다.
         """
         for msg in self.stream_tool_call(
             name, arguments, progress_token=progress_token, request_id=request_id
@@ -360,7 +353,7 @@ class GatewayMCPClient:
                 return {"result": msg.get("result"), "error": msg.get("error")}
         return {"result": None, "error": None}
 
-    # --- Prompts --------------------------------------------------------
+    # --- 프롬프트 -------------------------------------------------------
 
     def list_prompts(self, cursor: Optional[str] = None) -> Dict[str, Any]:
         params = {"cursor": cursor} if cursor else None
@@ -372,7 +365,7 @@ class GatewayMCPClient:
     def get_prompt(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         return self._rpc("prompts/get", {"name": name, "arguments": arguments})
 
-    # --- Resources ------------------------------------------------------
+    # --- 리소스 ---------------------------------------------------------
 
     def list_resources(self, cursor: Optional[str] = None) -> Dict[str, Any]:
         params = {"cursor": cursor} if cursor else None

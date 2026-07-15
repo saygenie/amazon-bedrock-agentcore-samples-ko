@@ -1,63 +1,63 @@
-# 01 — Custom Containers
+# 01 — 사용자 지정 컨테이너
 
-Run a harness agent inside **your own container image** instead of the default Amazon Linux VM. This unlocks any runtime, system library, or pre-installed dependency your agent needs.
+기본 Amazon Linux VM 대신 **사용자 고유의 컨테이너 이미지** 안에서 AgentCore Harness 에이전트를 실행합니다. 이를 통해 에이전트에 필요한 모든 런타임, 시스템 라이브러리, 사전 설치 종속성을 사용할 수 있습니다.
 
-## Why custom containers?
+## 사용자 지정 컨테이너가 필요한 이유
 
-By default, a harness session runs on Amazon Linux 2023 with Python pre-installed. But many real-world agents need:
+기본적으로 AgentCore Harness 세션은 Python이 사전 설치된 Amazon Linux 2023에서 실행됩니다. 하지만 실제 환경의 에이전트에는 다음 항목이 필요한 경우가 많습니다.
 
-- Specific language runtimes (Node.js, Go, Rust, Java, Ruby...)
-- System libraries (ImageMagick, FFmpeg, headless Chromium...)
-- Pre-installed dependencies (frameworks, ML models, your own source code)
-- A locked-down environment that matches production
+- 특정 언어 런타임(Node.js, Go, Rust, Java, Ruby 등)
+- 시스템 라이브러리(ImageMagick, FFmpeg, Headless Chromium 등)
+- 사전 설치된 종속성(프레임워크, ML 모델, 자체 소스 코드)
+- 프로덕션 환경과 일치하도록 제한된 환경
 
-Custom containers let you bring your own Linux ARM64 image — public ECR, private ECR, or any OCI-compliant registry.
+사용자 지정 컨테이너를 사용하면 Public ECR, Private ECR 또는 OCI 호환 레지스트리에서 자체 Linux ARM64 이미지를 가져올 수 있습니다.
 
-## What's in this folder
+## 폴더 구성
 
-| File | Type | What it does |
+| 파일 | 유형 | 설명 |
 |---|---|---|
-| [`01_custom_container_node.ipynb`](01_custom_container_node.ipynb) | Notebook | Attaches a **Node.js** container, asks the agent to build an HTTP server, installs `chalk` via npm, runs it — all inside the agent's VM. |
-| [`02_custom_container_cli.py`](02_custom_container_cli.py) | CLI script | Standalone command-line version — works with **any container image** via `--language node\|go\|python` presets or a raw `--container URI`. |
-| [`03_custom_container_go.ipynb`](03_custom_container_go.ipynb) | Notebook | Attaches a **Go** container, has the agent write + `go build` + run an HTTP server, then **cross-compiles** the binary for linux/amd64. |
+| [`01_custom_container_node.ipynb`](01_custom_container_node.ipynb) | 노트북 | **Node.js** 컨테이너를 연결하고, 에이전트에게 HTTP 서버를 빌드하도록 요청한 뒤 npm으로 `chalk`를 설치하고 실행합니다. 이 모든 작업은 에이전트의 VM 안에서 이루어집니다. |
+| [`02_custom_container_cli.py`](02_custom_container_cli.py) | CLI 스크립트 | 독립 실행형 명령줄 버전입니다. `--language node\|go\|python` 프리셋 또는 원시 `--container URI`를 통해 **모든 컨테이너 이미지**와 함께 사용할 수 있습니다. |
+| [`03_custom_container_go.ipynb`](03_custom_container_go.ipynb) | 노트북 | **Go** 컨테이너를 연결하고, 에이전트가 HTTP 서버를 작성하고 `go build`로 빌드한 후 실행하도록 합니다. 이어서 linux/amd64용 바이너리를 **크로스 컴파일**합니다. |
 
-## Key concepts demonstrated
+## 주요 학습 개념
 
-- **`environmentArtifact.optionalValue.containerConfiguration.containerUri`** — the field on `update_harness` that attaches a container image
-- **`systemPrompt`** — telling the agent what runtime it has available so it picks the right tools
-- **`invoke_agent_runtime_command`** (ExecuteCommand) — imperative commands on the VM, bypassing the agent loop (useful to verify `node --version`, `go env`, inspect generated files)
-- **Session persistence** — same `runtimeSessionId` keeps the VM state across invocations (files and installed packages stick around)
+- **`environmentArtifact.optionalValue.containerConfiguration.containerUri`** — 컨테이너 이미지를 연결하는 `update_harness` 필드
+- **`systemPrompt`** — 에이전트가 적절한 도구를 선택할 수 있도록 사용 가능한 런타임을 알려 주는 설정
+- **`invoke_agent_runtime_command`** (ExecuteCommand) — 에이전트 루프를 거치지 않고 VM에서 직접 명령을 실행하는 기능(`node --version`, `go env` 확인 및 생성된 파일 검사에 유용)
+- **세션 지속성** — 동일한 `runtimeSessionId`를 사용하면 여러 호출에서 VM 상태가 유지됨(파일과 설치된 패키지가 그대로 유지됨)
 
-## How to run
+## 실행 방법
 
-### Notebook
-Open in Jupyter/VSCode and run cells in order. Cleanup cells at the bottom delete the harness.
+### 노트북
+Jupyter 또는 VSCode에서 열고 셀을 순서대로 실행합니다. 하단의 정리 셀은 AgentCore Harness를 삭제합니다.
 
 ### CLI
 ```bash
-# Language presets
-python 02_custom_container_cli.py --language node      # default
+# 언어 preset
+python 02_custom_container_cli.py --language node      # 기본값
 python 02_custom_container_cli.py --language go
 python 02_custom_container_cli.py --language python
 
-# Any ARM64-compatible container image
+# ARM64 호환 container image
 python 02_custom_container_cli.py \
     --container public.ecr.aws/docker/library/rust:slim \
     --message "Write a Rust program that prints system info."
 
-# Other options
-python 02_custom_container_cli.py --skip-cleanup   # keep harness after demo
-python 02_custom_container_cli.py --raw-events     # dump raw streaming JSON
+# 기타 옵션
+python 02_custom_container_cli.py --skip-cleanup   # 데모 후 Harness 유지
+python 02_custom_container_cli.py --raw-events     # 원시 streaming JSON dump
 python 02_custom_container_cli.py --help
 ```
 
-## Sample container images
+## 컨테이너 이미지 예시
 
-| Image | Use case |
+| 이미지 | 사용 사례 |
 |---|---|
-| `public.ecr.aws/docker/library/node:slim` | Node.js / npm ecosystem |
-| `public.ecr.aws/docker/library/golang:1.24` | Go toolchain + cross-compilation |
-| `public.ecr.aws/docker/library/python:3.12-slim` | Python with specific version |
-| Your private ECR image | Custom dependencies, pre-loaded source code, ML models |
+| `public.ecr.aws/docker/library/node:slim` | Node.js/npm 생태계 |
+| `public.ecr.aws/docker/library/golang:1.24` | Go 도구 체인 및 크로스 컴파일 |
+| `public.ecr.aws/docker/library/python:3.12-slim` | 특정 버전의 Python |
+| Private ECR 이미지 | 사용자 지정 종속성, 미리 로드된 소스 코드, ML 모델 |
 
-> Containers must support **linux/arm64**. The harness VM runs on ARM.
+> 컨테이너는 **linux/arm64**를 지원해야 합니다. AgentCore Harness VM은 ARM에서 실행됩니다.

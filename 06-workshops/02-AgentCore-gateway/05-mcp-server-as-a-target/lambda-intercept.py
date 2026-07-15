@@ -1,21 +1,19 @@
-"""AgentCore Gateway interceptor — doc-strict passthrough.
+"""문서 사양을 엄격히 따르는 AgentCore Gateway passthrough 인터셉터입니다.
 
-Implements the response-streaming contract from the AgentCore Gateway docs:
+AgentCore Gateway 문서의 response streaming 계약을 구현합니다.
 
-  - REQUEST interceptor:
-      Returns `transformedGatewayRequest.body` unchanged.
-  - RESPONSE interceptor (non-streaming, `isStreamingResponse` is False or
-    absent):
-      Returns `transformedGatewayResponse` with `headers`, `statusCode`, and
-      `body` unchanged.
-  - RESPONSE interceptor (streaming, `isStreamingResponse=True`):
-      First event (statusCode present in input): may override headers,
-      statusCode, body. We pass through unchanged.
-      Subsequent events (no statusCode in input): only `body` may be returned;
-      headers and statusCode are ignored if present.
+  - REQUEST 인터셉터:
+      `transformedGatewayRequest.body`를 변경 없이 반환합니다.
+  - RESPONSE 인터셉터(non-streaming, `isStreamingResponse`가 False이거나 없음):
+      `headers`, `statusCode`, `body`가 변경되지 않은
+      `transformedGatewayResponse`를 반환합니다.
+  - RESPONSE 인터셉터(streaming, `isStreamingResponse=True`):
+      첫 이벤트(입력에 statusCode가 있음)는 headers, statusCode, body를 재정의할 수
+      있으며 여기서는 변경 없이 전달합니다. 이후 이벤트(입력에 statusCode가 없음)는
+      `body`만 반환할 수 있고, headers와 statusCode가 있어도 무시됩니다.
 
-Logs identify which branch fired and the underlying MCP method/id so
-CloudWatch traces can be correlated with the gateway's request id.
+로그에는 실행된 분기와 기반 MCP method/ID를 기록하여 CloudWatch trace를
+gateway의 request ID와 연계할 수 있게 합니다.
 """
 
 import logging

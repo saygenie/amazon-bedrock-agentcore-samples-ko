@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Amazon Bedrock AgentCore Cleanup Script
+Amazon Bedrock AgentCore 정리 스크립트
 
-This script replaces the cleanup.sh bash script with a Python-based cleanup
-that works with both traditional deployments and agentcore-starter-toolkit deployments.
+이 스크립트는 cleanup.sh Bash 스크립트를 기존 배포와
+agentcore-starter-toolkit 배포 모두에서 작동하는 Python 기반 정리 도구로 대체합니다.
 
-Usage:
+사용법:
     python cleanup.py <websocket-folder>
 
-Examples:
+예시:
     python cleanup.py 01-bedrock-sonic-ws
     python cleanup.py 02-strands-ws
 """
@@ -23,21 +23,21 @@ from typing import Optional  # noqa: F401
 
 
 class Colors:
-    """ANSI color codes for terminal output"""
+    """터미널 출력용 ANSI 색상 코드입니다."""
 
     GREEN = "\033[0;32m"
     YELLOW = "\033[1;33m"
     RED = "\033[0;31m"
-    NC = "\033[0m"  # No Color
+    NC = "\033[0m"  # 색상 없음
 
 
 class AgentCoreCleanup:
-    """Handles cleanup of AgentCore resources"""
+    """AgentCore 리소스 정리를 처리합니다."""
 
     def __init__(self, websocket_folder: str):
         self.websocket_folder = websocket_folder
 
-        # Resolve paths relative to the project root directory
+        # 프로젝트 루트 디렉터리를 기준으로 경로 확인
         self.base_dir = Path(__file__).parent.parent
 
         self.config_file = self.base_dir / websocket_folder / "setup_config.json"
@@ -45,30 +45,30 @@ class AgentCoreCleanup:
         self.config = None
         self.gateway_config = None
 
-        # Validate folder exists
+        # 폴더 존재 여부 검증
         if not (self.base_dir / websocket_folder).exists():
             self._error(f"Folder not found: {websocket_folder}")
             self._print_available_folders()
             sys.exit(1)
 
     def _print(self, message: str, color: str = Colors.NC):
-        """Print colored message"""
+        """색상이 적용된 메시지를 출력합니다."""
         print(f"{color}{message}{Colors.NC}")
 
     def _error(self, message: str):
-        """Print error message"""
+        """오류 메시지를 출력합니다."""
         self._print(f"❌ {message}", Colors.RED)
 
     def _success(self, message: str):
-        """Print success message"""
+        """성공 메시지를 출력합니다."""
         self._print(f"✅ {message}", Colors.GREEN)
 
     def _info(self, message: str):
-        """Print info message"""
+        """정보 메시지를 출력합니다."""
         self._print(f"ℹ️  {message}", Colors.YELLOW)
 
     def _print_available_folders(self):
-        """Print available websocket folders"""
+        """사용 가능한 WebSocket 폴더를 출력합니다."""
         print("\nAvailable folders:")
         for folder in [
             "01-bedrock-sonic-ws",
@@ -81,7 +81,7 @@ class AgentCoreCleanup:
                 print(f"  - {folder}")
 
     def _run_command(self, cmd: list, check: bool = False) -> subprocess.CompletedProcess:
-        """Run a shell command and return the result"""
+        """Shell 명령을 실행하고 결과를 반환합니다."""
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=check)
             return result
@@ -92,7 +92,7 @@ class AgentCoreCleanup:
             return e
 
     def load_configuration(self):
-        """Load configuration from setup_config.json and gateway_config.json"""
+        """setup_config.json과 gateway_config.json에서 구성을 불러옵니다."""
         has_config = False
 
         if self.config_file.exists():
@@ -119,7 +119,7 @@ class AgentCoreCleanup:
         return has_config
 
     def print_cleanup_config(self):
-        """Print cleanup configuration"""
+        """정리 구성을 출력합니다."""
         print("\n" + "=" * 70)
         print("🔧 Cleanup Configuration")
         print("=" * 70)
@@ -146,14 +146,14 @@ class AgentCoreCleanup:
         print("=" * 70 + "\n")
 
     def cleanup_with_agentcore_toolkit(self) -> bool:
-        """Cleanup using agentcore destroy command"""
+        """agentcore destroy 명령으로 정리합니다."""
         self._print("\n🧹 Cleaning up with agentcore toolkit...", Colors.YELLOW)
 
-        # Check if agentcore CLI is available
+        # agentcore CLI 사용 가능 여부 확인
         if not self._check_agentcore_installed():
             return False
 
-        # Change to websocket directory
+        # WebSocket 디렉터리로 이동
         websocket_path = self.base_dir / self.websocket_folder / "websocket"
         if not websocket_path.exists():
             self._error(f"Websocket directory not found: {websocket_path}")
@@ -163,12 +163,12 @@ class AgentCoreCleanup:
         os.chdir(websocket_path)
 
         try:
-            # Check if .bedrock_agentcore.yaml exists
+            # .bedrock_agentcore.yaml 존재 여부 확인
             if not Path(".bedrock_agentcore.yaml").exists():
                 self._info("No .bedrock_agentcore.yaml found, skipping agentcore destroy")
                 return False
 
-            # Run agentcore destroy
+            # agentcore destroy 실행
             self._info("Running agentcore destroy...")
             result = self._run_command(["agentcore", "destroy"], check=False)
 
@@ -184,12 +184,12 @@ class AgentCoreCleanup:
             os.chdir(original_dir)
 
     def _check_agentcore_installed(self) -> bool:
-        """Check if agentcore CLI is installed"""
+        """agentcore CLI 설치 여부를 확인합니다."""
         result = self._run_command(["which", "agentcore"], check=False)
         return result.returncode == 0
 
     def delete_agent_runtime(self):
-        """Delete the agent runtime"""
+        """에이전트 Runtime을 삭제합니다."""
         if not self.config or "agent_arn" not in self.config:
             self._info("No agent ARN found, skipping agent deletion")
             return
@@ -200,7 +200,7 @@ class AgentCoreCleanup:
 
         self._print(f"\n🤖 Deleting agent runtime: {agent_id}", Colors.YELLOW)
 
-        # Check if agent exists
+        # 에이전트 존재 여부 확인
         check_cmd = [
             "aws",
             "bedrock-agentcore-control",
@@ -217,7 +217,7 @@ class AgentCoreCleanup:
             self._info("Agent runtime not found or already deleted")
             return
 
-        # Delete agent
+        # 에이전트 삭제
         delete_cmd = [
             "aws",
             "bedrock-agentcore-control",
@@ -233,13 +233,13 @@ class AgentCoreCleanup:
         if result.returncode == 0:
             self._success("Agent runtime deleted")
 
-            # Wait for deletion to propagate
+            # 삭제 반영 대기
             self._info("Waiting for deletion to propagate...")
             import time
 
             time.sleep(2)
 
-            # Verify deletion
+            # 삭제 확인
             verify_result = self._run_command(check_cmd, check=False)
             if verify_result.returncode != 0:
                 self._success("Verified: Agent runtime no longer exists")
@@ -250,9 +250,9 @@ class AgentCoreCleanup:
             print(result.stderr)
 
     def delete_iam_role(self):
-        """Delete IAM role and policies"""
+        """IAM 역할과 정책을 삭제합니다."""
         if not self.config:
-            # Try default role name
+            # 기본 역할 이름 사용
             role_name = f"WebSocket{self.websocket_folder.capitalize()}AgentRole"
         else:
             role_arn = self.config.get("iam_role_arn", "")
@@ -263,7 +263,7 @@ class AgentCoreCleanup:
 
         self._print(f"\n🔐 Deleting IAM role: {role_name}", Colors.YELLOW)
 
-        # Delete role policy
+        # 역할 정책 삭제
         delete_policy_cmd = [
             "aws",
             "iam",
@@ -280,7 +280,7 @@ class AgentCoreCleanup:
         else:
             self._info("Policy deletion failed or already deleted")
 
-        # Delete role
+        # 역할 삭제
         delete_role_cmd = ["aws", "iam", "delete-role", "--role-name", role_name]
 
         result = self._run_command(delete_role_cmd, check=False)
@@ -290,7 +290,7 @@ class AgentCoreCleanup:
             self._info("Role deletion failed or already deleted")
 
     def delete_ecr_repository(self):
-        """Delete ECR repository and images"""
+        """ECR 리포지토리와 이미지를 삭제합니다."""
         if not self.config or "ecr_repo_name" not in self.config:
             self._info("\nNo ECR repository found in config, skipping ECR cleanup")
             return
@@ -300,7 +300,7 @@ class AgentCoreCleanup:
 
         self._print(f"\n🐳 Deleting ECR repository: {repo_name}", Colors.YELLOW)
 
-        # Delete repository (force deletes all images)
+        # 리포지토리 삭제(모든 이미지 강제 삭제)
         delete_cmd = [
             "aws",
             "ecr",
@@ -320,7 +320,7 @@ class AgentCoreCleanup:
             self._info("ECR repository deletion failed or already deleted")
 
     def delete_gateway(self):
-        """Delete MCP Gateway and related resources using starter toolkit"""
+        """starter toolkit으로 MCP Gateway와 관련 리소스를 삭제합니다."""
         if not self.gateway_config:
             self._info("\nNo gateway configuration found, skipping gateway cleanup")
             return
@@ -341,18 +341,18 @@ class AgentCoreCleanup:
                 GatewayClient,
             )
 
-            # Initialize Gateway client
+            # Gateway 클라이언트 초기화
             client = GatewayClient(region_name=region)  # noqa: F841
 
-            # Delete gateway (this should handle targets automatically)
+            # Gateway 삭제(대상도 자동으로 처리되어야 함)
             try:
                 self._info("Deleting gateway and all targets...")
-                # The toolkit's delete method should handle cleanup
+                # toolkit의 delete 메서드가 정리를 처리해야 함
                 import boto3
 
                 bedrock_client = boto3.client("bedrock-agentcore-control", region_name=region)
 
-                # First, delete all targets
+                # 먼저 모든 대상 삭제
                 try:
                     targets_response = bedrock_client.list_gateway_targets(gatewayIdentifier=gateway_id)
                     targets = targets_response.get("items", [])
@@ -366,14 +366,14 @@ class AgentCoreCleanup:
                         except Exception as e:
                             self._info(f"Failed to delete target {target_id}: {e}")
 
-                    # Wait for target deletions to propagate
+                    # 대상 삭제 반영 대기
                     if targets:
                         self._info("Waiting for target deletions to propagate...")
                         import time
 
                         time.sleep(5)
 
-                        # Verify targets are deleted
+                        # 대상 삭제 확인
                         verify_response = bedrock_client.list_gateway_targets(gatewayIdentifier=gateway_id)
                         remaining_targets = verify_response.get("items", [])
                         if remaining_targets:
@@ -385,11 +385,11 @@ class AgentCoreCleanup:
                 except Exception as e:
                     self._info(f"Failed to list/delete targets: {e}")
 
-                # Delete the gateway
+                # Gateway 삭제
                 bedrock_client.delete_gateway(gatewayIdentifier=gateway_id)
                 self._success("MCP Gateway deleted")
 
-                # Wait for deletion
+                # 삭제 대기
                 self._info("Waiting for gateway deletion to complete...")
                 import time
 
@@ -401,10 +401,10 @@ class AgentCoreCleanup:
                 else:
                     self._error(f"Gateway deletion failed: {e}")
 
-            # Clean up Lambda function if it was created
+            # 생성된 Lambda 함수가 있으면 정리
             self._cleanup_lambda_resources(region)
 
-            # Clean up Gateway execution role
+            # Gateway 실행 역할 정리
             self._cleanup_gateway_iam_role()
 
         except ImportError:
@@ -417,7 +417,7 @@ class AgentCoreCleanup:
             traceback.print_exc()
 
     def _cleanup_lambda_resources(self, region: str):
-        """Clean up Lambda function and its IAM role"""
+        """Lambda 함수와 해당 IAM 역할을 정리합니다."""
         try:
             import boto3
 
@@ -436,12 +436,12 @@ class AgentCoreCleanup:
                 else:
                     self._info(f"Lambda cleanup skipped: {e}")
 
-            # Clean up IAM role for Lambda
+            # Lambda용 IAM 역할 정리
             iam_client = boto3.client("iam")
             lambda_role_name = "AgentCoreTestLambdaRole"
 
             try:
-                # Detach policies first
+                # 먼저 정책 분리
                 try:
                     policies_response = iam_client.list_attached_role_policies(RoleName=lambda_role_name)
                     for policy in policies_response.get("AttachedPolicies", []):
@@ -449,7 +449,7 @@ class AgentCoreCleanup:
                 except Exception:
                     pass
 
-                # Delete inline policies
+                # 인라인 정책 삭제
                 try:
                     inline_policies = iam_client.list_role_policies(RoleName=lambda_role_name)
                     for policy_name in inline_policies.get("PolicyNames", []):
@@ -457,7 +457,7 @@ class AgentCoreCleanup:
                 except Exception:
                     pass
 
-                # Delete role
+                # 역할 삭제
                 self._info("Deleting Lambda IAM role...")
                 iam_client.delete_role(RoleName=lambda_role_name)
                 self._success("Lambda IAM role deleted")
@@ -471,7 +471,7 @@ class AgentCoreCleanup:
             self._info(f"Lambda resources cleanup skipped: {e}")
 
     def _cleanup_gateway_iam_role(self):
-        """Clean up Gateway execution IAM role"""
+        """Gateway 실행 IAM 역할을 정리합니다."""
         try:
             import boto3
 
@@ -479,7 +479,7 @@ class AgentCoreCleanup:
             gateway_role_name = "AgentCoreGatewayExecutionRole"
 
             try:
-                # Detach policies
+                # 정책 분리
                 try:
                     policies_response = iam_client.list_attached_role_policies(RoleName=gateway_role_name)
                     for policy in policies_response.get("AttachedPolicies", []):
@@ -487,7 +487,7 @@ class AgentCoreCleanup:
                 except Exception:
                     pass
 
-                # Delete inline policies
+                # 인라인 정책 삭제
                 try:
                     inline_policies = iam_client.list_role_policies(RoleName=gateway_role_name)
                     for policy_name in inline_policies.get("PolicyNames", []):
@@ -495,7 +495,7 @@ class AgentCoreCleanup:
                 except Exception:
                     pass
 
-                # Delete role
+                # 역할 삭제
                 self._info("Deleting Gateway IAM role...")
                 iam_client.delete_role(RoleName=gateway_role_name)
                 self._success("Gateway IAM role deleted")
@@ -509,18 +509,18 @@ class AgentCoreCleanup:
             self._info(f"Gateway IAM role cleanup skipped: {e}")
 
     def _delete_gateway_with_boto3(self, gateway_id: str, region: str):
-        """Fallback method to delete gateway using boto3 directly"""
+        """boto3로 Gateway를 직접 삭제하는 대체 메서드입니다."""
         try:
             import boto3
 
             bedrock_client = boto3.client("bedrock-agentcore-control", region_name=region)
 
-            # Delete targets
+            # 대상 삭제
             targets_response = bedrock_client.list_gateway_targets(gatewayIdentifier=gateway_id)
             for target in targets_response.get("items", []):
                 bedrock_client.delete_gateway_target(gatewayIdentifier=gateway_id, targetId=target["targetId"])
 
-            # Delete gateway
+            # Gateway 삭제
             bedrock_client.delete_gateway(gatewayIdentifier=gateway_id)
             self._success("Gateway deleted (boto3 fallback)")
 
@@ -528,7 +528,7 @@ class AgentCoreCleanup:
             self._error(f"Boto3 fallback cleanup failed: {e}")
 
     def delete_config_file(self):
-        """Delete configuration files"""
+        """구성 파일을 삭제합니다."""
         if self.config_file.exists():
             self._print(f"\n🗑️  Deleting configuration file: {self.config_file}", Colors.YELLOW)
             self.config_file.unlink()
@@ -543,7 +543,7 @@ class AgentCoreCleanup:
             self._success("Gateway configuration file deleted")
 
     def delete_memory(self):
-        """Delete AgentCore Memory resource if it was created during deployment."""
+        """배포 중 생성된 AgentCore Memory 리소스가 있으면 삭제합니다."""
         if not self.config or "memory" not in self.config:
             self._info("\nNo memory configuration found, skipping memory cleanup")
             return
@@ -574,7 +574,7 @@ class AgentCoreCleanup:
                 self._warning(f"Failed to delete memory: {e}")
 
     def print_summary(self):
-        """Print cleanup summary"""
+        """정리 요약을 출력합니다."""
         print("\n" + "=" * 70)
         self._success("Cleanup complete!")
         print("=" * 70)
@@ -597,44 +597,44 @@ class AgentCoreCleanup:
         print()
 
     def cleanup(self):
-        """Main cleanup workflow"""
+        """기본 정리 워크플로입니다."""
         try:
             self._print(f"\n🧹 Cleaning up {self.websocket_folder} resources...", Colors.YELLOW)
             self._print(f"📁 Using folder: {self.websocket_folder}\n", Colors.YELLOW)
 
-            # Load configuration
+            # 구성 불러오기
             has_config = self.load_configuration()
 
-            # Print configuration
+            # 구성 출력
             self.print_cleanup_config()
 
-            # Determine cleanup method
+            # 정리 방법 결정
             if has_config and self.config and self.config.get("deployment_method") == "agentcore-starter-toolkit":
-                # Try agentcore destroy first
+                # 먼저 agentcore destroy 시도
                 if self.cleanup_with_agentcore_toolkit():
                     self._info("AgentCore toolkit cleanup successful")
-                    # Still need to clean up IAM role manually
+                    # IAM 역할은 계속 수동으로 정리해야 함
                     self.delete_iam_role()
                 else:
                     self._info("Falling back to manual cleanup")
                     self.delete_agent_runtime()
                     self.delete_iam_role()
             else:
-                # Traditional cleanup
+                # 기존 방식으로 정리
                 self.delete_agent_runtime()
                 self.delete_iam_role()
                 self.delete_ecr_repository()
 
-            # Delete gateway if exists
+            # Gateway가 있으면 삭제
             self.delete_gateway()
 
-            # Delete memory if exists
+            # Memory가 있으면 삭제
             self.delete_memory()
 
-            # Delete config files
+            # 구성 파일 삭제
             self.delete_config_file()
 
-            # Print summary
+            # 요약 출력
             self.print_summary()
 
         except KeyboardInterrupt:
@@ -673,7 +673,7 @@ Examples:
 
     args = parser.parse_args()
 
-    # Create cleanup handler and run
+    # 정리 핸들러를 생성하여 실행
     cleanup = AgentCoreCleanup(args.websocket_folder)
     cleanup.cleanup()
 

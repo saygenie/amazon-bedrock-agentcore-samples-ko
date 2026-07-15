@@ -14,17 +14,17 @@ import uuid
 
 app = FastAPI(title="Travel API")
 
-# Configuration from environment variables
+# 환경 변수 기반 구성
 MODEL_ID = os.environ.get("MODEL_ID", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
 MODEL_TEMPERATURE = float(os.environ.get("MODEL_TEMPERATURE", "0"))
 MODEL_MAX_TOKENS = int(os.environ.get("MODEL_MAX_TOKENS", "1028"))
 DDGS_DELAY_SECONDS = int(os.environ.get("DDGS_DELAY_SECONDS", "10"))
 
 
-# Shared helper function to avoid rate limiting
+# 속도 제한을 피하기 위한 공용 헬퍼 함수
 def ddgs_search_with_delay(query: str, max_results: int = 3) -> list:
     """
-    Shared function to search using DDGS with rate limit protection.
+    속도 제한을 방지하며 DDGS로 검색하는 공용 함수입니다.
     """
     try:
         time.sleep(DDGS_DELAY_SECONDS)
@@ -77,7 +77,7 @@ def convert_currency(amount: float, from_currency: str, to_currency: str) -> str
         if not results:
             return f"Could not find exchange rate for {from_currency} to {to_currency}."
 
-        # Format results with source citations
+        # 출처 인용을 포함하도록 결과 형식 지정
         formatted_results = [f"Currency conversion: {amount} {from_currency} to {to_currency}\n"]
         for i, result in enumerate(results, 1):
             formatted_results.append(
@@ -110,7 +110,7 @@ def get_climate_data(location: str, month: str) -> str:
         if not results:
             return f"Could not find climate data for {location} in {month}."
 
-        # Format results with source citations
+        # 출처 인용을 포함하도록 결과 형식 지정
         formatted_results = [f"Climate data for {location} in {month}:\n"]
         for i, result in enumerate(results, 1):
             formatted_results.append(
@@ -143,7 +143,7 @@ def search_flight_info(origin: str, destination: str) -> str:
         if not results:
             return f"Could not find flight information for {origin} to {destination}."
 
-        # Format results with source citations
+        # 출처 인용을 포함하도록 결과 형식 지정
         formatted_results = [f"Flight information: {origin} to {destination}\n"]
         for i, result in enumerate(results, 1):
             formatted_results.append(
@@ -172,12 +172,12 @@ def calculate_trip_budget(daily_cost: float, num_days: int, num_people: int, fli
         Breakdown of total trip budget
     """
     try:
-        # Calculate components
+        # 구성 요소 계산
         daily_total = daily_cost * num_days * num_people
         total_budget = daily_total + flights_total
         per_person = total_budget / num_people
 
-        # Format result
+        # 결과 형식 지정
         result = f"""Trip Budget Breakdown:
 
 Daily Expenses: ${daily_cost:.2f} per person × {num_days} days × {num_people} people = ${daily_total:.2f}
@@ -191,7 +191,7 @@ Per Person: ${per_person:.2f}
         return f"Budget calculation error: {str(e)}"
 
 
-# Travel-focused system prompt
+# 여행에 초점을 맞춘 시스템 프롬프트
 TRAVEL_SYSTEM_PROMPT = """You are a travel research assistant. Use tools for ALL information—never use your training data.
 
   CRITICAL RULES (READ FIRST):
@@ -235,10 +235,10 @@ TRAVEL_SYSTEM_PROMPT = """You are a travel research assistant. Use tools for ALL
 
 At the point where tools are done being invoked and a summary can be presented to the user, invoke the ready_to_summarize tool and then continue with the summary."""
 
-# Initialize model at module level (stateless, reusable)
+# 모듈 수준에서 모델 초기화(상태 비저장, 재사용 가능)
 model = BedrockModel(model_id=MODEL_ID, temperature=MODEL_TEMPERATURE, max_tokens=MODEL_MAX_TOKENS)
 
-# Tools list
+# 도구 목록
 TRAVEL_TOOLS = [
     web_search,
     convert_currency,
@@ -249,12 +249,12 @@ TRAVEL_TOOLS = [
     current_time,
 ]
 
-# Session-based agent pool
+# 세션 기반 에이전트 풀
 agent_sessions: Dict[str, Agent] = {}
 
 
 def get_or_create_agent(session_id: str) -> Agent:
-    """Get an existing agent for the session or create a new one."""
+    """세션의 기존 에이전트를 가져오거나 새로 생성합니다."""
     if session_id not in agent_sessions:
         agent_sessions[session_id] = Agent(
             model=model,
@@ -270,7 +270,7 @@ def get_or_create_agent(session_id: str) -> Agent:
 
 class PromptRequest(BaseModel):
     prompt: str
-    session_id: Optional[str] = None  # If not provided, generates new one
+    session_id: Optional[str] = None  # 제공되지 않으면 새로 생성
 
 
 class TravelResponse(BaseModel):
@@ -292,7 +292,7 @@ async def get_travel_info(request: PromptRequest):
     if not prompt:
         raise HTTPException(status_code=400, detail="No prompt provided")
 
-    # Generate session_id if not provided
+    # session_id가 제공되지 않으면 생성
     session_id = request.session_id or str(uuid.uuid4())
 
     try:
@@ -304,6 +304,6 @@ async def get_travel_info(request: PromptRequest):
 
 
 if __name__ == "__main__":
-    # Get port from environment variable or default to 8000
+    # 환경 변수에서 포트를 가져오거나 기본값 8000 사용
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)  # nosec B104

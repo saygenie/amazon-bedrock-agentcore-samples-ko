@@ -1,21 +1,21 @@
 """
-Test script: Invokes the M2M + Auth Code agent with a Cognito bearer token.
+테스트 스크립트: Cognito bearer token으로 M2M + Auth Code 에이전트를 호출합니다.
 
-Tests:
-  1. M2M flow  — agent calls internal API using client credentials (no user interaction)
-  2. Auth Code — agent accesses Google Calendar on behalf of the user (3LO consent flow)
+테스트:
+  1. M2M 흐름: 에이전트가 사용자 상호 작용 없이 client credentials로 내부 API 호출
+  2. Auth Code: 에이전트가 사용자를 대신해 Google Calendar에 액세스(3LO 동의 흐름)
 
-For the 3LO test, this script:
-  - Starts the OAuth2 callback server (localhost:9090)
-  - Stores the user's bearer token so session binding can verify identity
-  - Invokes the agent (which returns a Google consent URL on first call)
-  - Waits for user to complete consent, then re-invokes to retrieve calendar events
+3LO 테스트에서 이 스크립트가 수행하는 작업:
+  - OAuth2 콜백 서버 시작(localhost:9090)
+  - 세션 바인딩에서 신원을 검증할 수 있도록 사용자의 bearer token 저장
+  - 에이전트 호출(첫 호출에서 Google 동의 URL 반환)
+  - 사용자가 동의를 완료할 때까지 기다린 후 다시 호출하여 Calendar 이벤트 조회
 
-Usage:
-    # Test M2M flow
+사용법:
+    # M2M 흐름 테스트
     python invoke.py --flow m2m
 
-    # Test Auth Code (3LO) flow
+    # Auth Code(3LO) 흐름 테스트
     python invoke.py --flow authcode
 """
 
@@ -41,7 +41,7 @@ warnings.filterwarnings("ignore", message="urllib3")
 
 
 def get_bearer_token(config: dict) -> str:
-    """Get a fresh Cognito access token."""
+    """새 Cognito 액세스 토큰을 가져옵니다."""
     cognito = boto3.client("cognito-idp", region_name=config["region"])
     auth = cognito.initiate_auth(
         ClientId=config["client_id"],
@@ -64,7 +64,7 @@ def _find_project_dir() -> str:
 
 
 def _find_in_json(obj, key):
-    """Recursively search for a key in nested JSON."""
+    """중첩된 JSON에서 키를 재귀적으로 검색합니다."""
     if isinstance(obj, dict):
         if key in obj:
             return obj[key]
@@ -81,9 +81,9 @@ def _find_in_json(obj, key):
 
 
 def get_agent_arn() -> str:
-    """Read the deployed agent ARN from deployed-state.json.
+    """deployed-state.json에서 배포된 에이전트 ARN을 읽습니다.
 
-    Searches for runtimeArn recursively to work across CLI versions.
+    CLI 버전에 관계없이 동작하도록 runtimeArn을 재귀적으로 검색합니다.
     """
     project_dir = _find_project_dir()
     state_file = os.path.join(project_dir, "agentcore", ".cli", "deployed-state.json")
@@ -178,7 +178,7 @@ def test_authcode(client, agent_arn: str, bearer_token: str, config: dict, provi
             print("ERROR: OAuth2 callback server did not start in time.")
             return
 
-        # Store the user's bearer token for session binding
+        # 세션 바인딩을 위해 사용자의 bearer token 저장
         store_token_in_oauth2_callback_server(bearer_token)
         print(f"  Callback URL: {get_oauth2_callback_url()}")  # codeql[py/clear-text-logging-sensitive-data]
 
@@ -196,10 +196,10 @@ def test_authcode(client, agent_arn: str, bearer_token: str, config: dict, provi
         )
         print(f"\nAgent response:\n{result}")
 
-        # If response contains an auth URL, wait for user to complete consent
+        # 응답에 인증 URL이 있으면 사용자가 동의를 완료할 때까지 대기
         result_lower = result.lower()
         if "http" in result_lower and any(kw in result_lower for kw in cfg["consent_keywords"]):
-            # Extract and auto-open the consent URL
+            # 동의 URL을 추출하여 자동으로 열기
             import re
 
             urls = re.findall(r'https?://[^\s\'")*\]]+', str(result))

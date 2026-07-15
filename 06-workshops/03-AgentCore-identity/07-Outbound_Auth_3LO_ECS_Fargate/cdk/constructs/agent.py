@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Main Agent construct for ECS service with session binding."""
+"""세션 바인딩을 사용하는 ECS 서비스의 기본 Agent construct."""
 
 from aws_cdk import CfnOutput, Stack
 from aws_cdk import aws_certificatemanager as acm
@@ -17,7 +17,7 @@ from .storage import Storage
 
 
 class Agent(Construct):
-    """Main Agent construct that provisions ECS service with session binding."""
+    """세션 바인딩을 사용하는 ECS 서비스를 프로비저닝하는 기본 Agent construct."""
 
     def __init__(
         self,
@@ -27,7 +27,7 @@ class Agent(Construct):
         workload_identity_name: str,
         session_expiration_days: int = 90,
     ):
-        """Initialize Agent construct."""
+        """Agent construct를 초기화한다."""
         super().__init__(scope, id)
 
         hosted_zone = route53.HostedZone.from_hosted_zone_attributes(

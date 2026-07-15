@@ -3,9 +3,9 @@ import * as acmpca from "aws-cdk-lib/aws-acmpca";
 import { Construct } from "constructs";
 
 /**
- * AWS Private CA in short-lived certificate mode ($50/month instead of $400/month).
- * Certificates issued by this CA are valid for up to 7 days.
- * Suitable for labs and short-lived workloads.
+ * 단기 Certificate 모드의 AWS Private CA(월 400달러 대신 50달러).
+ * 이 CA에서 발급한 Certificate는 최대 7일 동안 유효합니다.
+ * Lab 및 단기 Workload에 적합합니다.
  */
 export interface ShortLivedCaStackProps extends cdk.StackProps {
   baseDomain: string;

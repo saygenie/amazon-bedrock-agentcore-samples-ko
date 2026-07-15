@@ -1,108 +1,108 @@
-# Running Evaluations with Strands Agents
+# Strands Agents로 평가 실행
 
-## Overview
+## 개요
 
-This tutorial demonstrates how to use AgentCore Evaluations with agents built using the [Strands Agents SDK](https://strandsagents.com/). You'll learn to run both on-demand and online evaluations to assess and monitor your Strands agent's performance using built-in and custom evaluators.
+이 튜토리얼에서는 [Strands Agents SDK](https://strandsagents.com/)로 구축한 에이전트에 AgentCore Evaluations를 사용하는 방법을 보여줍니다. 기본 제공 및 사용자 지정 evaluator를 사용하여 온디맨드 평가와 온라인 평가를 모두 실행하고 Strands 에이전트의 성능을 평가하고 모니터링하는 방법을 알아봅니다.
 
-## What You'll Learn
+## 학습 내용
 
-- Running on-demand evaluations on specific Strands agent traces
-- Setting up online evaluations for continuous monitoring of Strands agents
-- Using the AgentCore Starter Toolkit to manage evaluations
-- Analyzing evaluation results to improve agent quality
+- 특정 Strands 에이전트 trace에 대한 온디맨드 평가 실행
+- Strands 에이전트의 지속적인 모니터링을 위한 온라인 평가 설정
+- AgentCore Starter Toolkit을 사용하여 평가 관리
+- 에이전트 품질 개선을 위한 평가 결과 분석
 
-## Prerequisites
+## 사전 요구 사항
 
-Before starting these tutorials, ensure you have:
-- Completed [Tutorial 00: Prerequisites](../../00-prereqs) and created the Strands agent (`eval_agent_strands.py`)
-- Completed [Tutorial 01: Creating Custom Evaluators](../../01-creating-custom-evaluators) and created a custom evaluator
-- Your Strands agent deployed on AgentCore Runtime
-- Generated at least one session with traces by invoking your agent
-- Python 3.10+ installed
-- AWS credentials configured with appropriate permissions
+이 튜토리얼을 시작하기 전에 다음 항목을 준비했는지 확인하세요.
+- [튜토리얼 00: 사전 요구 사항](../../00-prereqs)을 완료하고 Strands 에이전트(`eval_agent_strands.py`) 생성
+- [튜토리얼 01: 사용자 지정 evaluator 생성](../../01-creating-custom-evaluators)을 완료하고 사용자 지정 evaluator 생성
+- AgentCore Runtime에 Strands 에이전트 배포
+- 에이전트를 호출하여 trace가 포함된 세션을 하나 이상 생성
+- Python 3.10+ 설치
+- 적절한 권한으로 AWS 자격 증명 구성
 
-## Tutorial Structure
+## 튜토리얼 구성
 
 ### [01-on-demand-eval.ipynb](01-on-demand-eval.ipynb)
 
-**Tutorial Type:** Evaluating Strands agent with on-demand evaluators (built-in and custom)
+**튜토리얼 유형:** 온디맨드 evaluator(기본 제공 및 사용자 지정)를 사용한 Strands 에이전트 평가
 
-**What You'll Learn:**
-- How to retrieve session and trace information from your deployed Strands agent
-- Initializing the AgentCore Evaluations client using the Starter Toolkit
-- Running on-demand evaluations on specific traces or sessions
-- Using both built-in evaluators (e.g., `Builtin.Correctness`, `Builtin.Helpfulness`) and custom evaluators
-- Interpreting evaluation results including scores, explanations, and token usage
+**학습 내용:**
+- 배포된 Strands 에이전트에서 세션 및 trace 정보 검색
+- Starter Toolkit을 사용하여 AgentCore Evaluations client 초기화
+- 특정 trace 또는 세션에 대한 온디맨드 평가 실행
+- 기본 제공 evaluator(예: `Builtin.Correctness`, `Builtin.Helpfulness`)와 사용자 지정 evaluator 함께 사용
+- 점수, 설명, 토큰 사용량을 포함한 평가 결과 해석
 
-**Key Concepts:**
-- **Targeted Assessment**: Evaluate specific interactions by providing session or trace IDs
-- **Synchronous Execution**: Get immediate results for your evaluation requests
-- **Flexible Evaluator Selection**: Apply multiple evaluators to the same trace
-- **Investigation Tool**: Perfect for analyzing specific interactions or validating fixes
+**핵심 개념:**
+- **집중 평가**: 세션 또는 trace ID를 제공하여 특정 상호 작용 평가
+- **동기식 실행**: 평가 요청 결과를 즉시 확인
+- **유연한 evaluator 선택**: 동일한 trace에 여러 evaluator 적용
+- **조사 도구**: 특정 상호 작용을 분석하거나 수정 사항을 검증하는 데 적합
 
 ### [02-online-eval.ipynb](02-online-eval.ipynb)
 
-**Tutorial Type:** Evaluating Strands agent with online evaluators (built-in and custom)
+**튜토리얼 유형:** 온라인 evaluator(기본 제공 및 사용자 지정)를 사용한 Strands 에이전트 평가
 
-**What You'll Learn:**
-- Creating online evaluation configurations for your Strands agent
-- Configuring sampling rates and filtering rules
-- Setting up continuous evaluation with built-in and custom evaluators
-- Monitoring evaluation results in CloudWatch dashboards
-- Managing online evaluation configurations (enable, disable, update, delete)
+**학습 내용:**
+- Strands 에이전트용 온라인 평가 구성 생성
+- 표본 추출 비율 및 필터링 규칙 구성
+- 기본 제공 및 사용자 지정 evaluator를 사용한 지속적 평가 설정
+- CloudWatch 대시보드에서 평가 결과 모니터링
+- 온라인 평가 구성 관리(활성화, 비활성화, 업데이트, 삭제)
 
-**Key Concepts:**
-- **Continuous Monitoring**: Automatically evaluate agent performance as interactions occur
-- **Sampling-Based**: Configure percentage-based sampling (e.g., evaluate 10% of sessions)
-- **Real-time Insights**: Track quality trends and catch regressions early
-- **Production-Ready**: Designed for scale with minimal performance impact
+**핵심 개념:**
+- **지속적 모니터링**: 상호 작용이 발생할 때 에이전트 성능을 자동으로 평가
+- **표본 기반**: 백분율 기반 표본 추출 구성(예: 세션의 10% 평가)
+- **실시간 인사이트**: 품질 추세를 추적하고 regression을 조기에 감지
+- **프로덕션 지원**: 성능에 미치는 영향을 최소화하면서 확장할 수 있도록 설계
 
-## Strands Agent Architecture
+## Strands 에이전트 아키텍처
 
-The Strands agent used in these tutorials includes:
+이 튜토리얼에서 사용하는 Strands 에이전트는 다음 기능으로 구성됩니다.
 
-**Code Execution Capability:**
-- Uses AgentCore Code Interpreter to run Python code
-- Handles math calculations and data analysis
+**코드 실행 기능:**
+- AgentCore Code Interpreter를 사용하여 Python 코드 실행
+- 수학 계산 및 데이터 분석 처리
 
-**Memory Integration:**
-- Stores user facts and preferences
-- Retrieves relevant context for personalized responses
+**메모리 통합:**
+- 사용자 정보 및 선호도 저장
+- 개인화된 응답에 필요한 관련 컨텍스트 검색
 
-**Model:**
-- Anthropic Claude Haiku 4.5 from Amazon Bedrock
+**모델:**
+- Amazon Bedrock의 Anthropic Claude Haiku 4.5
 
-**Observability:**
-- Automatic OTEL instrumentation via AgentCore Runtime
-- Traces available in CloudWatch GenAI Observability Dashboard
+**관찰성:**
+- AgentCore Runtime을 통한 자동 OTEL 계측
+- CloudWatch GenAI Observability Dashboard에서 trace 확인 가능
 
-## How Evaluations Work with Strands Agents
+## Strands Agents의 평가 작동 방식
 
-1. **Agent Invocation**: Your Strands agent processes user requests
-2. **Trace Generation**: AgentCore Observability captures OTEL traces automatically
-3. **Trace Storage**: Traces are stored in CloudWatch Log groups
-4. **Evaluation**:
-   - **On-demand**: You select specific sessions/traces to evaluate
-   - **Online**: AgentCore automatically samples and evaluates based on your configuration
-5. **Results Analysis**: View scores, explanations, and trends in CloudWatch
+1. **에이전트 호출**: Strands 에이전트가 사용자 요청 처리
+2. **trace 생성**: AgentCore Observability가 OTEL trace를 자동으로 캡처
+3. **trace 저장**: trace가 CloudWatch log group에 저장됨
+4. **평가**:
+   - **온디맨드**: 평가할 특정 세션/trace 선택
+   - **온라인**: AgentCore가 구성에 따라 자동으로 표본을 추출하고 평가
+5. **결과 분석**: CloudWatch에서 점수, 설명 및 추세 확인
 
-## Using the AgentCore Starter Toolkit
+## AgentCore Starter Toolkit 사용
 
-Both notebooks use the **AgentCore Starter Toolkit** to simplify evaluation workflows:
+두 노트북 모두 **AgentCore Starter Toolkit**을 사용하여 평가 workflow를 간소화합니다.
 
 ```python
 from bedrock_agentcore_starter_toolkit import Evaluations
 
-# Initialize the evaluations client
+# Evaluations client 초기화
 evaluations = Evaluations()
 
-# On-demand evaluation
+# 온디맨드 평가
 result = evaluations.evaluate_session(
     session_id="your-session-id",
     evaluator_ids=["Builtin.Correctness", "your-custom-evaluator-id"]
 )
 
-# Online evaluation
+# 온라인 평가
 config = evaluations.create_online_evaluation(
     config_name="your-config-name",
     sampling_percentage=100,
@@ -110,19 +110,18 @@ config = evaluations.create_online_evaluation(
 )
 ```
 
-## Expected Outcomes
+## 예상 결과
 
-After completing these tutorials, you will be able to:
-- Evaluate specific Strands agent interactions using on-demand evaluations
-- Set up continuous quality monitoring for production Strands agents
-- Analyze evaluation results to identify areas for improvement
-- Use both built-in and custom evaluators effectively
-- Monitor agent quality trends over time
+이 튜토리얼을 완료하면 다음을 수행할 수 있습니다.
+- 온디맨드 평가를 사용하여 특정 Strands 에이전트 상호 작용 평가
+- 프로덕션 Strands 에이전트의 지속적인 품질 모니터링 설정
+- 개선 영역을 식별하기 위한 평가 결과 분석
+- 기본 제공 및 사용자 지정 evaluator를 효과적으로 사용
+- 시간 경과에 따른 에이전트 품질 추세 모니터링
 
-## Next Steps
+## 다음 단계
 
-After completing these Strands-specific tutorials:
-- Explore the [LangGraph examples](../02-langgraph/) to see how evaluations work with different frameworks
-- Proceed to [Tutorial 03: Advanced](../../03-advanced) for advanced evaluation techniques
-- Review your evaluation results in the CloudWatch GenAI Observability Dashboard
-
+Strands 관련 튜토리얼을 완료한 후:
+- [LangGraph 예제](../02-langgraph/)를 살펴보며 다른 프레임워크에서 평가가 작동하는 방식 확인
+- 고급 평가 기법은 [튜토리얼 03: 고급](../../03-advanced)으로 이동
+- CloudWatch GenAI Observability Dashboard에서 평가 결과 검토

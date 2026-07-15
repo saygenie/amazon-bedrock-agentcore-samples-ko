@@ -1,55 +1,55 @@
-# AWS Agent Registry Kiro Power — Publisher Workflow
+# AWS Agent Registry Kiro Power - 게시자 워크플로
 
-## Overview
+## 개요
 
-Kiro Powers bundle MCP tools, steering files, and hooks into a single install, giving your agents specialized knowledge without overwhelming them with context. Learn more in the [Kiro Powers Documentation](https://kiro.dev/docs/powers/).
+Kiro Powers는 MCP 도구, steering 파일 및 훅을 하나의 설치 패키지로 묶어 과도한 컨텍스트 없이 에이전트에 전문 지식을 제공합니다. 자세한 내용은 [Kiro Powers 설명서](https://kiro.dev/docs/powers/)를 참조하세요.
 
-This Kiro Power enables the **publisher persona** to create, manage, and submit agent/MCP records to the AWS Agent Registry.
+이 Kiro Power를 사용하면 **게시자 페르소나**가 AWS Agent Registry에서 에이전트/MCP 레코드를 생성하고 관리하며 제출할 수 있습니다.
 
-> Publisher workflow assumes a registry already exists (created by an admin).
+> 게시자 워크플로에서는 관리자가 생성한 레지스트리가 이미 있다고 가정합니다.
 
-### Tutorial Details
+### 튜토리얼 세부 정보
 
-| Information         | Details                                                                 |
+| 정보                | 세부 정보                                                               |
 |:--------------------|:------------------------------------------------------------------------|
-| Tutorial type       | Workflow                                                                |
-| Persona             | Publisher                                                               |
-| Power type          | Knowledge (steering only, no MCP tools)                                 |
-| Components          | `POWER.md`, Steering file with workflow guidance and code snippets      |
-| Registry operations | Create, List, Submit, Delete registry records (MCP and A2A)             |
-| Example complexity  | Intermediate                                                            |
-| SDK used            | boto3                                                                   |
+| 튜토리얼 유형       | 워크플로                                                                |
+| 페르소나            | 게시자                                                                  |
+| Power 유형          | Knowledge(steering만 사용, MCP 도구 없음)                               |
+| 구성 요소           | `POWER.md`, 워크플로 지침과 코드 조각이 포함된 steering 파일            |
+| 레지스트리 작업     | 레지스트리 레코드 생성, 나열, 제출, 삭제(MCP 및 A2A)                    |
+| 예제 난이도         | 중급                                                                    |
+| 사용 SDK            | boto3                                                                   |
 
-### What a Power Includes
+### Power의 구성 요소
 
-- `POWER.md`: The entry point steering file acts as an onboarding manual for the Kiro agent, defining available tools and usage context. It also defines the set of APIs available and includes troubleshooting guidelines.
-- `Steering`: Automates tasks and workflow-specific guidance, along with reference documentation and example code snippets for the power to execute. This is a Knowledge power, so it only has instructions.
+- `POWER.md`: 진입점 steering 파일은 Kiro 에이전트의 온보딩 설명서 역할을 하며 사용 가능한 도구와 사용 컨텍스트를 정의합니다. 또한 사용 가능한 API 집합을 정의하고 문제 해결 지침을 포함합니다.
+- `Steering`: 작업 및 워크플로별 지침과 함께 Power가 실행할 참조 문서와 예제 코드 조각을 자동화합니다. Knowledge Power이므로 지침만 포함됩니다.
 
-These two files are packaged together and loaded dynamically as per the user query.
+이 두 파일은 함께 패키징되며 사용자 쿼리에 따라 동적으로 로드됩니다.
 
-### Publisher Workflow Architecture
+### 게시자 워크플로 아키텍처
 
 <div style="text-align:left">
     <img src="images/publisher-workflow.png" width="100%"/>
 </div>
 
-### Key Features
+### 주요 기능
 
-* Publisher persona operations for AWS Agent Registry
-* Create and manage MCP server records
-* Create and manage A2A agent card records
-* Submit records for admin approval
-* Workflow guidance via Kiro steering files
+* AWS Agent Registry의 게시자 페르소나 작업
+* MCP 서버 레코드 생성 및 관리
+* A2A 에이전트 카드 레코드 생성 및 관리
+* 관리자 승인을 위한 레코드 제출
+* Kiro steering 파일을 통한 워크플로 지침 제공
 
 ---
 
-## Activate the Power
+## Power 활성화
 
-Install this power directly in Kiro using the GitHub URL below:
+아래 GitHub URL을 사용하여 Kiro에 이 Power를 직접 설치합니다.
 
-[Publisher Kiro Power for AWS Agent Registry on Github](https://github.com/awslabs/agentcore-samples/tree/main/06-workshops/10-Agent-Registry/01-advanced/kiro/kiro-power-publisher-workflow/aws-agent-registry)
+[AWS Agent Registry 게시자용 Kiro Power(GitHub)](https://github.com/awslabs/agentcore-samples/tree/main/06-workshops/10-Agent-Registry/01-advanced/kiro/kiro-power-publisher-workflow/aws-agent-registry)
 
-In Kiro, open the Powers panel, select "Add Custom Power -> Import Power from Github", and paste the link above.
+Kiro에서 Powers 패널을 열고 "Add Custom Power -> Import Power from Github"을 선택한 다음 위 링크를 붙여 넣습니다.
 
 <div style="text-align:left">
     <img src="images/activate-kiro-power.png" width="100%"/>
@@ -65,20 +65,20 @@ In Kiro, open the Powers panel, select "Add Custom Power -> Import Power from Gi
 
 ---
 
-## Prerequisites
+## 사전 요구 사항
 
-### 1. AWS CLI installed
+### 1. AWS CLI 설치
 
 ```bash
 aws --version
-# Expected: aws-cli/2.x.x ...
+# 예상 결과: aws-cli/2.x.x ...
 ```
 
-[Install AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
+[AWS CLI 설치](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 
 ---
 
-### 2. boto3 installed
+### 2. boto3 설치
 
 ```bash
 pip install boto3
@@ -86,35 +86,35 @@ pip install boto3
 
 ---
 
-### 3. AWS Identity configured with publisher persona permissions
+### 3. 게시자 페르소나 권한으로 구성된 AWS Identity
 
-Your AWS identity needs permission to carry out registry operations. Use whichever method matches your setup:
+AWS Identity에는 레지스트리 작업을 수행할 권한이 필요합니다. 환경에 맞는 방법을 사용하세요.
 
-Option A — named profile:
+옵션 A - 명명된 프로파일:
 ```bash
 aws configure --profile <YOUR_PROFILE>
 ```
 
-Option B — IAM user access keys (environment variables):
+옵션 B - IAM 사용자 액세스 키(환경 변수):
 ```bash
 export AWS_ACCESS_KEY_ID=your_access_key
 export AWS_SECRET_ACCESS_KEY=your_secret_key
 export AWS_DEFAULT_REGION=your_region
 ```
 
-Option C — IAM role — credentials are picked up automatically
+옵션 C - IAM 역할 - 자격 증명이 자동으로 선택됩니다.
 
-Verify your identity resolves correctly:
+자격 증명이 올바르게 확인되는지 검증합니다.
 ```bash
 aws sts get-caller-identity
-# Expected: returns AccountId, Arn, UserId
+# 예상 결과: AccountId, Arn, UserId 반환
 ```
 
 ---
 
-### 4. Publisher persona policy
+### 4. 게시자 페르소나 정책
 
-For carrying out AWS Agent Registry operations for publisher workflow, create an IAM role with the following policy:
+게시자 워크플로의 AWS Agent Registry 작업을 수행하려면 다음 정책을 포함하는 IAM 역할을 생성합니다.
 
 ```json
 {
@@ -139,25 +139,25 @@ For carrying out AWS Agent Registry operations for publisher workflow, create an
 }
 ```
 
-> Note: Publishers cannot `CreateRegistry`, `DeleteRegistry`, or approve/reject records — those are admin-only operations.
+> 참고: 게시자는 `CreateRegistry`, `DeleteRegistry`를 수행하거나 레코드를 승인/거부할 수 없습니다. 이러한 작업은 관리자만 수행할 수 있습니다.
 
 ---
 
-### 5. IAM trust policy to assume the publisher role
+### 5. 게시자 역할을 수임하기 위한 IAM 신뢰 정책
 
-To assume the publisher IAM role, your IAM user must be granted `sts:AssumeRole` permission, and the target role's trust policy must allow your user as a principal. Refer to the AWS documentation on [how to configure trust policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-user.html) and [how to assume a role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html) for setup instructions.
-
----
-
-## Next Steps
-
-Once prerequisites are met, you are now ready to use **AWS Agent Registry** Kiro Power for the publisher workflow.
+게시자 IAM 역할을 수임하려면 IAM 사용자에게 `sts:AssumeRole` 권한이 부여되어야 하며, 대상 역할의 신뢰 정책에서 사용자를 보안 주체로 허용해야 합니다. 설정 지침은 AWS 설명서의 [신뢰 정책 구성 방법](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-user.html) 및 [역할 수임 방법](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html)을 참조하세요.
 
 ---
 
-## Sample Prompts
+## 다음 단계
 
-> Tip: If you are in a single Kiro IDE session, you don't have to mention the registry name every time — Kiro remembers it from context.
+사전 요구 사항을 충족하면 게시자 워크플로용 **AWS Agent Registry** Kiro Power를 사용할 준비가 된 것입니다.
+
+---
+
+## 샘플 프롬프트
+
+> 팁: 하나의 Kiro IDE 세션에서 작업하는 경우 매번 레지스트리 이름을 언급할 필요가 없습니다. Kiro가 컨텍스트를 통해 이름을 기억합니다.
 
 1. "List all registries in my account in the us-west-2 region"
 2. "Show me the list of records in registry `<REGISTRY-NAME>`"

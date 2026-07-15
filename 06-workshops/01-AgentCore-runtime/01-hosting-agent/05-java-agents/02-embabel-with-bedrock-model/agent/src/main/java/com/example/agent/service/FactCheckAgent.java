@@ -19,13 +19,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 /**
- * Embabel GOAP Fact-Checker Agent on AgentCore Runtime with AgentCore Browser.
+ * AgentCore Browser를 사용하는 AgentCore Runtime의 Embabel GOAP 팩트 체크 에이전트입니다.
  *
- * Pipeline: FactCheckRequest → ParsedClaims → VerifiedClaims → FactCheckReport
+ * 파이프라인: FactCheckRequest → ParsedClaims → VerifiedClaims → FactCheckReport
  *
- * The GOAP planner auto-chains the three @Action methods based on type availability
- * on the Blackboard. The browser-equipped inner ChatClient navigates real web pages
- * to verify claims.
+ * GOAP 플래너는 Blackboard에서 사용할 수 있는 타입에 따라 세 @Action 메서드를
+ * 자동으로 연결합니다. 브라우저가 연결된 내부 ChatClient는 실제 웹 페이지를 탐색해
+ * 주장을 검증합니다.
  */
 @Agent(description = "Fact-checks user-submitted claims by parsing, browsing web sources, and summarizing results")
 @Service
@@ -48,7 +48,7 @@ public class FactCheckAgent {
                 .build();
     }
 
-    /** AgentCore Runtime entry point. */
+    /** AgentCore Runtime 진입점입니다. */
     @AgentCoreInvocation
     public String check(FactCheckRequest request) {
         log.info("Received fact-check request with {} claims", request.claims().size());
@@ -63,7 +63,7 @@ public class FactCheckAgent {
         }
     }
 
-    // ---- GOAP Actions ----
+    // ---- GOAP 작업 ----
 
     @Action(description = "Parse raw user input into individual verifiable claims")
     public ParsedClaims parseClaims(FactCheckRequest request, OperationContext ctx) {

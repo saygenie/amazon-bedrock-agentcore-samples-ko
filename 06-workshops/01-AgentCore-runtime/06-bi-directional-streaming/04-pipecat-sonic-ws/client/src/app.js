@@ -11,8 +11,8 @@ const btnDisconnect = document.getElementById("btnDisconnect");
 const serverUrlInput = document.getElementById("serverUrl");
 
 let pcClient = null;
-// Keep a reference to the raw transport so we can call
-// _mediaManager.userStartedSpeaking() for barge-in.
+// 끼어들기 시 _mediaManager.userStartedSpeaking()을 호출할 수 있도록
+// 원본 transport 참조를 유지합니다.
 let transport = null;
 
 function log(msg, cls) {
@@ -77,9 +77,9 @@ async function connect() {
         },
         onUserStartedSpeaking: () => {
           log("User speaking...", "log-system");
-          // Interrupt bot audio playback for barge-in.
-          // The transport doesn't wire this up automatically —
-          // we call userStartedSpeaking() on its internal media manager.
+          // 끼어들기를 위해 봇 오디오 재생을 중단합니다.
+          // transport가 자동으로 연결하지 않으므로 내부 media manager의
+          // userStartedSpeaking()을 호출합니다.
           if (transport._mediaManager) {
             transport._mediaManager.userStartedSpeaking();
           }
@@ -109,10 +109,9 @@ async function connect() {
     await pcClient.initDevices();
     log("Devices initialized", "log-system");
 
-    // Manually fetch the /start endpoint to get the WebSocket URL,
-    // then connect directly. Using startBotAndConnect() causes a
-    // "body stream already read" error because the SDK reads the
-    // response body twice internally.
+    // WebSocket URL을 가져오기 위해 /start 엔드포인트를 직접 요청한 후
+    // 바로 연결합니다. startBotAndConnect()을 사용하면 SDK가 내부에서
+    // 응답 본문을 두 번 읽어 "body stream already read" 오류가 발생합니다.
     const resp = await fetch(serverUrl, { method: "POST" });
     const data = await resp.json();
     if (!data.ws_url) {

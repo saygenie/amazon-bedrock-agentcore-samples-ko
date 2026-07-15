@@ -1,15 +1,15 @@
 """
-Lab 02: ZIP-based Lambda Deployment Packager
+Lab 02: ZIP 기반 Lambda 배포 패키저
 
-Replaces Docker-based deployment with pure Python ZIP packaging.
-Works natively in SageMaker VPC mode (no Docker daemon needed).
+Docker 기반 배포를 순수 Python ZIP 패키징으로 대체합니다.
+SageMaker VPC 모드에서 기본적으로 작동하며 Docker 데몬이 필요하지 않습니다.
 
-Functions:
-- create_deployment_package()      # Create ZIP with dependencies
-- upload_package_to_s3()           # Upload to S3
-- create_lambda_function_from_zip() # Deploy Lambda from ZIP
-- get_package_info()                # Validate size and contents
-- setup_s3_bucket()                 # Create/verify S3 bucket
+함수:
+- create_deployment_package()      # 종속성을 포함한 ZIP 생성
+- upload_package_to_s3()           # S3에 업로드
+- create_lambda_function_from_zip() # ZIP에서 Lambda 배포
+- get_package_info()                # 크기 및 내용 검증
+- setup_s3_bucket()                 # S3 버킷 생성/확인
 """
 
 import os
@@ -26,12 +26,12 @@ from lab_helpers.config import MODEL_ID, AWS_REGION
 
 
 # ============================================================================
-# UTILITIES
+# 유틸리티
 # ============================================================================
 
 
 def get_dir_size(path: str) -> int:
-    """Calculate total size of directory in bytes"""
+    """디렉터리의 전체 크기를 바이트 단위로 계산합니다."""
     total = 0
     for dirpath, dirnames, filenames in os.walk(path):
         for filename in filenames:
@@ -42,12 +42,12 @@ def get_dir_size(path: str) -> int:
 
 
 def get_zip_size(zip_path: str) -> int:
-    """Get compressed ZIP file size in bytes"""
+    """압축된 ZIP 파일 크기를 바이트 단위로 반환합니다."""
     return os.path.getsize(zip_path)
 
 
 def format_size(size_bytes: int) -> str:
-    """Format bytes to human-readable size"""
+    """바이트를 읽기 쉬운 크기 형식으로 변환합니다."""
     for unit in ["B", "KB", "MB", "GB"]:
         if size_bytes < 1024.0:
             return f"{size_bytes:.1f} {unit}"
@@ -56,7 +56,7 @@ def format_size(size_bytes: int) -> str:
 
 
 def validate_requirements(build_dir: str) -> bool:
-    """Verify requirements.txt exists in build directory"""
+    """빌드 디렉터리에 requirements.txt가 있는지 확인합니다."""
     req_file = os.path.join(build_dir, "requirements.txt")
     if not os.path.exists(req_file):
         print(f"❌ requirements.txt not found in {build_dir}")
@@ -65,34 +65,34 @@ def validate_requirements(build_dir: str) -> bool:
 
 
 # ============================================================================
-# PACKAGE CREATION
+# 패키지 생성
 # ============================================================================
 
 
 def install_dependencies(build_dir: str, requirements_content: str) -> Tuple[bool, Dict]:
     """
-    Install dependencies using pip into lib/ directory
+    pip을 사용해 lib/ 디렉터리에 종속성을 설치합니다.
 
-    Args:
-        build_dir: Directory where dependencies will be installed
-        requirements_content: Content of requirements.txt
+    인자:
+        build_dir: 종속성을 설치할 디렉터리
+        requirements_content: requirements.txt의 내용
 
-    Returns:
-        (success: bool, stats: dict with installation info)
+    반환:
+        (success: bool, stats: 설치 정보가 포함된 dict)
     """
     print("\n📦 Installing dependencies...")
 
-    # Write requirements.txt
+    # requirements.txt 쓰기
     req_file = os.path.join(build_dir, "requirements.txt")
     with open(req_file, "w") as f:
         f.write(requirements_content)
     print(f"✓ Wrote requirements.txt ({len(requirements_content)} bytes)")
 
-    # Create lib directory
+    # lib 디렉터리 생성
     lib_dir = os.path.join(build_dir, "lib")
     os.makedirs(lib_dir, exist_ok=True)
 
-    # Install dependencies
+    # 종속성 설치
     print("✓ Installing to lib/...")
     print("  Target: Python 3.11 Linux x86_64 (Lambda runtime)")
     try:
@@ -121,10 +121,10 @@ def install_dependencies(build_dir: str, requirements_content: str) -> Tuple[boo
             check=True,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minute timeout
+            timeout=300,  # 5분 제한 시간
         )
 
-        # Count packages
+        # 패키지 수 계산
         installed_packages = [d for d in os.listdir(lib_dir) if os.path.isdir(os.path.join(lib_dir, d))]
 
         lib_size = get_dir_size(lib_dir)
@@ -151,9 +151,9 @@ def install_dependencies(build_dir: str, requirements_content: str) -> Tuple[boo
 
 def create_lambda_zip(build_dir: str, handler_code: str, output_zip: str) -> Tuple[bool, Dict]:
     """
-    Create Lambda deployment ZIP with proper structure
+    올바른 구조로 Lambda 배포 ZIP을 생성합니다.
 
-    Structure:
+    구조:
     ├── app.py (handler)
     ├── lab_helpers/ (utilities)
     ├── lib/ (dependencies)
@@ -163,28 +163,28 @@ def create_lambda_zip(build_dir: str, handler_code: str, output_zip: str) -> Tup
     │   └── ...
     └── requirements.txt
 
-    Args:
-        build_dir: Source build directory
-        handler_code: Python code for app.py
-        output_zip: Output ZIP file path
+    인자:
+        build_dir: 소스 빌드 디렉터리
+        handler_code: app.py용 Python 코드
+        output_zip: 출력 ZIP 파일 경로
 
-    Returns:
+    반환:
         (success: bool, stats: dict)
     """
     print("\n📦 Creating Lambda ZIP package...")
 
-    # Write app.py
+    # app.py 쓰기
     app_py = os.path.join(build_dir, "app.py")
     with open(app_py, "w") as f:
         f.write(handler_code)
     print(f"✓ Wrote app.py ({len(handler_code)} bytes)")
 
-    # Create ZIP
+    # ZIP 생성
     try:
         with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
             total_files = 0
 
-            # Add lib/ (dependencies)
+            # lib/ 추가(종속성)
             lib_dir = os.path.join(build_dir, "lib")
             if os.path.exists(lib_dir):
                 for root, dirs, files in os.walk(lib_dir):
@@ -195,7 +195,7 @@ def create_lambda_zip(build_dir: str, handler_code: str, output_zip: str) -> Tup
                         total_files += 1
                 print(f"✓ Added {total_files} files from lib/")
 
-            # Add lab_helpers/ (utilities)
+            # lab_helpers/ 추가(유틸리티)
             lab_helpers_dir = os.path.join(build_dir, "lab_helpers")
             if os.path.exists(lab_helpers_dir):
                 helpers_start = total_files
@@ -207,7 +207,7 @@ def create_lambda_zip(build_dir: str, handler_code: str, output_zip: str) -> Tup
                         total_files += 1
                 print(f"✓ Added {total_files - helpers_start} files from lab_helpers/")
 
-            # Add app.py and requirements.txt at root
+            # 루트에 app.py 및 requirements.txt 추가
             zf.write(app_py, "app.py")
             req_file = os.path.join(build_dir, "requirements.txt")
             if os.path.exists(req_file):
@@ -238,21 +238,21 @@ def create_deployment_package(
     build_dir: str = "lambda_diagnostic_agent_zip",
 ) -> Dict:
     """
-    Complete workflow: Create deployment package with dependencies
+    전체 워크플로: 종속성이 포함된 배포 패키지를 생성합니다.
 
-    Args:
-        handler_code: Python code for Lambda handler (app.py)
-        requirements_content: pip requirements text
-        build_dir: Build directory name
+    인자:
+        handler_code: Lambda 핸들러용 Python 코드(app.py)
+        requirements_content: pip 요구 사항 텍스트
+        build_dir: 빌드 디렉터리 이름
 
-    Returns:
-        Dictionary with package info or error details
+    반환:
+        패키지 정보 또는 오류 세부 정보가 포함된 딕셔너리
     """
     print("=" * 70)
     print("CREATING LAMBDA ZIP DEPLOYMENT PACKAGE")
     print("=" * 70)
 
-    # Cleanup old build if exists
+    # 기존 빌드가 있으면 정리
     if os.path.exists(build_dir):
         print("\n🧹 Cleaning up existing build directory...")
         shutil.rmtree(build_dir)
@@ -260,7 +260,7 @@ def create_deployment_package(
     os.makedirs(build_dir, exist_ok=True)
     print(f"✓ Created build directory: {build_dir}")
 
-    # Copy lab_helpers from repository root to build directory
+    # 리포지토리 루트의 lab_helpers를 빌드 디렉터리로 복사
     lab_helpers_src = "lab_helpers"
     if os.path.exists(lab_helpers_src):
         lab_helpers_dest = os.path.join(build_dir, "lab_helpers")
@@ -274,23 +274,23 @@ def create_deployment_package(
     else:
         print("⚠️  lab_helpers directory not found in repository root")
 
-    # Step 1: Install dependencies
+    # 1단계: 종속성 설치
     success, install_stats = install_dependencies(build_dir, requirements_content)
     if not success:
         return {"status": "error", "error": "Failed to install dependencies"}
 
-    # Step 2: Create ZIP
+    # 2단계: ZIP 생성
     output_zip = f"{build_dir}.zip"
     success, zip_stats = create_lambda_zip(build_dir, handler_code, output_zip)
     if not success:
         return {"status": "error", "error": "Failed to create ZIP"}
 
-    # Step 3: Validate size
+    # 3단계: 크기 검증
     print("\n✅ Validating package size...")
     zip_size = zip_stats["zip_size"]
     uncompressed_size = get_dir_size(build_dir)
 
-    # Check against Lambda limits
+    # Lambda 제한과 비교
     DIRECT_UPLOAD_LIMIT = 50 * 1024 * 1024  # 50 MB
     S3_UPLOAD_LIMIT = 250 * 1024 * 1024  # 250 MB
     UNCOMPRESSED_LIMIT = 250 * 1024 * 1024  # 250 MB
@@ -332,20 +332,20 @@ def create_deployment_package(
 
 
 # ============================================================================
-# S3 OPERATIONS
+# S3 작업
 # ============================================================================
 
 
 def setup_s3_bucket(bucket_name: str, region_name: Optional[str] = None) -> Dict:
     """
-    Create or verify S3 bucket for Lambda deployment packages
+    Lambda 배포 패키지용 S3 버킷을 생성하거나 확인합니다.
 
-    Args:
-        bucket_name: S3 bucket name
-        region_name: AWS region
+    인자:
+        bucket_name: S3 버킷 이름
+        region_name: AWS 리전
 
-    Returns:
-        Dictionary with bucket info
+    반환:
+        버킷 정보가 포함된 딕셔너리
     """
     if region_name is None:
         region_name = AWS_REGION
@@ -355,24 +355,24 @@ def setup_s3_bucket(bucket_name: str, region_name: Optional[str] = None) -> Dict
     s3 = boto3.client("s3", region_name=region_name)
 
     try:
-        # Check if bucket exists
+        # 버킷이 존재하는지 확인
         s3.head_bucket(Bucket=bucket_name)
         print(f"✓ S3 bucket already exists: {bucket_name}")
         bucket_arn = f"arn:aws:s3:::{bucket_name}"
 
     except Exception as e:
-        # head_bucket raises ClientError with error code '404', not NoSuchBucket
-        # Check if bucket doesn't exist (404/NotFound error)
+        # head_bucket은 NoSuchBucket이 아니라 오류 코드가 '404'인 ClientError를 발생시킴
+        # 버킷이 존재하지 않는지 확인(404/NotFound 오류)
         is_not_found = False
 
         if hasattr(e, "response"):
-            # Extract error code from ClientError response
+            # ClientError 응답에서 오류 코드 추출
             error_code = e.response.get("Error", {}).get("Code", "")
             http_status = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0)
             is_not_found = error_code == "404" or http_status == 404
 
         if is_not_found:
-            # Create bucket
+            # 버킷 생성
             print(f"✓ Creating S3 bucket: {bucket_name}")
 
             try:
@@ -387,7 +387,7 @@ def setup_s3_bucket(bucket_name: str, region_name: Optional[str] = None) -> Dict
                 bucket_arn = f"arn:aws:s3:::{bucket_name}"
                 print(f"✓ Bucket created: {bucket_arn}")
             except Exception as create_error:
-                # If bucket creation fails (e.g., already exists from concurrent request), continue
+                # 버킷 생성이 실패해도(예: 동시 요청으로 이미 존재) 계속 진행
                 create_error_str = str(create_error)
                 if any(err in create_error_str for err in ["BucketAlreadyExists", "BucketAlreadyOwnedByYou"]):
                     print(f"✓ S3 bucket exists (concurrent creation): {bucket_name}")
@@ -396,7 +396,7 @@ def setup_s3_bucket(bucket_name: str, region_name: Optional[str] = None) -> Dict
                     print(f"❌ Error creating bucket: {create_error}")
                     raise
         else:
-            # Other error - re-raise
+            # 그 밖의 오류는 다시 발생시킴
             print(f"❌ Error checking/setting up bucket: {e}")
             raise
 
@@ -410,16 +410,16 @@ def upload_package_to_s3(
     region_name: Optional[str] = None,
 ) -> Dict:
     """
-    Upload ZIP package to S3
+    ZIP 패키지를 S3에 업로드합니다.
 
-    Args:
-        zip_path: Local ZIP file path
-        s3_bucket: S3 bucket name
-        s3_key: S3 object key
-        region_name: AWS region
+    인자:
+        zip_path: 로컬 ZIP 파일 경로
+        s3_bucket: S3 버킷 이름
+        s3_key: S3 객체 키
+        region_name: AWS 리전
 
-    Returns:
-        Dictionary with S3 URI and upload info
+    반환:
+        S3 URI 및 업로드 정보가 포함된 딕셔너리
     """
     if region_name is None:
         region_name = AWS_REGION
@@ -436,7 +436,7 @@ def upload_package_to_s3(
     s3 = boto3.client("s3", region_name=region_name)
 
     try:
-        # Upload with metadata
+        # 메타데이터와 함께 업로드
         s3.upload_file(
             zip_path,
             s3_bucket,
@@ -466,7 +466,7 @@ def upload_package_to_s3(
 
 
 # ============================================================================
-# LAMBDA DEPLOYMENT
+# LAMBDA 배포
 # ============================================================================
 
 
@@ -478,17 +478,17 @@ def create_lambda_function_from_zip(
     region_name: Optional[str] = None,
 ) -> Dict:
     """
-    Create or update Lambda function from ZIP package
+    ZIP 패키지에서 Lambda 함수를 생성하거나 업데이트합니다.
 
-    Args:
-        function_name: Lambda function name
-        zip_path: Local ZIP file path (for direct upload, <50MB)
-        s3_uri: S3 URI (for S3 upload, >50MB). Format: s3://bucket/key
-        role_arn: Lambda execution role ARN
-        region_name: AWS region
+    인자:
+        function_name: Lambda 함수 이름
+        zip_path: 로컬 ZIP 파일 경로(직접 업로드용, <50MB)
+        s3_uri: S3 URI(S3 업로드용, >50MB). 형식: s3://bucket/key
+        role_arn: Lambda 실행 역할 ARN
+        region_name: AWS 리전
 
-    Returns:
-        Dictionary with Lambda function info
+    반환:
+        Lambda 함수 정보가 포함된 딕셔너리
     """
     if region_name is None:
         region_name = AWS_REGION
@@ -499,11 +499,11 @@ def create_lambda_function_from_zip(
 
     lambda_client = boto3.client("lambda", region_name=region_name)
 
-    # Prepare code argument
+    # 코드 인자 준비
     code_arg = {}
     if s3_uri:
-        # S3-based upload (for larger packages)
-        # Format: s3://bucket/key
+        # S3 기반 업로드(큰 패키지용)
+        # 형식: s3://bucket/key
         parts = s3_uri.replace("s3://", "").split("/", 1)
         bucket = parts[0]
         key = parts[1] if len(parts) > 1 else ""
@@ -511,7 +511,7 @@ def create_lambda_function_from_zip(
         upload_method = "S3"
         print("   Upload method: S3")
     elif zip_path and os.path.exists(zip_path):
-        # Direct ZIP upload (for smaller packages)
+        # ZIP 직접 업로드(작은 패키지용)
         with open(zip_path, "rb") as f:
             code_arg = {"ZipFile": f.read()}
         upload_method = "Direct"
@@ -520,21 +520,21 @@ def create_lambda_function_from_zip(
         return {"status": "error", "error": "No valid zip_path or s3_uri provided"}
 
     try:
-        # Check if function exists
+        # 함수가 존재하는지 확인
         try:
             func = lambda_client.get_function(FunctionName=function_name)  # noqa: F841
 
-            # Function exists, update it
+            # 함수가 존재하면 업데이트
             print("✓ Function exists, updating...")
 
             response = lambda_client.update_function_code(FunctionName=function_name, **code_arg)
 
-            # Wait for update to complete
+            # 업데이트 완료 대기
             print("  Waiting for update to complete...")
             waiter = lambda_client.get_waiter("function_updated")
             waiter.wait(FunctionName=function_name)
 
-            # Update configuration
+            # 구성 업데이트
             config_response = lambda_client.update_function_configuration(  # noqa: F841
                 FunctionName=function_name,
                 Runtime="python3.11",
@@ -549,7 +549,7 @@ def create_lambda_function_from_zip(
             function_arn = response["FunctionArn"]
 
         except lambda_client.exceptions.ResourceNotFoundException:
-            # Function doesn't exist, create it
+            # 함수가 없으면 생성
             print("✓ Creating new function...")
 
             response = lambda_client.create_function(
@@ -564,7 +564,7 @@ def create_lambda_function_from_zip(
                 Description="AIML301 Workshop - Diagnostics Agent (ZIP-based)",
             )
 
-            # Wait for creation to complete
+            # 생성 완료 대기
             print("  Waiting for function to become active...")
             waiter = lambda_client.get_waiter("function_active")
             waiter.wait(FunctionName=function_name)
@@ -573,7 +573,7 @@ def create_lambda_function_from_zip(
 
             function_arn = response["FunctionArn"]  # noqa: F841
 
-        # Get final function details
+        # 최종 함수 세부 정보 조회
         final_func = lambda_client.get_function(FunctionName=function_name)
         config = final_func["Configuration"]
 
@@ -608,7 +608,7 @@ def create_lambda_function_from_zip(
 
 
 # ============================================================================
-# COMPLETE WORKFLOW
+# 전체 워크플로
 # ============================================================================
 
 
@@ -616,51 +616,51 @@ def setup_lambda_zip_deployment(
     handler_code: str, requirements_content: str, region_name: Optional[str] = None
 ) -> Dict:
     """
-    Complete workflow: Package creation → (optional) S3 upload → Lambda deployment
+    전체 워크플로: 패키지 생성 → (선택 사항) S3 업로드 → Lambda 배포
 
-    Args:
-        handler_code: Python code for Lambda handler
-        requirements_content: pip requirements text
-        region_name: AWS region
+    인자:
+        handler_code: Lambda 핸들러용 Python 코드
+        requirements_content: pip 요구 사항 텍스트
+        region_name: AWS 리전
 
-    Returns:
-        Complete deployment results
+    반환:
+        전체 배포 결과
     """
     if region_name is None:
         region_name = AWS_REGION
 
-    # Step 1: Create package
+    # 1단계: 패키지 생성
     package_result = create_deployment_package(handler_code, requirements_content)
 
     if package_result.get("status") == "error":
         return package_result
 
-    # Step 2: Skip S3 for direct uploads (packages < 50MB)
+    # 2단계: 직접 업로드하는 경우 S3 생략(50MB 미만 패키지)
     zip_path = package_result["zip_path"]
     upload_method = package_result.get("upload_method", "direct")
     s3_result = {
         "status": "success",
         "upload_method": "direct",
-    }  # Default for direct uploads
+    }  # 직접 업로드의 기본값
 
     if upload_method == "S3":
-        # Only setup S3 bucket if needed for large packages
+        # 큰 패키지에 필요한 경우에만 S3 버킷 설정
         bucket_result = setup_s3_bucket("aiml301-lambda-packages", region_name)
 
-        # Step 3: Upload to S3
+        # 3단계: S3에 업로드
         s3_result = upload_package_to_s3(zip_path, bucket_result["bucket_name"], region_name=region_name)
 
         if s3_result.get("status") == "error":
             return s3_result
 
-    # Step 4: Get Lambda role from Parameter Store
+    # 4단계: Parameter Store에서 Lambda 역할 조회
     try:
         role_arn = get_parameter(PARAMETER_PATHS["lab_02"]["lambda_role_arn"], region_name=region_name)
     except Exception as e:
         print("❌ Could not retrieve Lambda role ARN from Parameter Store")
         return {"status": "error", "error": f"Lambda role not found: {e}"}
 
-    # Step 5: Deploy Lambda
+    # 5단계: Lambda 배포
     lambda_result = create_lambda_function_from_zip(
         function_name="aiml301-diagnostic-agent",
         zip_path=zip_path if package_result["upload_method"] == "direct" else None,
@@ -672,7 +672,7 @@ def setup_lambda_zip_deployment(
     if lambda_result.get("status") == "error":
         return lambda_result
 
-    # Step 6: Save Lambda ARN to Parameter Store
+    # 6단계: Lambda ARN을 Parameter Store에 저장
     print("\n📝 Saving Lambda ARN to Parameter Store...")
     put_parameter(
         PARAMETER_PATHS["lab_02"]["lambda_function_arn"],
@@ -691,26 +691,26 @@ def setup_lambda_zip_deployment(
 
 
 # ============================================================================
-# UTILITY FUNCTIONS
+# 유틸리티 함수
 # ============================================================================
 
 
 def get_package_info(zip_path: str) -> Dict:
     """
-    Get detailed information about a ZIP package
+    ZIP 패키지의 상세 정보를 반환합니다.
 
-    Args:
-        zip_path: Path to ZIP file
+    인자:
+        zip_path: ZIP 파일 경로
 
-    Returns:
-        Dictionary with package information
+    반환:
+        패키지 정보가 포함된 딕셔너리
     """
     if not os.path.exists(zip_path):
         return {"status": "error", "error": f"ZIP not found: {zip_path}"}
 
     zip_size = get_zip_size(zip_path)
 
-    # List contents
+    # 내용 나열
     files = []
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
@@ -718,7 +718,7 @@ def get_package_info(zip_path: str) -> Dict:
     except Exception as e:
         return {"status": "error", "error": f"Invalid ZIP: {e}"}
 
-    # Categorize files
+    # 파일 분류
     has_app = "app.py" in files
     has_handler = any(f.endswith(".py") for f in files)
     lib_files = [f for f in files if f.startswith("lib/")]
@@ -744,7 +744,7 @@ def get_package_info(zip_path: str) -> Dict:
 
 
 if __name__ == "__main__":
-    # Example usage
+    # 사용 예
     print("Lambda Packager - Example Usage\n")
     print("from lab_helpers.lab_02.lambda_packager import:")
     print("  - create_deployment_package()")

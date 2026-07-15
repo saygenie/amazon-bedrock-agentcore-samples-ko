@@ -18,7 +18,7 @@ export class AgentCoreStack extends cdk.Stack {
     const imageTag = props.imageTag || 'latest';
     const firstRun = props.firstRun ?? false;
 
-    // ECR Repository
+    // ECR 리포지토리
     const ecrRepo = new ecr.Repository(this, 'AgentRepository', {
       repositoryName: `${agentName}-repo`,
       imageScanOnPush: true,
@@ -36,7 +36,7 @@ export class AgentCoreStack extends cdk.Stack {
       return;
     }
 
-    // IAM Role
+    // IAM 역할
     const role = new iam.Role(this, 'AgentRuntimeRole', {
       roleName: `${agentName}-agentcore-runtime-role`,
       assumedBy: new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com', {

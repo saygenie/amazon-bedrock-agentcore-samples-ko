@@ -9,20 +9,20 @@ import string
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
-# Import from utils folder websocket_helpers
+# utils 폴더에서 websocket_helpers 가져오기
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../utils"))
 from websocket_helpers import create_presigned_url
 
 
 class SonicClientHandler(BaseHTTPRequestHandler):
-    """HTTP request handler that serves the Nova Sonic client"""
+    """Nova Sonic Client를 제공하는 HTTP 요청 핸들러입니다."""
 
-    # Class variables to store connection details
+    # 연결 세부 정보를 저장하는 클래스 변수
     websocket_url = None
     session_id = None
     is_presigned = False
 
-    # Store config for regenerating URLs
+    # URL 재생성용 구성 저장
     runtime_arn = None
     region = None
     service = None
@@ -30,11 +30,11 @@ class SonicClientHandler(BaseHTTPRequestHandler):
     qualifier = None
 
     def log_message(self, format, *args):
-        """Override to provide cleaner logging"""
+        """더 깔끔한 로깅을 위해 재정의합니다."""
         sys.stderr.write(f"[{self.log_date_time_string()}] {format % args}\n")
 
     def do_GET(self):
-        """Handle GET requests"""
+        """GET 요청을 처리합니다."""
         parsed_path = urlparse(self.path)
 
         if parsed_path.path == "/" or parsed_path.path == "/index.html":
@@ -45,7 +45,7 @@ class SonicClientHandler(BaseHTTPRequestHandler):
             self.send_error(404, "File not found")
 
     def do_POST(self):
-        """Handle POST requests"""
+        """POST 요청을 처리합니다."""
         parsed_path = urlparse(self.path)
 
         if parsed_path.path == "/api/regenerate":
@@ -54,14 +54,14 @@ class SonicClientHandler(BaseHTTPRequestHandler):
             self.send_error(404, "Endpoint not found")
 
     def serve_client_page(self):
-        """Serve the HTML client with pre-configured connection"""
+        """연결이 미리 구성된 HTML Client를 제공합니다."""
         try:
-            # Read the HTML template
+            # HTML 템플릿 읽기
             html_path = os.path.join(os.path.dirname(__file__), "sonic-client.html")
             with open(html_path, "r", encoding="utf-8") as f:
                 html_content = f.read()
 
-            # Inject the WebSocket URL if provided
+            # 제공된 경우 WebSocket URL 주입
             if self.websocket_url:
                 html_content = html_content.replace(
                     'id="websocketUrl" placeholder="ws://localhost:8081/ws" value="ws://localhost:8081/ws"',
@@ -80,7 +80,7 @@ class SonicClientHandler(BaseHTTPRequestHandler):
             self.send_error(500, f"Internal server error: {str(e)}")
 
     def serve_connection_info(self):
-        """Serve the connection information as JSON"""
+        """연결 정보를 JSON으로 제공합니다."""
         response = {
             "websocket_url": self.websocket_url or "ws://localhost:8081/ws",
             "session_id": self.session_id,
@@ -98,7 +98,7 @@ class SonicClientHandler(BaseHTTPRequestHandler):
         self.wfile.write(response_json.encode())
 
     def regenerate_url(self):
-        """Regenerate the presigned URL"""
+        """Presigned URL을 다시 생성합니다."""
         try:
             if not self.runtime_arn:
                 error_response = {
@@ -113,12 +113,12 @@ class SonicClientHandler(BaseHTTPRequestHandler):
                 self.wfile.write(response_json.encode())
                 return
 
-            # Generate new presigned URL
+            # 새 Presigned URL 생성
             base_url = f"wss://bedrock-agentcore.{self.region}.amazonaws.com/runtimes/{self.runtime_arn}/ws?qualifier={self.qualifier}"
 
             new_url = create_presigned_url(base_url, region=self.region, service=self.service, expires=self.expires)
 
-            # Update the class variable
+            # 클래스 변수 업데이트
             SonicClientHandler.websocket_url = new_url
 
             response = {
@@ -206,14 +206,14 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate arguments
+    # 인자 검증
     if not args.runtime_arn and not args.ws_url:
         parser.error("Either --runtime-arn or --ws-url must be specified")
 
     if args.runtime_arn and args.ws_url:
         parser.error("Cannot specify both --runtime-arn and --ws-url")
 
-    # Validate required parameters for AWS Bedrock connection
+    # Amazon Bedrock 연결에 필요한 파라미터 검증
     if args.runtime_arn:
         if not args.region:
             parser.error("--region or AWS_REGION env var is required when using --runtime-arn")
@@ -227,7 +227,7 @@ Examples:
     is_presigned = False
 
     try:
-        # Generate presigned URL for AWS Bedrock
+        # Amazon Bedrock용 Presigned URL 생성
         if args.runtime_arn:
             base_url = f"wss://bedrock-agentcore.{args.region}.amazonaws.com/runtimes/{args.runtime_arn}/ws?qualifier={args.qualifier}"
 
@@ -245,7 +245,7 @@ Examples:
             is_presigned = True
             print("✅ Pre-signed URL generated successfully!")
 
-        # Use provided WebSocket URL for local connections
+        # 로컬 연결에 제공된 WebSocket URL 사용
         else:
             websocket_url = args.ws_url
             print(f"🔗 WebSocket URL: {websocket_url}")
@@ -254,12 +254,12 @@ Examples:
         print(f"🌐 Web Server Port: {args.port}")
         print()
 
-        # Set connection details in the handler class
+        # 핸들러 클래스에 연결 세부 정보 설정
         SonicClientHandler.websocket_url = websocket_url
         SonicClientHandler.session_id = session_id
         SonicClientHandler.is_presigned = is_presigned
 
-        # Store config for regenerating URLs
+        # URL 재생성용 구성 저장
         if args.runtime_arn:
             SonicClientHandler.runtime_arn = args.runtime_arn
             SonicClientHandler.region = args.region
@@ -267,7 +267,7 @@ Examples:
             SonicClientHandler.expires = args.expires
             SonicClientHandler.qualifier = args.qualifier
 
-        # Start web server
+        # Web Server 시작
         server_address = ("", args.port)
         httpd = HTTPServer(server_address, SonicClientHandler)
 
@@ -288,13 +288,13 @@ Examples:
         print("=" * 70)
         print()
 
-        # Open browser automatically
+        # 브라우저 자동 열기
         if not args.no_browser:
             print("🌐 Opening browser...")
             webbrowser.open(server_url)
             print()
 
-        # Start serving
+        # 서비스 시작
         httpd.serve_forever()
 
     except KeyboardInterrupt:

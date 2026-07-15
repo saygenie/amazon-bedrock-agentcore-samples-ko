@@ -1,30 +1,30 @@
 """
-Lab 03: Remediation Agent Resource Cleanup
+Lab 03: Remediation Agent 리소스 정리
 
-Removes all resources created during Lab 03:
+Lab 03에서 생성한 모든 리소스를 제거합니다.
 
-AWS RESOURCES DELETED:
-- AgentCore Gateway and all targets
-- AgentCore Runtime (remediation-runtime)
+삭제하는 AWS 리소스:
+- AgentCore Gateway 및 모든 대상
+- AgentCore Runtime(remediation-runtime)
 - OAuth2 Credential Provider
-- Secrets Manager secrets (m2m credentials)
-- IAM roles (Runtime execution, Gateway service)
-- CloudWatch logs
+- Secrets Manager 보안 암호(m2m 자격 증명)
+- IAM 역할(Runtime 실행, Gateway 서비스)
+- CloudWatch 로그
 
-AWS RESOURCES PRESERVED:
-- Parameter Store entries (put_parameter() now handles overwrites intelligently)
-  • Re-run Section 7.3c to update with new runtime_arn/runtime_id after redeploying
+보존하는 AWS 리소스:
+- Parameter Store 항목(put_parameter()가 이제 덮어쓰기를 지능적으로 처리)
+  • 재배포 후 Section 7.3c를 다시 실행하여 새 runtime_arn/runtime_id로 업데이트
 
-LOCAL ARTIFACTS DELETED:
+삭제하는 로컬 아티팩트:
 - agent-remediation.py
 - Dockerfile
 - .bedrock_agentcore.yaml
 - .dockerignore
-- Python cache (__pycache__/, *.pyc)
+- Python 캐시(__pycache__/, *.pyc)
 
-LOCAL ARTIFACTS PRESERVED:
-- Lab-03-remediation-agent.ipynb (notebook file)
-- lab_helpers/ module (preserved for reuse)
+보존하는 로컬 아티팩트:
+- Lab-03-remediation-agent.ipynb (Notebook 파일)
+- lab_helpers/ 모듈(재사용을 위해 보존)
 """
 
 import boto3
@@ -42,33 +42,33 @@ logger = logging.getLogger(__name__)
 
 def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None:
     """
-    Clean up all Lab 03 resources (Runtime and Gateway).
+    Lab 03의 모든 리소스(Runtime 및 Gateway)를 정리합니다.
 
-    This function removes AWS resources and local artifacts created during Lab 03:
+    이 함수는 Lab 03에서 생성한 AWS 리소스와 로컬 아티팩트를 제거합니다.
 
-    AWS RESOURCES DELETED:
-    1. AgentCore Gateway (and all targets)
-    2. AgentCore Runtime (remediation-runtime)
+    삭제하는 AWS 리소스:
+    1. AgentCore Gateway(및 모든 대상)
+    2. AgentCore Runtime(remediation-runtime)
     3. OAuth2 Credential Provider
-    4. Secrets Manager secrets (m2m credentials)
-    5. IAM roles (Runtime execution role, Gateway service role)
-    6. CloudWatch logs
+    4. Secrets Manager 보안 암호(m2m 자격 증명)
+    5. IAM 역할(Runtime 실행 역할, Gateway 서비스 역할)
+    6. CloudWatch 로그
 
-    AWS RESOURCES PRESERVED:
-    - Parameter Store entries (intelligently overwritten on re-deploy)
+    보존하는 AWS 리소스:
+    - Parameter Store 항목(재배포 시 지능적으로 덮어씀)
 
-    LOCAL ARTIFACTS DELETED:
-    7. Generated files (agent-remediation.py, Dockerfile, .bedrock_agentcore.yaml, .dockerignore)
-    8. Python cache (__pycache__/, *.pyc)
+    삭제하는 로컬 아티팩트:
+    7. 생성 파일(agent-remediation.py, Dockerfile, .bedrock_agentcore.yaml, .dockerignore)
+    8. Python 캐시(__pycache__/, *.pyc)
 
-    Args:
-        region_name: AWS region (default: us-west-2)
-        verbose: Print detailed status messages (default: True)
+    인자:
+        region_name: AWS 리전(기본값: us-west-2)
+        verbose: 상세 상태 메시지 출력 여부(기본값: True)
 
-    Returns:
-        None (prints status to stdout)
+    반환:
+        None(stdout에 상태 출력)
 
-    Example:
+    예:
         from lab_helpers.lab_03.cleanup import cleanup_lab_03
         cleanup_lab_03(region_name="us-west-2", verbose=True)
     """
@@ -78,14 +78,14 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     if verbose:
         logging.basicConfig(level=logging.INFO)
 
-    # Initialize clients
+    # 클라이언트 초기화
     agentcore_client = boto3.client("bedrock-agentcore-control", region_name=region_name)
     iam_client = boto3.client("iam")
     ssm_client = boto3.client("ssm", region_name=region_name)
     logs_client = boto3.client("logs", region_name=region_name)
     secrets_client = boto3.client("secretsmanager", region_name=region_name)
 
-    # Debug: Find all parameters related to Lab 03
+    # 디버그: Lab 03 관련 파라미터 모두 찾기
     if verbose:
         print("[DEBUG] Searching for Lab 03 parameters in Parameter Store...")
         try:
@@ -107,19 +107,19 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
             print(f"  ℹ Parameter search error: {e}")
         print()
 
-    # 1. Delete OAuth2 Credential Provider
+    # 1. OAuth2 Credential Provider 삭제
     print("[1/7] Deleting OAuth2 Credential Provider...")
     provider_deleted = False
 
     try:
-        # Get provider ARN from Parameter Store
+        # Parameter Store에서 provider ARN 조회
         try:
             response = ssm_client.get_parameter(Name=PARAMETER_PATHS["lab_03"]["oauth2_provider_arn"])
             provider_arn = response["Parameter"]["Value"]
 
             if provider_arn:
-                # Extract provider name from ARN
-                # ARN format: arn:aws:bedrock-agentcore:region:account:token-vault/default/oauth2credentialprovider/PROVIDER_NAME
+                # ARN에서 provider 이름 추출
+                # ARN 형식: arn:aws:bedrock-agentcore:region:account:token-vault/default/oauth2credentialprovider/PROVIDER_NAME
                 provider_name = provider_arn.split("/")[-1]
 
                 if verbose:
@@ -127,13 +127,13 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                     print(f"  ℹ Extracted provider name: {provider_name}")
 
                 try:
-                    # Delete the provider using the correct 'name' parameter
+                    # 올바른 'name' 파라미터를 사용해 provider 삭제
                     agentcore_client.delete_oauth2_credential_provider(name=provider_name)
                     print(f"  ✓ OAuth2 credential provider deleted: {provider_name}")
                     provider_deleted = True
                 except Exception as e:
                     error_str = str(e)
-                    # Check if it's already deleted or doesn't exist
+                    # 이미 삭제되었거나 존재하지 않는지 확인
                     if "ResourceNotFoundException" in error_str or "does not exist" in error_str.lower():
                         print("  ✓ Provider already deleted or not found (ok)")
                         provider_deleted = True
@@ -148,11 +148,11 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ OAuth2 cleanup error: {e}")
 
-    # 1b. Delete Secrets Manager secrets created by OAuth2 credential provider
+    # 1b. OAuth2 credential provider가 생성한 Secrets Manager 보안 암호 삭제
     print("[1b/8] Deleting Secrets Manager secrets...")
     try:
-        # Paginate through secrets to find those created by the OAuth2 credential provider
-        # OAuth2 provider creates secrets with pattern: bedrock-agentcore-identity!default/oauth2/aiml301-m2m-credentials-*
+        # 보안 암호를 페이지 단위로 조회하여 OAuth2 credential provider가 생성한 항목 찾기
+        # OAuth2 provider는 다음 패턴으로 보안 암호를 생성: bedrock-agentcore-identity!default/oauth2/aiml301-m2m-credentials-*
         paginator = secrets_client.get_paginator("list_secrets")
         pages = paginator.paginate()
 
@@ -160,7 +160,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
         for page in pages:
             for secret in page.get("SecretList", []):
                 secret_name = secret["Name"]
-                # Match OAuth2 credential provider secrets
+                # OAuth2 credential provider 보안 암호와 일치하는지 확인
                 if (
                     ("bedrock-agentcore-identity" in secret_name and "m2m-credentials" in secret_name)
                     or ("bedrock-agentcore-identity" in secret_name and "aiml301" in secret_name)
@@ -177,7 +177,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                 except Exception as e:
                     error_str = str(e)  # codeql[py/clear-text-logging-sensitive-data]
                     if "ResourceNotFoundException" not in error_str:
-                        # Check if it's owned by bedrock-agentcore-identity (expected)
+                        # 예상대로 bedrock-agentcore-identity가 소유하는지 확인
                         if "bedrock-agentcore-identity" in error_str:
                             print(
                                 f"  ℹ Secret {secret_name} is service-owned - will be auto-deleted when provider is removed"
@@ -192,16 +192,16 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ Secrets Manager cleanup error: {e}")
 
-    # 2. Delete Gateway (targets first, then gateway)
+    # 2. Gateway 삭제(대상을 먼저 삭제한 다음 Gateway 삭제)
     print("[2/8] Deleting Gateway and targets...")
     try:
-        # Find gateway by name
+        # 이름으로 Gateway 찾기
         gateways = agentcore_client.list_gateways()
         for gw in gateways.get("items", []):
             if "remediation-gateway" in gw["name"]:
                 gateway_id = gw["gatewayId"]
 
-                # Step 1: Delete targets
+                # 1단계: 대상 삭제
                 try:
                     targets = agentcore_client.list_gateway_targets(gatewayIdentifier=gateway_id)
                     target_count = len(targets.get("items", []))
@@ -213,14 +213,14 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                             agentcore_client.delete_gateway_target(gatewayIdentifier=gateway_id, targetId=target_id)
                             print(f"    • Deleted target: {target_id}")
 
-                        # Step 2: Verify targets are deleted with retry logic
+                        # 2단계: 재시도 로직으로 대상이 삭제되었는지 확인
                         print("  Verifying target deletion...")
                         max_retries = 5
                         retry_count = 0
                         targets_deleted = False
 
                         while retry_count < max_retries and not targets_deleted:
-                            time.sleep(3)  # Wait for AWS propagation
+                            time.sleep(3)  # AWS 전파 대기
                             remaining_targets = agentcore_client.list_gateway_targets(gatewayIdentifier=gateway_id)
                             remaining_count = len(remaining_targets.get("items", []))
 
@@ -246,7 +246,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                     print(f"  ⚠ Target deletion: {e}")
                     targets_deleted = False
 
-                # Step 3: Delete gateway (only if targets are confirmed deleted)
+                # 3단계: Gateway 삭제(대상이 삭제되었다고 확인된 경우에만)
                 try:
                     if targets_deleted:
                         agentcore_client.delete_gateway(gatewayIdentifier=gateway_id)
@@ -264,7 +264,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ Gateway lookup error: {e}")
 
-    # 3. Delete Runtime and associated CloudWatch Logs Delivery
+    # 3. Runtime 및 연결된 CloudWatch Logs Delivery 삭제
     print("[3/8] Deleting AgentCore Runtime...")
     try:
         runtime_deleted = False
@@ -276,17 +276,17 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
             "lab-03",
         ]
 
-        # First, try to get runtime info from Parameter Store
+        # 먼저 Parameter Store에서 Runtime 정보 조회 시도
         for prefix in prefixes:
             if runtime_deleted:
                 break
 
             try:
-                # Try multiple parameter names (most specific first)
+                # 여러 파라미터 이름을 구체적인 순서로 조회
                 param_names = [
-                    f"/{prefix}/lab-03/runtime-id",  # Direct ID (most likely)
-                    f"/{prefix}/lab-03/runtime-config",  # JSON with ID
-                    f"/{prefix}/runtime-id",  # Fallback variations
+                    f"/{prefix}/lab-03/runtime-id",  # 직접 ID(가장 가능성 높음)
+                    f"/{prefix}/lab-03/runtime-config",  # ID가 포함된 JSON
+                    f"/{prefix}/runtime-id",  # 대체 이름
                     f"/{prefix}/runtime-config",
                 ]
 
@@ -298,13 +298,13 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                         if verbose:
                             print(f"  Found parameter: {param_name}")
 
-                        # Try to parse as JSON first
+                        # 먼저 JSON으로 파싱 시도
                         runtime_id = None
                         try:
                             runtime_config = json.loads(param_value)
                             runtime_id = runtime_config.get("runtime_id")
                         except (json.JSONDecodeError, TypeError):
-                            # If not JSON, assume it's the runtime ID directly
+                            # JSON이 아니면 Runtime ID 자체로 간주
                             if param_value and param_value.strip():
                                 runtime_id = param_value.strip()
 
@@ -312,7 +312,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                             print("  Found runtime ID: ****")
                             runtime_id_for_logging = runtime_id
 
-                            # Clean up CloudWatch Logs Delivery BEFORE deleting runtime
+                            # Runtime을 삭제하기 전에 CloudWatch Logs Delivery 정리
                             try:
                                 print("  Cleaning up CloudWatch Logs Delivery for runtime...")
                                 cleanup_runtime_logging(runtime_id, region=region_name)
@@ -323,7 +323,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                                 agentcore_client.delete_agent_runtime(agentRuntimeId=runtime_id)
                                 print("  ✓ Runtime deletion initiated: ****")
 
-                                # Wait for Runtime to be fully deleted
+                                # Runtime이 완전히 삭제될 때까지 대기
                                 print("  ⏳ Waiting for Runtime deletion to complete...")
                                 max_retries = 60
                                 retry_count = 0
@@ -372,7 +372,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                 if verbose:
                     print(f"  ℹ Parameter Store search ({prefix}): {e}")
 
-        # Fallback: try to list and find runtimes
+        # 대체 경로: Runtime 목록에서 찾기
         if not runtime_deleted:
             if verbose:
                 print("  Runtime not in Parameter Store, checking API...")
@@ -391,7 +391,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                         runtime_id_for_logging = runtime_id  # noqa: F841
                         print(f"  Found runtime: {rt['agentRuntimeName']}")
 
-                        # Clean up CloudWatch Logs Delivery BEFORE deleting runtime
+                        # Runtime을 삭제하기 전에 CloudWatch Logs Delivery 정리
                         try:
                             print("  Cleaning up CloudWatch Logs Delivery for runtime...")
                             cleanup_runtime_logging(runtime_id, region=region_name)
@@ -402,7 +402,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                             agentcore_client.delete_agent_runtime(agentRuntimeId=runtime_id)
                             print("  ✓ Runtime deletion initiated: ****")
 
-                            # Wait for Runtime to be fully deleted
+                            # Runtime이 완전히 삭제될 때까지 대기
                             print("  ⏳ Waiting for Runtime deletion to complete...")
                             max_retries = 30
                             retry_count = 0
@@ -447,10 +447,10 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ Runtime cleanup error: {e}")
 
-    # 3b. Delete Custom Code Interpreter
+    # 3b. 사용자 지정 Code Interpreter 삭제
     print("[3b/8] Deleting Custom Code Interpreter...")
     try:
-        # Try to get from SSM first
+        # 먼저 SSM에서 조회 시도
         interpreter_id = None
         try:
             response = ssm_client.get_parameter(Name=PARAMETER_PATHS["lab_03"]["code_interpreter_id"])
@@ -460,7 +460,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
             if verbose:
                 print("  Interpreter ID not in SSM, checking API...")
 
-        # If not in SSM, list and find
+        # SSM에 없으면 목록에서 찾기
         if not interpreter_id:
             list_response = agentcore_client.list_code_interpreters()
             for item in list_response.get("codeInterpreterSummaries", []):
@@ -483,10 +483,10 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ Code interpreter cleanup error: {e}")
 
-    # 4. Delete IAM roles
+    # 4. IAM 역할 삭제
     print("[4/8] Deleting IAM roles...")
 
-    # Delete Custom Runtime execution role
+    # 사용자 지정 Runtime 실행 역할 삭제
     try:
         _delete_role(iam_client, "aiml301_sre_agentcore_CustomRuntimeRole")
         print("  ✓ Custom Runtime execution role deleted")
@@ -495,7 +495,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ Custom Runtime role: {e}")
 
-    # Delete Code Interpreter execution role
+    # Code Interpreter 실행 역할 삭제
     try:
         _delete_role(iam_client, "aiml301_sre_agentcore-CodeInterpreterRole")
         print("  ✓ Code Interpreter execution role deleted")
@@ -504,7 +504,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ Code Interpreter role: {e}")
 
-    # Delete old Runtime execution role (if exists)
+    # 이전 Runtime 실행 역할이 있으면 삭제
     try:
         _delete_role(iam_client, "aiml301-agentcore-remediation-role")
         print("  ✓ Old Runtime execution role deleted")
@@ -513,7 +513,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ Old Runtime role: {e}")
 
-    # Delete Gateway service role
+    # Gateway 서비스 역할 삭제
     try:
         _delete_role(iam_client, "aiml301-remediation-gateway-role")
         print("  ✓ Gateway service role deleted")
@@ -522,15 +522,15 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ Gateway role: {e}")
 
-    # 5. Parameter Store entries (PRESERVED for reuse)
+    # 5. Parameter Store 항목(재사용을 위해 보존)
     print("[5/8] Parameter Store entries...")
     print("  ✓ Preserved (put_parameter() now handles overwrites intelligently)")
     print("  ℹ Run Section 7.3c again to update values with latest ARN/ID")
 
-    # 6. Delete CloudWatch logs
+    # 6. CloudWatch 로그 삭제
     print("[6/8] Deleting CloudWatch log groups...")
     try:
-        # Find and delete log groups matching pattern
+        # 패턴과 일치하는 로그 그룹을 찾아 삭제
         logs_pattern = "/aws/bedrock-agentcore/runtime"
         log_groups = logs_client.describe_log_groups(logGroupNamePrefix=logs_pattern)
 
@@ -547,13 +547,13 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ Log group cleanup: {e}")
 
-    # 7. Delete local generated files
+    # 7. 로컬 생성 파일 삭제
     print("[7/8] Deleting local artifacts...")
     try:
-        # Get current working directory
+        # 현재 작업 디렉터리 가져오기
         cwd = os.getcwd()
 
-        # Files to delete
+        # 삭제할 파일
         files_to_delete = [
             os.path.join(cwd, "agent-remediation.py"),
             os.path.join(cwd, "Dockerfile"),
@@ -571,7 +571,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
                 except Exception as e:
                     print(f"  ⚠ Failed to delete {os.path.basename(file_path)}: {e}")
 
-        # Clean up Python cache
+        # Python 캐시 정리
         pycache_paths = [
             os.path.join(cwd, "__pycache__"),
             os.path.join(cwd, "agent_remediation.cpython-*.pyc"),
@@ -591,7 +591,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     except Exception as e:
         print(f"  ⚠ Local cleanup: {e}")
 
-    # 7. Delete local generated files
+    # 7. 로컬 생성 파일 삭제
     print("[8/8] Deleting s3 bucket containing remediation plans...")
     s3_client = boto3.client("s3", region_name=region_name)
     s3_resource = boto3.resource("s3", region_name=region_name)
@@ -599,12 +599,12 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
     parameter_name = "/aiml301_sre_workshop/remediation_s3_bucket"
 
     try:
-        # Get bucket name from Parameter Store
+        # Parameter Store에서 버킷 이름 조회
         response = ssm_client.get_parameter(Name=parameter_name)
         bucket_name = response["Parameter"]["Value"]
         print(f"Found bucket name in Parameter Store: {bucket_name}")
 
-        # Empty and delete the bucket
+        # 버킷을 비우고 삭제
         bucket = s3_resource.Bucket(bucket_name)
         print(f"Emptying bucket: {bucket_name}")
         bucket.objects.all().delete()
@@ -614,7 +614,7 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
         s3_client.delete_bucket(Bucket=bucket_name)
         print(f"Successfully deleted bucket: {bucket_name}")
 
-        # Delete the parameter
+        # 파라미터 삭제
         ssm_client.delete_parameter(Name=parameter_name)
         print(f"Deleted parameter: {parameter_name}")
 
@@ -631,23 +631,23 @@ def cleanup_lab_03(region_name: str = "us-west-2", verbose: bool = True) -> None
 
 def _delete_role(iam_client, role_name: str) -> None:
     """
-    Helper: Detach all policies and delete role.
+    헬퍼: 모든 정책을 분리하고 역할을 삭제합니다.
 
-    Args:
-        iam_client: IAM boto3 client
-        role_name: Name of IAM role to delete
+    인자:
+        iam_client: IAM boto3 클라이언트
+        role_name: 삭제할 IAM 역할 이름
     """
-    # Detach managed policies
+    # 관리형 정책 분리
     policies = iam_client.list_attached_role_policies(RoleName=role_name)
     for policy in policies.get("AttachedPolicies", []):
         iam_client.detach_role_policy(RoleName=role_name, PolicyArn=policy["PolicyArn"])
 
-    # Delete inline policies
+    # 인라인 정책 삭제
     inline_policies = iam_client.list_role_policies(RoleName=role_name)
     for policy_name in inline_policies.get("PolicyNames", []):
         iam_client.delete_role_policy(RoleName=role_name, PolicyName=policy_name)
 
-    # Delete role
+    # 역할 삭제
     iam_client.delete_role(RoleName=role_name)
 
 

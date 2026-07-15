@@ -1,13 +1,13 @@
-"""Utilities for CloudWatch to Strands Eval conversion with multi-session support.
+"""다중 세션을 지원하는 CloudWatch-Strands Eval 변환 유틸리티입니다.
 
-This module provides utilities for:
-- Querying CloudWatch Logs for OTEL traces (ObservabilityClient)
-- Discovering sessions from CloudWatch log groups (time-based and score-based)
-- Mapping CloudWatch spans to Strands Eval Session format (CloudWatchSessionMapper)
-- Data models for spans, sessions, and evaluation results
-- Custom CloudWatch logging with original trace IDs (send_evaluation_to_cloudwatch)
+이 모듈은 다음 유틸리티를 제공합니다:
+- CloudWatch Logs에서 OTEL trace 쿼리(ObservabilityClient)
+- CloudWatch 로그 그룹에서 세션 검색(시간 기반 및 점수 기반)
+- CloudWatch span을 Strands Eval Session 형식으로 매핑(CloudWatchSessionMapper)
+- span, 세션, 평가 결과용 데이터 모델
+- 원본 trace ID를 사용하는 사용자 지정 CloudWatch 로깅(send_evaluation_to_cloudwatch)
 
-Note: Configuration is in config.py (same directory as notebooks).
+참고: 구성은 Notebook과 같은 디렉터리의 config.py에 있습니다.
 """
 
 from .cloudwatch_client import CloudWatchQueryBuilder, ObservabilityClient
@@ -29,16 +29,16 @@ from .models import (
 from .session_mapper import CloudWatchSessionMapper
 
 __all__ = [
-    # CloudWatch client
+    # CloudWatch 클라이언트
     "ObservabilityClient",
     "CloudWatchQueryBuilder",
-    # Session mapper
+    # 세션 매퍼
     "CloudWatchSessionMapper",
-    # Custom CloudWatch logger
+    # 사용자 지정 CloudWatch 로거
     "send_evaluation_to_cloudwatch",
     "log_evaluation_batch",
     "EvaluationLogConfig",
-    # Models
+    # 모델
     "Span",
     "RuntimeLog",
     "TraceData",

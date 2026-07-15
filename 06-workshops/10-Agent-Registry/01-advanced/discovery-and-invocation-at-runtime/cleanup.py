@@ -1,12 +1,12 @@
 """
-Cleanup script for 05_agentic_consumer_discovery.ipynb
-Deletes all AWS resources created during the notebook demo in reverse order.
+05_agentic_consumer_discovery.ipynb 정리 스크립트입니다.
+노트북 데모 중에 생성된 모든 AWS 리소스를 역순으로 삭제합니다.
 
-Usage (from notebook):
+사용법(노트북에서 실행):
     %run cleanup.py
 
-All variables are expected to come from the notebook kernel. Each section
-is guarded so cleanup proceeds even if the kernel was restarted mid-demo.
+모든 변수는 노트북 커널에서 가져온다고 가정합니다. 데모 도중 커널이 재시작되더라도
+정리 작업을 계속할 수 있도록 각 섹션을 보호합니다.
 """
 
 import os
@@ -14,7 +14,7 @@ import time
 import shutil
 import boto3
 
-# Re-create AWS clients in case kernel was restarted
+# 커널이 재시작되었을 경우 AWS 클라이언트 다시 생성
 try:
     cp_client
 except NameError:
@@ -27,20 +27,20 @@ except NameError:
     sm_client = session.client("secretsmanager")
 
 
-# Safely resolve notebook variables — if the kernel was restarted, some may be missing.
-# NOTE: We use direct variable references with try/except instead of locals().get()
-# because %run -i injects notebook variables into the execution namespace but
-# locals().get() / globals().get() may not find them reliably in all IPython versions.
+# 노트북 변수를 안전하게 확인합니다. 커널이 재시작되었다면 일부 변수가 없을 수 있습니다.
+# 참고: %run -i는 노트북 변수를 실행 네임스페이스에 주입하지만, 일부 IPython 버전에서는
+# locals().get() / globals().get()으로 변수를 안정적으로 찾지 못할 수 있으므로
+# try/except와 직접 변수 참조를 사용합니다.
 def _safe_get(name):
-    """Get a variable from the notebook namespace, returning None if not set."""
-    # Try IPython's user namespace first (most reliable for %run -i)
+    """노트북 네임스페이스에서 변수를 가져오고, 설정되지 않았으면 None을 반환합니다."""
+    # 먼저 IPython 사용자 네임스페이스 확인(%run -i에서 가장 안정적)
     try:
         ip = get_ipython()
         if name in ip.user_ns:
             return ip.user_ns[name]
     except NameError:
         pass
-    # Fallback to frame locals/globals
+    # 프레임의 지역/전역 변수로 대체
     import inspect
 
     frame = inspect.currentframe().f_back
@@ -79,7 +79,7 @@ _agent_ids = [
     ("support", _support_agent_id),
 ]
 
-# 1. Delete registry records
+# 1. 레지스트리 레코드 삭제
 print("\n1. Deleting registry records...")
 if _record_ids and _REGISTRY_ID:
     for rid in _record_ids:
@@ -91,7 +91,7 @@ if _record_ids and _REGISTRY_ID:
 else:
     print("  Skipped (record_ids or REGISTRY_ID not set)")
 
-# 2. Delete registry
+# 2. 레지스트리 삭제
 print("\n2. Deleting registry...")
 if _REGISTRY_ID:
     try:
@@ -102,7 +102,7 @@ if _REGISTRY_ID:
 else:
     print("  Skipped (REGISTRY_ID not set)")
 
-# 3. Delete A2A agents
+# 3. A2A 에이전트 삭제
 print("\n3. Deleting A2A agents...")
 for name, aid in _agent_ids:
     if not aid:
@@ -114,7 +114,7 @@ for name, aid in _agent_ids:
     except Exception as e:
         print(f"  Skip {name}: {e}")
 
-# 4. Delete gateway targets
+# 4. Gateway 대상 삭제
 print("\n4. Deleting gateway targets...")
 if _target_ids and _gateway_id:
     for tname, tid in _target_ids.items():
@@ -123,11 +123,11 @@ if _target_ids and _gateway_id:
             print(f"  Deleted target: {tid}")
         except Exception as e:
             print(f"  Skip {tname}: {e}")
-    time.sleep(30)  # Wait for targets to delete
+    time.sleep(30)  # 대상이 삭제될 때까지 대기
 else:
     print("  Skipped (target_ids or gateway_id not set)")
 
-# 5. Delete gateway
+# 5. Gateway 삭제
 print("\n5. Deleting gateway...")
 if _gateway_id:
     try:
@@ -138,7 +138,7 @@ if _gateway_id:
 else:
     print("  Skipped (gateway_id not set)")
 
-# 6. Delete Lambda functions
+# 6. Lambda 함수 삭제
 print("\n6. Deleting Lambda functions...")
 if _lambda_arns:
     for name, arn in _lambda_arns.items():
@@ -150,7 +150,7 @@ if _lambda_arns:
 else:
     print("  Skipped (lambda_arns not set)")
 
-# 7. Delete IAM roles
+# 7. IAM 역할 삭제
 print("\n7. Deleting IAM roles...")
 for role_name in [_lambda_role_name, _gateway_role_name]:
     if not role_name:
@@ -165,7 +165,7 @@ for role_name in [_lambda_role_name, _gateway_role_name]:
     except Exception as e:
         print(f"  Skip {role_name}: {e}")
 
-# 8. Delete Secrets Manager secret
+# 8. Secrets Manager 보안 암호 삭제
 print("\n8. Deleting Secrets Manager secret...")
 if _secret_name:
     try:
@@ -176,7 +176,7 @@ if _secret_name:
 else:
     print("  Skipped (secret_name not set)")
 
-# 9. Delete Cognito
+# 9. Cognito 삭제
 print("\n9. Deleting Cognito...")
 if _domain_name and _user_pool_id:
     try:
@@ -188,7 +188,7 @@ if _domain_name and _user_pool_id:
 else:
     print("  Skipped (domain_name or user_pool_id not set)")
 
-# 10. Clean up local files
+# 10. 로컬 파일 정리
 print("\n10. Cleaning up local files...")
 for f in [
     "pricing_agent.py",
@@ -206,7 +206,7 @@ for f in [
 if os.path.exists("models"):
     shutil.rmtree("models")
 
-# 11. Delete ECR repositories created by starter toolkit
+# 11. 스타터 툴킷에서 생성한 ECR 리포지토리 삭제
 print("\n11. Deleting ECR repositories...")
 ecr_client = session.client("ecr")
 for launch in [_orchestrator_launch, _pricing_launch, _support_launch]:

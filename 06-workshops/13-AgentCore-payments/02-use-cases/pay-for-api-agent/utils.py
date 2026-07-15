@@ -1,9 +1,8 @@
 """
-utils.py — shared helpers for the pay-for-api notebook.
+pay-for-api Notebook에서 공유하는 utils.py helper입니다.
 
-Small wrappers around boto3 for pretty-printing responses, assuming IAM
-roles, polling for status transitions, and tolerating idempotent
-create calls.
+응답 정돈 출력, IAM role assume, 상태 전환 polling, 멱등 create 호출 처리를
+위한 간단한 boto3 wrapper를 제공합니다.
 """
 
 import json
@@ -14,7 +13,7 @@ import botocore.exceptions
 
 
 def pp(label: str, response: dict) -> None:
-    """Pretty-print an API response, stripping ResponseMetadata."""
+    """ResponseMetadata를 제외하고 API 응답을 보기 좋게 출력합니다."""
     data = {k: v for k, v in response.items() if k != "ResponseMetadata"}
     print(f"\n{'=' * 60}")
     print(f"  {label}")
@@ -27,16 +26,15 @@ def assume_role(
     role_arn: str,
     session_name: str = "tutorial-session",
 ) -> boto3.Session:
-    """Assume an IAM role and return a boto3 Session with auto-refreshing credentials.
+    """IAM role을 assume하고 credential을 자동 갱신하는 boto3 Session을 반환합니다.
 
-    Uses botocore's ``RefreshableCredentials`` under the hood so sessions
-    stay valid past the default 1-hour STS expiry without the caller
-    having to rebuild clients. This matters for the notebook, where a
-    user can leave §5.1's session sitting for hours before coming back
-    to §7 / §9.
+    내부적으로 botocore의 ``RefreshableCredentials``를 사용하므로 호출자가
+    client를 다시 만들지 않아도 기본 1시간 STS 만료 이후까지 session이
+    유효하게 유지됩니다. 사용자가 5.1절의 session을 몇 시간 동안 그대로 둔 뒤
+    7절이나 9절로 돌아올 수 있는 Notebook에서 중요합니다.
 
-    Immediately verifies the assumed identity by calling
-    get_caller_identity(); raises if the assumption fails outright.
+    get_caller_identity()를 호출해 assume한 identity를 즉시 검증하며,
+    assume 자체가 실패하면 예외를 발생시킵니다.
     """
     from botocore.credentials import RefreshableCredentials
     from botocore.session import Session as BotocoreSession
@@ -79,16 +77,16 @@ def wait_for_status(
     timeout: int = 120,
     **kwargs,
 ) -> dict:
-    """Poll a Get* API until the resource reaches expected_status.
+    """resource가 expected_status에 도달할 때까지 Get* API를 polling합니다.
 
-    Resolves status from these response shapes (checked in order):
-    - Top-level ``status`` field (Manager, Connector responses)
-    - ``paymentInstrument.status`` (GetPaymentInstrument response)
+    다음 응답 형식에서 순서대로 상태를 확인합니다.
+    - 최상위 ``status`` 필드(Manager, Connector 응답)
+    - ``paymentInstrument.status``(GetPaymentInstrument 응답)
 
-    Raises TimeoutError if the resource has not reached expected_status
-    within ``timeout`` seconds.
-    Raises RuntimeError immediately if the resource enters a terminal
-    failure state (any status ending in ``_FAILED``).
+    resource가 ``timeout``초 이내에 expected_status에 도달하지 않으면
+    TimeoutError를 발생시킵니다.
+    resource가 종료 failure 상태(``_FAILED``로 끝나는 모든 상태)에 들어가면
+    즉시 RuntimeError를 발생시킵니다.
     """
     deadline = time.time() + timeout
     while True:
@@ -105,10 +103,10 @@ def wait_for_status(
 
 
 def idempotent_create(create_fn, conflict_msg: str = "Resource already exists", **kwargs) -> dict | None:
-    """Call create_fn; handle ConflictException gracefully.
+    """create_fn을 호출하고 ConflictException을 정상적으로 처리합니다.
 
-    Returns the API response on success, or None if the resource already exists.
-    Re-raises any other ClientError.
+    성공하면 API 응답을 반환하고 resource가 이미 있으면 None을 반환합니다.
+    그 밖의 ClientError는 다시 발생시킵니다.
     """
     try:
         return create_fn(**kwargs)
@@ -120,22 +118,20 @@ def idempotent_create(create_fn, conflict_msg: str = "Resource already exists", 
 
 
 def write_env_updates(updates: dict, env_path: str = ".env") -> None:
-    """Upsert key=value pairs into a dotenv file, preserving other lines.
+    """다른 줄을 보존하면서 dotenv 파일에 key=value 쌍을 upsert합니다.
 
-    Updates in-place — matching keys are replaced, new keys are appended,
-    comments and blank lines are preserved. Values are written verbatim
-    (no quoting), matching the existing .env style in this tutorial.
+    제자리에서 업데이트합니다. 일치하는 키는 교체하고 새 키는 추가하며,
+    주석과 빈 줄은 보존합니다. 이 자습서의 기존 .env 스타일에 맞춰 값을
+    그대로(따옴표 없이) 기록합니다.
 
-    Used only for non-secret values written by the notebook at runtime
-    (USER_ID, role ARNs, manager IDs, instrument IDs, session IDs,
-    wallet addresses). Wallet-provider secrets (Coinbase / Privy keys,
-    Privy authorization private key) are pasted into ``.env`` by the
-    user manually and never flow through this function. After §4 of
-    the notebook calls ``CreatePaymentCredentialProvider``, AgentCore
-    Identity stores those secrets in AWS Secrets Manager under KMS
-    encryption and only the credential-provider ARN remains in
-    ``.env`` for runtime use. The ``.env`` file itself is gitignored
-    from use-case creation.
+    Notebook이 runtime에 기록하는 비밀이 아닌 값(USER_ID, role ARN, manager ID,
+    instrument ID, session ID, wallet address)에만 사용합니다. Wallet provider
+    secret(Coinbase/Privy key, Privy authorization private key)은 사용자가
+    ``.env``에 직접 붙여 넣으며 이 함수를 통과하지 않습니다. Notebook 4절에서
+    ``CreatePaymentCredentialProvider``를 호출하면 AgentCore Identity가 해당
+    secret을 KMS로 암호화해 AWS Secrets Manager에 저장하고, runtime에서 사용할
+    credential provider ARN만 ``.env``에 남습니다. ``.env`` 파일 자체는 use case
+    생성 시점부터 gitignore 대상입니다.
     """
     import pathlib
 

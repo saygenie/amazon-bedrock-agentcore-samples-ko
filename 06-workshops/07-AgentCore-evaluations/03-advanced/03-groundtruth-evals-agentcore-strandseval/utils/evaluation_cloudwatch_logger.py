@@ -1,11 +1,11 @@
-"""Custom CloudWatch logger for evaluation results with original trace IDs.
+"""원본 trace ID가 포함된 평가 결과용 사용자 지정 CloudWatch 로거입니다.
 
-This module provides CloudWatch logging that uses the exact EMF format expected
-by AgentCore Observability Dashboard, but with trace IDs from the original
-AgentCore trace dataset instead of generating new ones.
+이 모듈은 AgentCore Observability Dashboard가 요구하는 정확한 EMF 형식을
+사용하되, 새 ID를 생성하는 대신 원본 AgentCore trace 데이터 세트의 trace ID를
+사용하는 CloudWatch 로깅을 제공합니다.
 
-Based on strands_evals.telemetry._cloudwatch_logger but modified to accept
-trace_id as a parameter from the case metadata.
+strands_evals.telemetry._cloudwatch_logger를 기반으로 하며 케이스 메타데이터의
+trace_id를 파라미터로 받도록 수정되었습니다.
 """
 
 import json
@@ -19,12 +19,12 @@ import boto3
 
 logger = logging.getLogger(__name__)
 
-# Module-level CloudWatch client (lazy initialization)
+# 모듈 수준 CloudWatch 클라이언트(지연 초기화)
 _cloudwatch_client = None
 
 
 def _get_cloudwatch_client():
-    """Get or create the CloudWatch Logs client (singleton pattern)."""
+    """CloudWatch Logs 클라이언트를 가져오거나 생성합니다(싱글턴 패턴)."""
     global _cloudwatch_client
     if _cloudwatch_client is None:
         region = os.environ.get("AWS_REGION", "us-east-1")
@@ -34,7 +34,7 @@ def _get_cloudwatch_client():
 
 @dataclass
 class EvaluationLogConfig:
-    """Configuration for evaluation logging."""
+    """평가 로깅용 구성입니다."""
 
     destination_log_group: str
     log_stream: str
@@ -43,22 +43,22 @@ class EvaluationLogConfig:
 
     @classmethod
     def from_environment(cls) -> "EvaluationLogConfig":
-        """Parse log configuration from environment variables.
+        """환경 변수에서 로그 구성을 파싱합니다.
 
-        Environment variables:
-        - EVALUATION_RESULTS_LOG_GROUP: Base name for results log group
-        - LOG_STREAM_NAME: Explicit log stream name (takes priority)
-        - OTEL_RESOURCE_ATTRIBUTES: Contains service.name and optionally aws.log.group.names
-        - OTEL_EXPORTER_OTLP_LOGS_HEADERS: Contains x-aws-log-stream (fallback)
+        환경 변수:
+        - EVALUATION_RESULTS_LOG_GROUP: 결과 로그 그룹의 기본 이름
+        - LOG_STREAM_NAME: 명시적 로그 스트림 이름(우선 적용)
+        - OTEL_RESOURCE_ATTRIBUTES: service.name 및 선택적으로 aws.log.group.names 포함
+        - OTEL_EXPORTER_OTLP_LOGS_HEADERS: x-aws-log-stream 포함(대체 값)
         """
-        # Destination log group from EVALUATION_RESULTS_LOG_GROUP
+        # EVALUATION_RESULTS_LOG_GROUP에서 대상 로그 그룹 가져오기
         base_log_group = os.environ.get("EVALUATION_RESULTS_LOG_GROUP", "default_strands_evals_results")
         destination_log_group = f"/aws/bedrock-agentcore/evaluations/results/{base_log_group}"
 
-        # Log stream: First check LOG_STREAM_NAME env var (explicit override)
+        # 로그 스트림: 먼저 LOG_STREAM_NAME 환경 변수 확인(명시적 재정의)
         log_stream = os.environ.get("LOG_STREAM_NAME", "")
 
-        # Fallback: Parse log stream from OTEL_EXPORTER_OTLP_LOGS_HEADERS
+        # 대체 방식: OTEL_EXPORTER_OTLP_LOGS_HEADERS에서 로그 스트림 파싱
         if not log_stream:
             logs_headers = os.environ.get("OTEL_EXPORTER_OTLP_LOGS_HEADERS", "")
             if logs_headers:
@@ -69,11 +69,11 @@ class EvaluationLogConfig:
                             log_stream = value.strip()
                             break
 
-        # Final fallback: use "default"
+        # 최종 대체 값: "default" 사용
         if not log_stream:
             log_stream = "default"
 
-        # Parse OTEL_RESOURCE_ATTRIBUTES for service.name and aws.log.group.names
+        # OTEL_RESOURCE_ATTRIBUTES에서 service.name과 aws.log.group.names 파싱
         resource_attrs = os.environ.get("OTEL_RESOURCE_ATTRIBUTES", "")
         service_name = None
         resource_log_group = None
@@ -109,23 +109,23 @@ def send_evaluation_to_cloudwatch(
     label: Optional[str] = None,
     config_id: str = "strands-offline-evaluation",
 ) -> bool:
-    """Send evaluation result to CloudWatch in EMF format.
+    """평가 결과를 EMF 형식으로 CloudWatch에 전송합니다.
 
-    This function uses the exact EMF format expected by AgentCore Observability Dashboard,
-    but with the trace_id from the original AgentCore trace dataset.
+    이 함수는 AgentCore Observability Dashboard가 요구하는 정확한 EMF 형식을
+    사용하되, 원본 AgentCore trace 데이터 세트의 trace_id를 사용합니다.
 
-    Args:
-        trace_id: The original trace ID from AgentCore Observability (passed through from case metadata)
-        session_id: The session ID from the original trace dataset
-        evaluator_name: Full evaluator name (e.g., "Custom.StrandsEvalOfflineTravelEvaluator")
-        score: Evaluation score (0.0 to 1.0)
-        explanation: Explanation for the score
-        evaluation_level: "Trace" or "Span" (default: "Trace")
-        label: Score label ("YES", "NO", or custom). If None, derived from score.
-        config_id: Configuration ID for ARN construction (default: "strands-offline-evaluation")
+    인수:
+        trace_id: AgentCore Observability의 원본 trace ID(케이스 메타데이터에서 전달)
+        session_id: 원본 trace 데이터 세트의 세션 ID
+        evaluator_name: 전체 Evaluator 이름(예: "Custom.StrandsEvalOfflineTravelEvaluator")
+        score: 평가 점수(0.0~1.0)
+        explanation: 점수에 대한 설명
+        evaluation_level: "Trace" 또는 "Span"(기본값: "Trace")
+        label: 점수 레이블("YES", "NO" 또는 사용자 지정). None이면 점수에서 파생합니다.
+        config_id: ARN 생성용 구성 ID(기본값: "strands-offline-evaluation")
 
-    Returns:
-        True if logging succeeded, False otherwise
+    반환값:
+        로깅에 성공하면 True, 그렇지 않으면 False
     """
     try:
         config = EvaluationLogConfig.from_environment()
@@ -136,7 +136,7 @@ def send_evaluation_to_cloudwatch(
 
         cloudwatch_client = _get_cloudwatch_client()
 
-        # Ensure log group exists
+        # 로그 그룹이 있는지 확인
         try:
             cloudwatch_client.create_log_group(logGroupName=config.destination_log_group)
             logger.info(f"Created log group: {config.destination_log_group}")
@@ -145,7 +145,7 @@ def send_evaluation_to_cloudwatch(
         except Exception as e:
             logger.warning(f"Failed to create log group: {str(e)}")
 
-        # Ensure log stream exists
+        # 로그 스트림이 있는지 확인
         try:
             cloudwatch_client.create_log_stream(
                 logGroupName=config.destination_log_group,
@@ -157,7 +157,7 @@ def send_evaluation_to_cloudwatch(
         except Exception as e:
             logger.warning(f"Failed to create log stream: {str(e)}")
 
-        # Get sequence token for the log stream
+        # 로그 스트림의 sequence token 가져오기
         sequence_token = None
         try:
             response = cloudwatch_client.describe_log_streams(
@@ -169,24 +169,24 @@ def send_evaluation_to_cloudwatch(
         except Exception as e:
             logger.warning(f"Failed to get sequence token: {str(e)}")
 
-        # Derive label from score if not provided
+        # 제공되지 않은 경우 점수에서 레이블 파생
         if label is None:
             label = "YES" if score >= 0.5 else "NO"
 
-        # Build ARNs (using bedrock-agentcore format)
+        # ARN 생성(bedrock-agentcore 형식 사용)
         region = os.environ.get("AWS_REGION", "us-east-1")
         account_id = os.environ.get("AWS_ACCOUNT_ID", "")
         config_arn = f"arn:aws:bedrock-agentcore:{region}:{account_id}:online-evaluation-config/{config_id}"
         evaluator_arn = f"arn:aws:bedrock-agentcore:::evaluator/{evaluator_name}"
 
-        # Derive config_name from config_id (e.g., "EKS_Agent_Evaluation" from "EKS_Agent_Evaluation-5MB8aF5rLE")
+        # config_id에서 config_name 파생(예: "EKS_Agent_Evaluation-5MB8aF5rLE"에서 "EKS_Agent_Evaluation")
         config_name = config_id.rsplit("-", 1)[0] if "-" in config_id else config_id
 
-        # Get current timestamp
+        # 현재 타임스탬프 가져오기
         current_time_ns = time.time_ns()
         current_time_ms = int(current_time_ns / 1_000_000)
 
-        # Build log_data (attributes that go inside EMF)
+        # log_data 생성(EMF 내부에 들어가는 속성)
         log_data = {
             "gen_ai.evaluation.name": evaluator_name,
             "session.id": session_id,
@@ -201,7 +201,7 @@ def send_evaluation_to_cloudwatch(
             "aws.bedrock_agentcore.evaluation_level": evaluation_level,
         }
 
-        # Build EMF log structure (exact format from strands_evals)
+        # EMF 로그 구조 생성(strands_evals와 정확히 같은 형식)
         emf_log = {
             "resource": {
                 "attributes": {
@@ -219,7 +219,7 @@ def send_evaluation_to_cloudwatch(
                 **log_data,
             },
             "onlineEvaluationConfigId": config_id,
-            evaluator_name: score,  # Dynamic key for metric
+            evaluator_name: score,  # 지표용 동적 키
             "label": label,
             "service.name": config.service_name,
             "_aws": {
@@ -239,7 +239,7 @@ def send_evaluation_to_cloudwatch(
             },
         }
 
-        # Send to CloudWatch
+        # CloudWatch로 전송
         log_event = {"timestamp": current_time_ms, "message": json.dumps(emf_log)}
 
         put_log_params = {
@@ -269,15 +269,15 @@ def log_evaluation_batch(
     evaluator_name: str,
     config_id: str = "strands-offline-evaluation",
 ) -> int:
-    """Send multiple evaluation results to CloudWatch.
+    """여러 평가 결과를 CloudWatch에 전송합니다.
 
-    Args:
-        results: List of dicts with keys: trace_id, session_id, score, explanation, label (optional)
-        evaluator_name: Full evaluator name
-        config_id: Configuration ID
+    인수:
+        results: trace_id, session_id, score, explanation, label(선택 사항) 키가 있는 딕셔너리 목록
+        evaluator_name: 전체 Evaluator 이름
+        config_id: 구성 ID
 
-    Returns:
-        Number of successfully logged results
+    반환값:
+        성공적으로 기록된 결과 수
     """
     success_count = 0
     for result in results:

@@ -1,11 +1,11 @@
 """
-Lab 05: Supervisor Runtime IAM Setup
+Lab 05: Supervisor Runtime IAM 설정
 
-Creates IAM role for supervisor agent runtime with permissions to:
-- Invoke Bedrock models for orchestration
-- Call 3 sub-agent gateways with JWT token propagation
-- Retrieve gateway URLs from Parameter Store
-- Write logs to CloudWatch
+다음 권한이 포함된 Supervisor Agent Runtime용 IAM 역할을 생성합니다.
+- 오케스트레이션을 위한 Bedrock 모델 호출
+- JWT 토큰 전파를 사용해 세 개의 하위 Agent Gateway 호출
+- Parameter Store에서 Gateway URL 조회
+- CloudWatch에 로그 쓰기
 """
 
 import json
@@ -21,39 +21,39 @@ logger = logging.getLogger(__name__)
 
 def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION, account_id: str = None) -> Dict:
     """
-    Create IAM role for Supervisor Runtime with multi-gateway orchestration permissions.
+    Multi-Gateway 오케스트레이션 권한이 포함된 Supervisor Runtime용 IAM 역할을 생성합니다.
 
-    The supervisor runtime needs permissions to:
-    1. Connect to 3 different agent gateways (Diagnostics, Remediation, Prevention)
-    2. Orchestrate requests across multiple agents
-    3. Invoke Bedrock models for LLM-based orchestration logic
-    4. Retrieve gateway URLs from Parameter Store
-    5. Write logs to CloudWatch
+    Supervisor Runtime에는 다음 권한이 필요합니다.
+    1. 서로 다른 세 개의 Agent Gateway(Diagnostics, Remediation, Prevention) 연결
+    2. 여러 Agent에 걸친 요청 오케스트레이션
+    3. LLM 기반 오케스트레이션 로직을 위한 Bedrock 모델 호출
+    4. Parameter Store에서 Gateway URL 조회
+    5. CloudWatch에 로그 쓰기
 
-    Authentication uses JWT token propagation:
-    - User provides JWT token in Authorization header
-    - Supervisor Runtime extracts JWT and propagates to gateway connections
-    - No M2M credentials or token retrieval needed
+    인증에는 JWT 토큰 전파를 사용합니다.
+    - 사용자가 Authorization 헤더에 JWT 토큰 제공
+    - Supervisor Runtime이 JWT를 추출해 Gateway 연결로 전파
+    - M2M 자격 증명이나 토큰 조회가 필요하지 않음
 
-    Args:
-        role_name: Name for the IAM role
-        region: AWS region (default: from config)
-        account_id: AWS account ID (auto-detected if not provided)
+    인자:
+        role_name: IAM 역할 이름
+        region: AWS 리전(기본값: 구성에서 가져옴)
+        account_id: AWS 계정 ID(제공하지 않으면 자동 감지)
 
-    Returns:
-        Dict with role_name, role_arn, and policy details
+    반환:
+        role_name, role_arn 및 정책 세부 정보가 포함된 딕셔너리
     """
     iam = boto3.client("iam", region_name=region)
     sts = boto3.client("sts", region_name=region)
 
-    # Get account ID
+    # 계정 ID 조회
     if not account_id:
         account_id = sts.get_caller_identity()["Account"]
 
     logger.info(f"Creating supervisor runtime IAM role: {role_name}")
     logger.info("Authentication: JWT token propagation (User JWT → Supervisor → Gateways)")
 
-    # Trust policy: Allow bedrock-agentcore service to assume role
+    # 신뢰 정책: bedrock-agentcore 서비스가 역할을 수임하도록 허용
     trust_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -69,7 +69,7 @@ def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION,
         ],
     }
 
-    # Create role
+    # 역할 생성
     try:
         response = iam.create_role(
             RoleName=role_name,
@@ -92,12 +92,12 @@ def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION,
             logger.error(f"❌ Failed to create role: {e}")
             raise
 
-    # Inline policy for supervisor-specific permissions
+    # Supervisor 전용 권한을 위한 인라인 정책
     policy_name = f"{role_name}-policy"
     supervisor_policy = {
         "Version": "2012-10-17",
         "Statement": [
-            # 1. Bedrock Model Invocation (for orchestration logic)
+            # 1. Bedrock 모델 호출(오케스트레이션 로직용)
             {
                 "Sid": "BedrockModelInvocation",
                 "Effect": "Allow",
@@ -108,14 +108,14 @@ def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION,
                     "bedrock:ConverseStream",
                 ],
                 "Resource": [
-                    "arn:aws:bedrock:*::foundation-model/*",  # Cross-region model IDs (e.g., us.anthropic.claude-*)
+                    "arn:aws:bedrock:*::foundation-model/*",  # Cross-region 모델 ID(예: us.anthropic.claude-*)
                     f"arn:aws:bedrock:{region}:{account_id}:inference-profile/*",
                     f"arn:aws:bedrock:us-east-1:{account_id}:inference-profile/*",
                     f"arn:aws:bedrock:us-east-2:{account_id}:inference-profile/*",
                     f"arn:aws:bedrock:us-west-2:{account_id}:inference-profile/*",
                 ],
             },
-            # 2. CloudWatch Logs (Runtime logging)
+            # 2. CloudWatch Logs(Runtime 로깅)
             {
                 "Sid": "CloudWatchLogs",
                 "Effect": "Allow",
@@ -127,14 +127,14 @@ def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION,
                 ],
                 "Resource": [f"arn:aws:logs:{region}:{account_id}:log-group:/aws/bedrock-agentcore/*"],
             },
-            # 2b. X-Ray Tracing (Runtime observability and tracing)
+            # 2b. X-Ray 추적(Runtime 관찰성 및 추적)
             {
                 "Sid": "XRayTracing",
                 "Effect": "Allow",
                 "Action": ["xray:PutTraceSegments", "xray:PutTelemetryRecords"],
                 "Resource": "*",
             },
-            # 3. Gateway Access (call sub-agent gateways)
+            # 3. Gateway 접근(하위 Agent Gateway 호출)
             {
                 "Sid": "GatewayAccess",
                 "Effect": "Allow",
@@ -145,7 +145,7 @@ def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION,
                 ],
                 "Resource": [f"arn:aws:bedrock-agentcore:{region}:{account_id}:gateway/*"],
             },
-            # 6. Parameter Store (Configuration and gateway URL retrieval)
+            # 6. Parameter Store(구성 및 Gateway URL 조회)
             {
                 "Sid": "ParameterStoreRead",
                 "Effect": "Allow",
@@ -156,7 +156,7 @@ def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION,
                 ],
                 "Resource": [f"arn:aws:ssm:{region}:{account_id}:parameter/*"],
             },
-            # 7. KMS (Decrypt secrets and parameters)
+            # 7. KMS(보안 암호 및 파라미터 복호화)
             {
                 "Sid": "KMSDecrypt",
                 "Effect": "Allow",
@@ -171,7 +171,7 @@ def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION,
                     }
                 },
             },
-            # 8. ECR Access (Pull container images)
+            # 8. ECR 접근(컨테이너 이미지 가져오기)
             {
                 "Sid": "ECRAccess",
                 "Effect": "Allow",
@@ -186,7 +186,7 @@ def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION,
         ],
     }
 
-    # Attach inline policy
+    # 인라인 정책 연결
     try:
         iam.put_role_policy(
             RoleName=role_name,
@@ -198,7 +198,7 @@ def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION,
         logger.error(f"❌ Failed to attach policy: {e}")
         raise
 
-    # Return role information
+    # 역할 정보 반환
     return {
         "role_name": role_name,
         "role_arn": role_arn,
@@ -218,33 +218,33 @@ def create_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION,
 
 def delete_supervisor_runtime_iam_role(role_name: str, region: str = AWS_REGION) -> bool:
     """
-    Delete supervisor runtime IAM role and associated policies.
+    Supervisor Runtime IAM 역할과 관련 정책을 삭제합니다.
 
-    Args:
-        role_name: Name of the IAM role to delete
-        region: AWS region (default: from config)
+    인자:
+        role_name: 삭제할 IAM 역할 이름
+        region: AWS 리전(기본값: 구성에서 가져옴)
 
-    Returns:
-        True if deletion successful, False otherwise
+    반환:
+        삭제에 성공하면 True, 그렇지 않으면 False
     """
     iam = boto3.client("iam", region_name=region)
 
     logger.info(f"Deleting supervisor runtime IAM role: {role_name}")
 
     try:
-        # List and delete inline policies
+        # 인라인 정책을 나열하고 삭제
         response = iam.list_role_policies(RoleName=role_name)
         for policy_name in response.get("PolicyNames", []):
             iam.delete_role_policy(RoleName=role_name, PolicyName=policy_name)
             logger.info(f"✅ Deleted inline policy: {policy_name}")
 
-        # List and detach managed policies
+        # 관리형 정책을 나열하고 분리
         response = iam.list_attached_role_policies(RoleName=role_name)
         for policy in response.get("AttachedPolicies", []):
             iam.detach_role_policy(RoleName=role_name, PolicyArn=policy["PolicyArn"])
             logger.info(f"✅ Detached managed policy: {policy['PolicyName']}")
 
-        # Delete role
+        # 역할 삭제
         iam.delete_role(RoleName=role_name)
         logger.info(f"✅ Deleted role: {role_name}")
 

@@ -1,63 +1,63 @@
-# Amazon Bedrock AgentCore Observability: Data Protection
+# Amazon Bedrock AgentCore Observability: 데이터 보호
 
-## Overview
+## 개요
 
-In this tutorial, we will learn how to implement comprehensive data protection in agentic AI applications using Amazon Bedrock Guardrails and Amazon CloudWatch Logs Data Protection policies. This tutorial demonstrates how to protect sensitive data throughout the agent's lifecycle, from input processing to output generation and logging.
+이 자습서에서는 Amazon Bedrock Guardrails와 Amazon CloudWatch Logs Data Protection 정책을 사용하여 에이전틱 AI 애플리케이션에 포괄적인 데이터 보호를 구현하는 방법을 학습합니다. 입력 처리부터 출력 생성 및 로깅에 이르기까지 에이전트의 전체 수명 주기에서 민감한 데이터를 보호하는 방법을 살펴봅니다.
 
-We will focus on creating a defense-in-depth strategy for securing your AI applications by combining multiple layers of protection that work in tandem to safeguard personally identifiable information (PII), financial data, health records, and other confidential information.
+개인 식별 정보(PII), 금융 데이터, 건강 기록 및 기타 기밀 정보를 보호하기 위해 함께 작동하는 여러 보호 계층을 결합하여 AI 애플리케이션을 보호하는 심층 방어 전략을 구축하는 데 중점을 둡니다.
 
-### Tutorial Details
+### 자습서 세부 정보
 
-| Information         | Details                                                                          |
+| 정보                | 세부 정보                                                                         |
 |:--------------------|:---------------------------------------------------------------------------------|
-| Tutorial type       | Observability & Security                                                         |
-| Agent type          | Single                                                                           |
-| Agentic Framework   | Strands Agents                                                                   |
-| LLM model           | Anthropic Claude Haiku 4.5                                                     |
-| Tutorial components | Data Protection, Bedrock Guardrails, CloudWatch Logs Data Protection           |
-| Tutorial vertical   | Cross-vertical                                                                   |
-| Example complexity  | Advanced                                                                         |
-| SDK used            | Amazon BedrockAgentCore Python SDK and boto3                                    |
+| 자습서 유형         | 관측성 및 보안                                                                    |
+| 에이전트 유형       | 단일 에이전트                                                                     |
+| 에이전트 프레임워크 | Strands Agents                                                                   |
+| LLM 모델            | Anthropic Claude Haiku 4.5                                                       |
+| 자습서 구성 요소    | 데이터 보호, Bedrock Guardrails, CloudWatch Logs Data Protection                |
+| 자습서 산업군       | 산업 전반                                                                         |
+| 예제 난이도         | 고급                                                                              |
+| 사용 SDK            | Amazon BedrockAgentCore Python SDK 및 boto3                                      |
 
-### Tutorial Architecture
+### 자습서 아키텍처
 
-In this tutorial, we will demonstrate how to implement data protection mechanisms for agents deployed on AgentCore runtime. We'll use a customer support agent that processes sensitive information and show how to protect this data using multiple layers of security.
+이 자습서에서는 AgentCore Runtime에 배포된 에이전트에 데이터 보호 메커니즘을 구현하는 방법을 살펴봅니다. 민감한 정보를 처리하는 고객 지원 에이전트를 사용하여 여러 보안 계층으로 데이터를 보호하는 방법을 보여 줍니다.
 
-The example includes:
-- A Strands Agent with customer support capabilities
-- Amazon Bedrock Guardrails for content filtering
-- CloudWatch Logs Data Protection for log masking
-- Sensitive information detection and handling
+예제에는 다음 항목이 포함됩니다.
+- 고객 지원 기능을 갖춘 Strands Agents
+- 콘텐츠 필터링을 위한 Amazon Bedrock Guardrails
+- 로그 마스킹을 위한 CloudWatch Logs Data Protection
+- 민감한 정보 탐지 및 처리
 
-### Tutorial Key Features
+### 자습서 주요 기능
 
-* **Multi-layered Data Protection**: Implementing Bedrock Guardrails and CloudWatch Logs Data Protection
-* **Sensitive Information Detection**: Automatically detecting PII, financial data, and other confidential information
-* **Agent Security**: Protecting sensitive data in agent interactions and traces
-* **Compliance Support**: Meeting privacy regulations (GDPR, HIPAA, CCPA) requirements
-* **Defense-in-Depth Strategy**: Creating comprehensive security for agentic AI applications
+* **다계층 데이터 보호**: Bedrock Guardrails 및 CloudWatch Logs Data Protection 구현
+* **민감한 정보 탐지**: PII, 금융 데이터 및 기타 기밀 정보 자동 탐지
+* **에이전트 보안**: 에이전트 상호 작용과 트레이스의 민감한 데이터 보호
+* **규정 준수 지원**: 개인 정보 보호 규정(GDPR, HIPAA, CCPA) 요구 사항 충족
+* **심층 방어 전략**: 에이전틱 AI 애플리케이션을 위한 포괄적인 보안 구축
 
-## What You'll Learn
+## 학습 내용
 
-In this hands-on tutorial, you'll explore:
+이 실습 자습서에서는 다음 내용을 살펴봅니다.
 
-- How to detect sensitive information in Agent interactions and CloudWatch Logs and Traces
-- Amazon Bedrock Guardrails: How to configure sensitive information filters to prevent AI agents from processing or generating sensitive content
-- CloudWatch Logs Data Protection: How to automatically detect and mask sensitive data in application logs
-- AgentCore Integration: How to implement these protective measures within agentic workflows
+- 에이전트 상호 작용과 CloudWatch 로그 및 트레이스에서 민감한 정보를 탐지하는 방법
+- Amazon Bedrock Guardrails: AI 에이전트가 민감한 콘텐츠를 처리하거나 생성하지 못하도록 민감한 정보 필터를 구성하는 방법
+- CloudWatch Logs Data Protection: 애플리케이션 로그에서 민감한 데이터를 자동으로 탐지하고 마스킹하는 방법
+- AgentCore 통합: 에이전트 워크플로에 이러한 보호 조치를 구현하는 방법
 
-## Why This Matters
+## 중요한 이유
 
-Without proper safeguards, agentic AI systems can:
+적절한 보호 조치가 없으면 에이전틱 AI 시스템에서 다음 문제가 발생할 수 있습니다.
 
-- Inadvertently expose sensitive customer data in responses or logs
-- Process or retain information that violates privacy regulations
-- Generate outputs containing PII that shouldn't be shared
-- Create compliance and security vulnerabilities in your application infrastructure
+- 응답이나 로그에서 민감한 고객 데이터가 의도치 않게 노출됨
+- 개인 정보 보호 규정을 위반하는 정보를 처리하거나 보관함
+- 공유해서는 안 되는 PII가 포함된 출력을 생성함
+- 애플리케이션 인프라에 규정 준수 및 보안 취약점을 만듦
 
-## Files in this Tutorial
+## 자습서 파일
 
-- `data_protection.ipynb` - Main tutorial notebook with step-by-step instructions
-- `requirements.txt` - Python dependencies required for the tutorial
-- `data/` - Sample data files including customer support conversation examples
-- `images/` - Architecture diagrams and visual aids for the tutorial
+- `data_protection.ipynb` - 단계별 지침이 포함된 기본 자습서 노트북
+- `requirements.txt` - 자습서에 필요한 Python 종속성
+- `data/` - 고객 지원 대화 예제를 포함한 샘플 데이터 파일
+- `images/` - 자습서용 아키텍처 다이어그램 및 시각 자료

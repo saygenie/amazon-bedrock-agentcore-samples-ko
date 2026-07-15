@@ -3,7 +3,7 @@ set -euo pipefail
 
 # -------------------------------------------------------
 # deploy.sh
-# Deploys the CloudFormation stack.
+# CloudFormation stack을 배포합니다.
 # -------------------------------------------------------
 
 usage() {
@@ -33,7 +33,7 @@ EOF
   exit 1
 }
 
-# --- Defaults ---
+# --- 기본값 ---
 AWS_REGION=""
 STACK_NAME=""
 PREFIX=""
@@ -44,7 +44,7 @@ S3_BUCKET=""
 LAYER_KEY=""
 SKIP_LAYER_BUILD=false
 
-# --- Parse arguments ---
+# --- 인수 파싱 ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --stack-name)     STACK_NAME="$2";     shift 2 ;;
@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# --- Validate required arguments ---
+# --- 필수 인수 검증 ---
 missing=()
 [[ -z "${STACK_NAME}" ]]     && missing+=("--stack-name")
 [[ -z "${PREFIX}" ]]         && missing+=("--prefix")
@@ -76,7 +76,7 @@ if [[ ${#missing[@]} -gt 0 ]]; then
   usage
 fi
 
-# --- Resolve layer key ---
+# --- layer key 확인 ---
 if [[ "${SKIP_LAYER_BUILD}" == true ]]; then
   if [[ -z "${LAYER_KEY}" ]]; then
     echo "Error: --layer-key is required when --skip-layer-build is set"
@@ -86,7 +86,7 @@ else
   LAYER_KEY="cicd_dependencies_layer-$(date +%Y%m%d%H%M%S).zip"
 fi
 
-# --- Resolve S3 bucket (auto-create if not provided) ---
+# --- S3 bucket 확인(지정하지 않으면 자동 생성) ---
 if [[ -z "${S3_BUCKET}" ]]; then
   ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text --region "${AWS_REGION}")
   S3_BUCKET="${PREFIX}-deploy-artifacts-${ACCOUNT_ID}-${AWS_REGION}"
@@ -114,11 +114,11 @@ else
   echo "S3 bucket created: ${S3_BUCKET}"
 fi
 
-# --- Paths ---
+# --- 경로 ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATE="${SCRIPT_DIR}/cfn_eventbridge.yaml"
 
-# --- Ensure zip is installed ---
+# --- zip 설치 확인 ---
 if ! command -v zip &>/dev/null; then
   echo "zip not found, installing..."
   if command -v apt-get &>/dev/null; then
@@ -133,7 +133,7 @@ if ! command -v zip &>/dev/null; then
   fi
 fi
 
-# --- Build and upload Lambda layer ---
+# --- Lambda layer build 및 업로드 ---
 if [[ "${SKIP_LAYER_BUILD}" == true ]]; then
   echo "Skipping Lambda layer build and upload (--skip-layer-build set)."
 else
@@ -156,7 +156,7 @@ else
   rm -f "${LAYER_ZIP}"
 fi
 
-# --- Deploy CloudFormation stack ---
+# --- CloudFormation stack 배포 ---
 echo "Deploying CloudFormation stack: ${STACK_NAME}..."
 aws cloudformation deploy \
   --template-file "${TEMPLATE}" \
@@ -178,5 +178,5 @@ aws cloudformation describe-stacks \
   --query "Stacks[0].Outputs" \
   --output table
 
-# --- Cleanup ---
+# --- 정리 ---
 echo "Deployment complete."

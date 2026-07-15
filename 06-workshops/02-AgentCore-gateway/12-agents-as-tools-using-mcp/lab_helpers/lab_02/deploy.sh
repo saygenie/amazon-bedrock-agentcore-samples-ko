@@ -1,11 +1,11 @@
 #!/bin/bash
-# Lab 02: ONE-LINE Lambda Deployment
-# Usage: bash lab_helpers/lab_02/deploy.sh
-# That's it! Everything is automatic.
+# Lab 02: 단일 명령 Lambda 배포
+# 사용법: bash lab_helpers/lab_02/deploy.sh
+# 이 명령 하나로 모든 과정이 자동 실행됩니다.
 
 set -e
 
-# Navigate to workshop root directory (parent of lab_helpers)
+# 워크숍 루트 디렉터리로 이동(lab_helpers의 상위 디렉터리)
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 WORKSHOP_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
 cd "$WORKSHOP_ROOT"
@@ -14,14 +14,14 @@ echo "🚀 Lab 02: Lambda ZIP Deployment (VPC-friendly)"
 echo "📂 Working directory: $(pwd)"
 echo ""
 
-# Verify prerequisites
+# 사전 요구 사항 확인
 command -v python3 &> /dev/null || { echo "❌ Python3 required"; exit 1; }
 command -v aws &> /dev/null || { echo "❌ AWS CLI required"; exit 1; }
 
 echo "✓ Prerequisites OK"
 echo ""
 
-# Create Lambda role if it doesn't exist
+# Lambda 역할이 없으면 생성
 ROLE_NAME="aiml301-diagnostic-lambda-role"
 if ! aws iam get-role --role-name "$ROLE_NAME" 2>/dev/null; then
     echo "→ Creating IAM role..."
@@ -41,10 +41,10 @@ if ! aws iam get-role --role-name "$ROLE_NAME" 2>/dev/null; then
     echo "✓ IAM role created"
 fi
 
-# Get role ARN and save to Parameter Store (using Python to ensure consistency with constants.py)
+# 역할 ARN을 가져와 Parameter Store에 저장(constants.py와의 일관성을 위해 Python 사용)
 ROLE_ARN=$(aws iam get-role --role-name "$ROLE_NAME" --query 'Role.Arn' --output text)
 
-# Use Python to save role ARN via put_parameter helper (ensures consistency with constants.py)
+# Python에서 put_parameter 헬퍼로 역할 ARN 저장(constants.py와의 일관성 유지)
 python3 << PYTHON_SAVE_ROLE
 import sys
 sys.path.insert(0, '.')
@@ -67,16 +67,16 @@ except Exception as e:
     print(f"⚠ Warning: Could not save role ARN to Parameter Store: {e}")
 PYTHON_SAVE_ROLE
 
-# Wait for IAM and Parameter Store propagation
+# IAM 및 Parameter Store 전파 대기
 sleep 5
 
 echo "→ Deploying Lambda..."
 echo ""
 
-# Export role ARN for Python to access
+# Python에서 접근할 수 있도록 역할 ARN 내보내기
 export LAMBDA_ROLE_ARN="$ROLE_ARN"
 
-# Deploy using Python (one simple call)
+# Python을 사용해 배포(간단한 호출 한 번)
 python3 << 'EOF'
 import sys
 import os

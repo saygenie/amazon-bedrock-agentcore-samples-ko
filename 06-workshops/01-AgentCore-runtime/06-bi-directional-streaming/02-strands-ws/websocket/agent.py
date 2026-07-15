@@ -14,18 +14,18 @@ DEFAULT_SYSTEM_PROMPT = """You are a friendly companion having a casual chat. Be
 
 
 def get_system_prompt() -> str:
-    """Get the default system prompt for the banking assistant."""
+    """Banking Assistant의 기본 system prompt를 가져옵니다."""
     return DEFAULT_SYSTEM_PROMPT
 
 
 async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: list, send_output=None):
     """
-    Handle a WebSocket session: wait for config event, initialize agent, and run.
+    WebSocket 세션을 처리합니다. 구성 이벤트를 기다리고 Agent를 초기화한 뒤 실행합니다.
 
-    Args:
-        websocket: The accepted WebSocket connection.
-        default_gateway_arns: Gateway ARNs from environment (used as fallback).
-        send_output: Optional async callable for sending output events. Defaults to websocket.send_json.
+    인자:
+        websocket: 수락된 WebSocket 연결입니다.
+        default_gateway_arns: 환경의 Gateway ARN입니다(대체 값으로 사용).
+        send_output: 출력 이벤트를 전송하는 선택적 비동기 callable입니다. 기본값은 websocket.send_json입니다.
     """
     agent = None
     output_fn = send_output or websocket.send_json
@@ -34,21 +34,21 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
     logger.info("⏳ Waiting for config event from client...")
 
     try:
-        # Wait for initial config event
+        # 초기 구성 이벤트 대기
         config, api_key, system_prompt = await _wait_for_config(websocket)
         if config is None:
             return
 
-        # Initialize agent from config
+        # 구성에서 Agent 초기화
         agent = _create_agent(
             config,
             default_gateway_arns,
             api_key=api_key,
             system_prompt=system_prompt,
         )
-        logger.info("✅ Agent initialized successfully")  # config details logged in _wait_for_config
+        logger.info("✅ Agent initialized successfully")  # 구성 세부 정보는 _wait_for_config에서 기록
 
-        # Send acknowledgment back to client
+        # 클라이언트에 확인 응답 전송
         await websocket.send_json(
             {
                 "type": "system",
@@ -56,13 +56,13 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
             }
         )
 
-        # Define input handler
+        # 입력 핸들러 정의
         async def handle_websocket_input():
-            """Handle incoming messages from the client, filtering config, text, and audio."""
+            """클라이언트에서 들어오는 메시지를 처리하고 구성, 텍스트 및 오디오를 필터링합니다."""
             while True:
                 message = await websocket.receive_json()
 
-                # Handle subsequent config events (not allowed after initialization)
+                # 후속 구성 이벤트 처리(초기화 후에는 허용되지 않음)
                 if message.get("type") == "config":
                     logger.info("⚠️ Config event received after initialization - ignoring")
                     await websocket.send_json(
@@ -73,24 +73,24 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
                     )
                     continue
 
-                # Check if it's a text message from the client
+                # 클라이언트의 텍스트 메시지인지 확인
                 elif message.get("type") == "text_input":
                     text = message.get("text", "")
                     logger.info("Received text input")
                     await agent.send(text)
                     continue
 
-                # Audio and other events - pass through to agent
+                # 오디오 및 기타 이벤트는 Agent로 전달
                 else:
                     return message
 
-        # Start the agent with the input handler
+        # 입력 핸들러와 함께 Agent 시작
         await agent.run(inputs=[handle_websocket_input], outputs=[output_fn])
 
     except WebSocketDisconnect:
         logger.info("Client disconnected")
     except Exception as e:
-        # Ignore AWS CRT cancelled future errors during cleanup
+        # 정리 중 발생하는 AWS CRT의 취소된 future 오류 무시
         if "InvalidStateError" in type(e).__name__ or "CANCELLED" in str(e):
             logger.warning("Ignoring CRT cleanup error")
         else:
@@ -107,11 +107,11 @@ async def handle_websocket_session(websocket: WebSocket, default_gateway_arns: l
 async def _wait_for_config(
     websocket: WebSocket,
 ) -> tuple[dict | None, str | None, str | None]:
-    """Wait for the initial config event from the client.
+    """클라이언트의 초기 구성 이벤트를 기다립니다.
 
-    Returns (config_dict, api_key, system_prompt) — sensitive and
-    user-provided text fields are kept separate so the config dict
-    stays free of tainted data for CodeQL compliance.
+    (config_dict, api_key, system_prompt)를 반환합니다. CodeQL 규정 준수를 위해
+    민감한 필드와 사용자가 제공한 텍스트 필드를 분리하여 config dict에
+    오염된 데이터가 남지 않도록 합니다.
     """
     while True:
         message = await websocket.receive_json()
@@ -150,8 +150,8 @@ def _create_agent(
     api_key: str = None,
     system_prompt: str = None,
 ) -> BidiAgent:
-    """Create and return a BidiAgent from the given config."""
-    # Use gateway ARNs from config if provided, otherwise use environment defaults
+    """주어진 구성에서 BidiAgent를 생성해 반환합니다."""
+    # 구성에 Gateway ARN이 있으면 사용하고, 없으면 환경 기본값 사용
     effective_gateway_arns = config["gateway_arns"] if config["gateway_arns"] else default_gateway_arns
     effective_system_prompt = system_prompt if system_prompt else get_system_prompt()
 
@@ -173,7 +173,7 @@ def _create_agent(
 
 
 def _create_model(config: dict, effective_gateway_arns: list, api_key: str = None):
-    """Create the appropriate BidiModel based on model_id."""
+    """model_id에 따라 적절한 BidiModel을 생성합니다."""
     model_id = config["model_id"]
 
     # Nova Sonic

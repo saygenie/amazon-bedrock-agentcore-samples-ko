@@ -9,7 +9,7 @@ import math
 app = BedrockAgentCoreApp()
 
 
-# Create calculator tool
+# 계산기 도구 생성
 @tool
 def calculator(expression: str) -> str:
     """
@@ -22,7 +22,7 @@ def calculator(expression: str) -> str:
         The result of the calculation as a string
     """
     try:
-        # Define safe functions that can be used in expressions
+        # 표현식에서 사용할 수 있는 안전한 함수 정의
         safe_dict = {
             "__builtins__": {},
             "abs": abs,
@@ -31,7 +31,7 @@ def calculator(expression: str) -> str:
             "max": max,
             "sum": sum,
             "pow": pow,
-            # Math functions
+            # 수학 함수
             "sqrt": math.sqrt,
             "sin": math.sin,
             "cos": math.cos,
@@ -45,14 +45,14 @@ def calculator(expression: str) -> str:
             "floor": math.floor,
             "degrees": math.degrees,
             "radians": math.radians,
-            # Basic operators (for explicit use)
+            # 기본 연산자(명시적 사용용)
             "add": operator.add,
             "sub": operator.sub,
             "mul": operator.mul,
             "truediv": operator.truediv,
         }
 
-        # Evaluate the expression safely
+        # 표현식을 안전하게 평가
         result = eval(expression, safe_dict)  # nosec B307
         return str(result)
 
@@ -66,34 +66,34 @@ def calculator(expression: str) -> str:
         return f"Error: {str(e)}"
 
 
-# Create a custom weather tool
+# 사용자 지정 날씨 도구 생성
 @tool
 def weather():
-    """Get weather"""  # Dummy implementation
+    """Get weather"""  # 더미 구현
     return "sunny"
 
 
-# Define the agent using manual LangGraph construction
+# LangGraph를 직접 구성하여 에이전트 정의
 def create_agent():
-    """Create and configure the LangGraph agent"""
+    """LangGraph agent를 생성하고 구성합니다."""
     from langchain_aws import ChatBedrock
 
-    # Initialize your LLM (adjust model and parameters as needed)
+    # LLM 초기화(필요에 따라 모델과 파라미터 조정)
     llm = ChatBedrock(
-        model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",  # or your preferred model
+        model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",  # 또는 선호하는 모델
         model_kwargs={"temperature": 0.1},
     )
 
-    # Bind tools to the LLM
+    # LLM에 도구 바인딩
     tools = [calculator, weather]
     llm_with_tools = llm.bind_tools(tools)
 
-    # System message
+    # 시스템 메시지
     system_message = "You're a helpful assistant. You can do simple math calculation, and tell the weather."
 
-    # Define the chatbot node
+    # 챗봇 노드 정의
     def chatbot(state: MessagesState):
-        # Add system message if not already present
+        # 시스템 메시지가 아직 없으면 추가
         messages = state["messages"]
         if not messages or not isinstance(messages[0], SystemMessage):
             messages = [SystemMessage(content=system_message)] + messages
@@ -101,42 +101,42 @@ def create_agent():
         response = llm_with_tools.invoke(messages)
         return {"messages": [response]}
 
-    # Create the graph
+    # 그래프 생성
     graph_builder = StateGraph(MessagesState)
 
-    # Add nodes
+    # 노드 추가
     graph_builder.add_node("chatbot", chatbot)
     graph_builder.add_node("tools", ToolNode(tools))
 
-    # Add edges
+    # 엣지 추가
     graph_builder.add_conditional_edges(
         "chatbot",
         tools_condition,
     )
     graph_builder.add_edge("tools", "chatbot")
 
-    # Set entry point
+    # 진입점 설정
     graph_builder.set_entry_point("chatbot")
 
-    # Compile the graph
+    # 그래프 컴파일
     return graph_builder.compile()
 
 
-# Initialize the agent
+# 에이전트 초기화
 agent = create_agent()
 
 
 @app.entrypoint
 def langgraph_bedrock(payload):
     """
-    Invoke the agent with a payload
+    페이로드로 에이전트를 호출합니다.
     """
     user_input = payload.get("prompt")
 
-    # Create the input in the format expected by LangGraph
+    # LangGraph가 요구하는 형식으로 입력 생성
     response = agent.invoke({"messages": [HumanMessage(content=user_input)]})
 
-    # Extract the final message content
+    # 최종 메시지 내용 추출
     return response["messages"][-1].content
 
 

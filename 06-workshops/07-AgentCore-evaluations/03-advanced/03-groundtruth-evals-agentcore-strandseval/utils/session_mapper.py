@@ -1,7 +1,7 @@
-"""CloudWatch to Strands Eval Session mapper.
+"""CloudWatch-Strands Eval Session 매퍼입니다.
 
-This module provides a SessionMapper implementation that converts CloudWatch OTEL
-spans (as returned by ObservabilityClient) to Strands Eval's Session format.
+이 모듈은 ObservabilityClient가 반환한 CloudWatch OTEL span을 Strands Eval의
+Session 형식으로 변환하는 SessionMapper 구현을 제공합니다.
 """
 
 import json
@@ -28,36 +28,36 @@ logger = logging.getLogger(__name__)
 
 
 class CloudWatchSessionMapper(SessionMapper):
-    """Maps CloudWatch OTEL spans to Strands Eval Session format.
+    """CloudWatch OTEL span을 Strands Eval Session 형식으로 매핑합니다.
 
-    This mapper preserves the full agentic flow including:
-    - Tool calls with inputs and outputs
-    - Agent invocations with user prompts and responses
-    - Sequential ordering of operations within each trace
+    이 매퍼는 다음을 포함한 전체 에이전트 흐름을 보존합니다:
+    - 입력과 출력이 있는 도구 호출
+    - 사용자 prompt와 응답이 있는 Agent 호출
+    - 각 trace 내 작업의 순차적 순서
     """
 
     def map_to_session(self, spans: list[Any], session_id: str) -> Session:
-        """Convert CloudWatch spans to Strands Eval Session.
+        """CloudWatch span을 Strands Eval Session으로 변환합니다.
 
-        Args:
-            spans: List of Span objects from ObservabilityClient
-            session_id: Session identifier
+        인수:
+            spans: ObservabilityClient의 Span 객체 목록
+            session_id: 세션 식별자
 
-        Returns:
-            Session object ready for evaluation
+        반환값:
+            평가 준비가 완료된 Session 객체
         """
-        # Group spans by trace_id
+        # trace_id별로 span 그룹화
         traces_by_id = defaultdict(list)
         for span in spans:
             if isinstance(span, Span) and span.raw_message:
                 trace_id = span.trace_id or span.raw_message.get("traceId", "unknown")
                 traces_by_id[trace_id].append(span)
 
-        # Convert each group to a Trace
+        # 각 그룹을 Trace로 변환
         traces = []
         for trace_id, trace_spans in traces_by_id.items():
             trace = self._create_trace(trace_spans, trace_id, session_id)
-            if trace.spans:  # Only add if we extracted spans
+            if trace.spans:  # span을 추출한 경우에만 추가
                 traces.append(trace)
 
         logger.info(
@@ -68,44 +68,44 @@ class CloudWatchSessionMapper(SessionMapper):
         return Session(traces=traces, session_id=session_id)
 
     def _create_trace(self, spans: list[Span], trace_id: str, session_id: str) -> Trace:
-        """Create a Trace from a group of CloudWatch spans.
+        """CloudWatch span 그룹에서 Trace를 생성합니다.
 
-        Args:
-            spans: List of Span objects with the same trace_id
-            trace_id: The trace identifier
-            session_id: The session identifier
+        인수:
+            spans: trace_id가 같은 Span 객체 목록
+            trace_id: trace 식별자
+            session_id: 세션 식별자
 
-        Returns:
-            Trace object with extracted spans
+        반환값:
+            추출한 span이 포함된 Trace 객체
         """
         eval_spans = []
 
-        # Sort by timestamp to preserve ordering
+        # 순서를 유지하도록 타임스탬프 기준 정렬
         sorted_spans = sorted(spans, key=lambda s: s.start_time_unix_nano or 0)
 
-        # Collect all tool calls and results across spans for matching
+        # 일치 항목을 찾기 위해 모든 span의 도구 호출과 결과 수집
         all_tool_calls = {}  # tool_use_id -> ToolCall
         all_tool_results = {}  # tool_use_id -> ToolResult
 
-        # First pass: collect all tool calls and results
+        # 첫 번째 단계: 모든 도구 호출과 결과 수집
         for span in sorted_spans:
             raw = span.raw_message
             if not raw:
                 continue
 
-            # Extract tool calls from output messages
+            # 출력 메시지에서 도구 호출 추출
             tool_calls = self._extract_tool_calls_from_span(raw)
             for tc in tool_calls:
                 if tc.tool_call_id:
                     all_tool_calls[tc.tool_call_id] = tc
 
-            # Extract tool results from input messages
+            # 입력 메시지에서 도구 결과 추출
             tool_results = self._extract_tool_results_from_span(raw)
             for tr in tool_results:
                 if tr.tool_call_id:
                     all_tool_results[tr.tool_call_id] = tr
 
-        # Create ToolExecutionSpans by matching calls with results
+        # 호출과 결과를 연결하여 ToolExecutionSpan 생성
         seen_tool_ids = set()
         for span in sorted_spans:
             raw = span.raw_message
@@ -116,10 +116,10 @@ class CloudWatchSessionMapper(SessionMapper):
             for tc in tool_calls:
                 if tc.tool_call_id and tc.tool_call_id not in seen_tool_ids:
                     seen_tool_ids.add(tc.tool_call_id)
-                    # Find matching result
+                    # 일치하는 결과 찾기
                     tr = all_tool_results.get(tc.tool_call_id)
                     if tr is None:
-                        # No result found, create a placeholder
+                        # 결과가 없으면 placeholder 생성
                         tr = ToolResult(content="", tool_call_id=tc.tool_call_id)
 
                     span_info = self._create_span_info(span, session_id)
@@ -130,7 +130,7 @@ class CloudWatchSessionMapper(SessionMapper):
                     )
                     eval_spans.append(tool_exec_span)
 
-        # Extract AgentInvocationSpan from the final span (has full response)
+        # 전체 응답이 있는 최종 span에서 AgentInvocationSpan 추출
         agent_span = self._extract_agent_invocation_span(sorted_spans, session_id)
         if agent_span:
             eval_spans.append(agent_span)
@@ -138,13 +138,13 @@ class CloudWatchSessionMapper(SessionMapper):
         return Trace(spans=eval_spans, trace_id=trace_id, session_id=session_id)
 
     def _extract_tool_calls_from_span(self, raw: dict) -> list[ToolCall]:
-        """Extract tool calls from a span's output messages.
+        """span의 출력 메시지에서 도구 호출을 추출합니다.
 
-        Args:
-            raw: The raw_message dict from a CloudWatch span
+        인수:
+            raw: CloudWatch span의 raw_message 딕셔너리
 
-        Returns:
-            List of ToolCall objects
+        반환값:
+            ToolCall 객체 목록
         """
         tool_calls = []
         body = raw.get("body", {})
@@ -158,7 +158,7 @@ class CloudWatchSessionMapper(SessionMapper):
             if not isinstance(content, dict):
                 continue
 
-            # Check for toolUse directly in content
+            # content에서 직접 toolUse 확인
             if "toolUse" in content:
                 tool_use = content["toolUse"]
                 tc = ToolCall(
@@ -168,7 +168,7 @@ class CloudWatchSessionMapper(SessionMapper):
                 )
                 tool_calls.append(tc)
 
-            # Check inside parsed JSON string (content.content or content.message)
+            # 파싱된 JSON 문자열 내부 확인(content.content 또는 content.message)
             raw_content = content.get("content") or content.get("message")
             if isinstance(raw_content, str):
                 tool_calls.extend(self._parse_tool_calls_from_json(raw_content))
@@ -176,13 +176,13 @@ class CloudWatchSessionMapper(SessionMapper):
         return tool_calls
 
     def _parse_tool_calls_from_json(self, json_str: str) -> list[ToolCall]:
-        """Parse tool calls from a JSON string.
+        """JSON 문자열에서 도구 호출을 파싱합니다.
 
-        Args:
-            json_str: JSON string like '[{"toolUse": {...}}, {"text": "..."}]'
+        인수:
+            json_str: '[{"toolUse": {...}}, {"text": "..."}]' 형식의 JSON 문자열
 
-        Returns:
-            List of ToolCall objects
+        반환값:
+            ToolCall 객체 목록
         """
         tool_calls = []
         try:
@@ -202,13 +202,13 @@ class CloudWatchSessionMapper(SessionMapper):
         return tool_calls
 
     def _extract_tool_results_from_span(self, raw: dict) -> list[ToolResult]:
-        """Extract tool results from a span's input messages.
+        """span의 입력 메시지에서 도구 결과를 추출합니다.
 
-        Args:
-            raw: The raw_message dict from a CloudWatch span
+        인수:
+            raw: CloudWatch span의 raw_message 딕셔너리
 
-        Returns:
-            List of ToolResult objects
+        반환값:
+            ToolResult 객체 목록
         """
         tool_results = []
         body = raw.get("body", {})
@@ -217,33 +217,33 @@ class CloudWatchSessionMapper(SessionMapper):
         for msg in input_messages:
             content = msg.get("content", {})
 
-            # Handle direct toolResult in content
+            # content의 직접적인 toolResult 처리
             if isinstance(content, dict) and "toolResult" in content:
                 tr_data = content["toolResult"]
                 tr = self._parse_tool_result(tr_data)
                 if tr:
                     tool_results.append(tr)
 
-            # Handle JSON string in content.content
+            # content.content의 JSON 문자열 처리
             if isinstance(content, dict):
                 raw_content = content.get("content") or content.get("message")
                 if isinstance(raw_content, str):
                     tool_results.extend(self._parse_tool_results_from_json(raw_content))
 
-            # Handle direct JSON string content (role=tool)
+            # 직접적인 JSON 문자열 content 처리(role=tool)
             if isinstance(content, str):
                 tool_results.extend(self._parse_tool_results_from_json(content))
 
         return tool_results
 
     def _parse_tool_results_from_json(self, json_str: str) -> list[ToolResult]:
-        """Parse tool results from a JSON string.
+        """JSON 문자열에서 도구 결과를 파싱합니다.
 
-        Args:
-            json_str: JSON string like '[{"toolResult": {...}}]'
+        인수:
+            json_str: '[{"toolResult": {...}}]' 형식의 JSON 문자열
 
-        Returns:
-            List of ToolResult objects
+        반환값:
+            ToolResult 객체 목록
         """
         tool_results = []
         try:
@@ -259,21 +259,21 @@ class CloudWatchSessionMapper(SessionMapper):
         return tool_results
 
     def _parse_tool_result(self, tr_data: dict) -> ToolResult | None:
-        """Parse a single tool result dict into a ToolResult object.
+        """단일 도구 결과 딕셔너리를 ToolResult 객체로 파싱합니다.
 
-        Args:
-            tr_data: Dict with toolResult data
+        인수:
+            tr_data: toolResult 데이터가 있는 딕셔너리
 
-        Returns:
-            ToolResult object or None
+        반환값:
+            ToolResult 객체 또는 None
         """
         if not isinstance(tr_data, dict):
             return None
 
-        # Extract content - may be string or list of content blocks
+        # content 추출 - 문자열 또는 content 블록 목록일 수 있음
         content_raw = tr_data.get("content", "")
         if isinstance(content_raw, list):
-            # Extract text from content blocks
+            # content 블록에서 텍스트 추출
             texts = []
             for block in content_raw:
                 if isinstance(block, dict) and "text" in block:
@@ -289,22 +289,22 @@ class CloudWatchSessionMapper(SessionMapper):
         )
 
     def _extract_agent_invocation_span(self, spans: list[Span], session_id: str) -> AgentInvocationSpan | None:
-        """Extract the AgentInvocationSpan from a list of spans.
+        """span 목록에서 AgentInvocationSpan을 추출합니다.
 
-        Finds the user prompt from the first span and the final response
-        from the span with the longest output.
+        첫 번째 span에서 사용자 prompt를 찾고 출력이 가장 긴 span에서
+        최종 응답을 찾습니다.
 
-        Args:
-            spans: List of sorted Span objects
-            session_id: Session identifier
+        인수:
+            spans: 정렬된 Span 객체 목록
+            session_id: 세션 식별자
 
-        Returns:
-            AgentInvocationSpan or None if extraction fails
+        반환값:
+            AgentInvocationSpan, 추출에 실패하면 None
         """
         if not spans:
             return None
 
-        # Get user prompt from first message
+        # 첫 번째 메시지에서 사용자 prompt 가져오기
         user_prompt = None
         for span in spans:
             raw = span.raw_message
@@ -318,7 +318,7 @@ class CloudWatchSessionMapper(SessionMapper):
         if not user_prompt:
             return None
 
-        # Get agent response from span with longest output (final answer)
+        # 출력이 가장 긴 span에서 에이전트 응답 가져오기(최종 답변)
         best_response = ""
         best_span = None
         for span in spans:
@@ -333,7 +333,7 @@ class CloudWatchSessionMapper(SessionMapper):
         if not best_response or not best_span:
             return None
 
-        # Extract available tools (from system message if present)
+        # 사용 가능한 도구 추출(있는 경우 시스템 메시지에서 추출)
         available_tools = self._extract_available_tools(spans)
 
         span_info = self._create_span_info(best_span, session_id)
@@ -345,13 +345,13 @@ class CloudWatchSessionMapper(SessionMapper):
         )
 
     def _extract_user_prompt(self, raw: dict) -> str | None:
-        """Extract user prompt text from a span.
+        """span에서 사용자 prompt 텍스트를 추출합니다.
 
-        Args:
-            raw: The raw_message dict
+        인수:
+            raw: raw_message 딕셔너리
 
-        Returns:
-            User prompt string or None
+        반환값:
+            사용자 prompt 문자열 또는 None
         """
         body = raw.get("body", {})
         input_messages = body.get("input", {}).get("messages", [])
@@ -368,18 +368,18 @@ class CloudWatchSessionMapper(SessionMapper):
         return None
 
     def _extract_agent_response(self, raw: dict) -> str | None:
-        """Extract agent response text from a span.
+        """span에서 에이전트 응답 텍스트를 추출합니다.
 
-        Args:
-            raw: The raw_message dict
+        인수:
+            raw: raw_message 딕셔너리
 
-        Returns:
-            Agent response string or None
+        반환값:
+            에이전트 응답 문자열 또는 None
         """
         body = raw.get("body", {})
         output_messages = body.get("output", {}).get("messages", [])
 
-        # Get the last assistant message that has actual text (not just tool calls)
+        # 도구 호출뿐 아니라 실제 텍스트가 있는 마지막 assistant 메시지 가져오기
         best_response = ""
         for msg in output_messages:
             if msg.get("role") != "assistant":
@@ -387,11 +387,11 @@ class CloudWatchSessionMapper(SessionMapper):
 
             content = msg.get("content", {})
 
-            # Check for direct message field (final response)
+            # 직접적인 message 필드 확인(최종 응답)
             if isinstance(content, dict):
                 direct_msg = content.get("message")
                 if isinstance(direct_msg, str) and not direct_msg.startswith("[{"):
-                    # Not a JSON string, this is the actual response
+                    # JSON 문자열이 아니므로 실제 응답
                     if len(direct_msg) > len(best_response):
                         best_response = direct_msg
                     continue
@@ -403,13 +403,13 @@ class CloudWatchSessionMapper(SessionMapper):
         return best_response if best_response else None
 
     def _extract_text_from_content(self, content: Any) -> str | None:
-        """Extract text from a content field.
+        """content 필드에서 텍스트를 추출합니다.
 
-        Args:
-            content: Content dict or string
+        인수:
+            content: content 딕셔너리 또는 문자열
 
-        Returns:
-            Extracted text or None
+        반환값:
+            추출된 텍스트 또는 None
         """
         if isinstance(content, str):
             return content
@@ -417,11 +417,11 @@ class CloudWatchSessionMapper(SessionMapper):
         if not isinstance(content, dict):
             return None
 
-        # Try content.content or content.message
+        # content.content 또는 content.message 시도
         raw_content = content.get("content") or content.get("message")
 
         if isinstance(raw_content, str):
-            # Try to parse as JSON
+            # JSON으로 파싱 시도
             try:
                 parsed = json.loads(raw_content)
                 if isinstance(parsed, list):
@@ -432,22 +432,22 @@ class CloudWatchSessionMapper(SessionMapper):
                     if texts:
                         return " ".join(texts)
             except (json.JSONDecodeError, TypeError):
-                # Not JSON, return as-is
+                # JSON이 아니므로 그대로 반환
                 return raw_content
 
         return None
 
     def _extract_available_tools(self, spans: list[Span]) -> list[ToolConfig]:
-        """Extract available tools from system message or span attributes.
+        """시스템 메시지 또는 span 속성에서 사용 가능한 도구를 추출합니다.
 
-        Args:
-            spans: List of Span objects
+        인수:
+            spans: Span 객체 목록
 
-        Returns:
-            List of ToolConfig objects
+        반환값:
+            ToolConfig 객체 목록
         """
-        # For now, we'll extract tool names from actual tool calls
-        # A more complete implementation would parse the system message
+        # 현재는 실제 도구 호출에서 도구 이름 추출
+        # 더 완전한 구현에서는 시스템 메시지를 파싱할 수 있음
         tool_names = set()
         for span in spans:
             raw = span.raw_message
@@ -460,18 +460,18 @@ class CloudWatchSessionMapper(SessionMapper):
         return [ToolConfig(name=name) for name in sorted(tool_names)]
 
     def _create_span_info(self, span: Span, session_id: str) -> SpanInfo:
-        """Create SpanInfo from a CloudWatch Span.
+        """CloudWatch Span에서 SpanInfo를 생성합니다.
 
-        Args:
-            span: The Span object
-            session_id: Session identifier
+        인수:
+            span: Span 객체
+            session_id: 세션 식별자
 
-        Returns:
-            SpanInfo object
+        반환값:
+            SpanInfo 객체
         """
         raw = span.raw_message or {}
 
-        # Convert nanoseconds to datetime
+        # 나노초를 datetime으로 변환
         start_nano = span.start_time_unix_nano or raw.get("startTimeUnixNano", 0)
         end_nano = raw.get("endTimeUnixNano", start_nano)
 

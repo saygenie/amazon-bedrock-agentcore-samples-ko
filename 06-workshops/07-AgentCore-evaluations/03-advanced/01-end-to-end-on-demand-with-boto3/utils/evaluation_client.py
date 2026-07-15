@@ -1,4 +1,4 @@
-"""Client for AgentCore Evaluation DataPlane API."""
+"""AgentCore Evaluation Data Plane API용 클라이언트입니다."""
 
 import json
 import os
@@ -26,16 +26,16 @@ from .models import EvaluationRequest, EvaluationResult, EvaluationResults, Trac
 
 
 class EvaluationClient:
-    """Client for AgentCore Evaluation Data Plane API."""
+    """AgentCore Evaluation Data Plane API용 클라이언트입니다."""
 
     DEFAULT_REGION = "us-east-1"
 
     def __init__(self, region: Optional[str] = None, boto_client: Optional[Any] = None):
-        """Initialize evaluation client.
+        """평가 클라이언트를 초기화합니다.
 
-        Args:
-            region: AWS region (defaults to env var or us-east-1)
-            boto_client: Optional pre-configured boto3 client for testing
+        인수:
+            region: AWS 리전(기본값은 환경 변수 또는 us-east-1)
+            boto_client: 테스트용으로 미리 구성된 선택적 boto3 클라이언트
         """
         self.region = region or os.getenv("AGENTCORE_EVAL_REGION", self.DEFAULT_REGION)
 
@@ -45,14 +45,14 @@ class EvaluationClient:
             self.client = boto3.client("agentcore-evaluation-dataplane", region_name=self.region)
 
     def _validate_scope_compatibility(self, evaluator_id: str, scope: str) -> None:
-        """Validate that the evaluator is compatible with the requested scope.
+        """Evaluator가 요청한 범위와 호환되는지 검증합니다.
 
-        Args:
-            evaluator_id: The evaluator identifier
-            scope: The evaluation scope ("session", "trace", or "span")
+        인수:
+            evaluator_id: Evaluator 식별자
+            scope: 평가 범위("session", "trace" 또는 "span")
 
-        Raises:
-            ValueError: If the evaluator-scope combination is invalid
+        예외:
+            ValueError: Evaluator와 범위의 조합이 유효하지 않은 경우
         """
         if scope == "span":
             if evaluator_id not in SPAN_SCOPED_EVALUATORS:
@@ -80,18 +80,18 @@ class EvaluationClient:
         trace_id: Optional[str] = None,
         span_ids: Optional[List[str]] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Build evaluationTarget based on scope.
+        """범위에 따라 evaluationTarget을 생성합니다.
 
-        Args:
-            scope: The evaluation scope ("session", "trace", or "span")
-            trace_id: Trace ID for trace scope
-            span_ids: List of span IDs for span scope
+        인수:
+            scope: 평가 범위("session", "trace" 또는 "span")
+            trace_id: trace 범위용 trace ID
+            span_ids: span 범위용 span ID 목록
 
-        Returns:
-            evaluationTarget dict or None for session scope
+        반환값:
+            evaluationTarget 딕셔너리, 세션 범위이면 None
 
-        Raises:
-            ValueError: If required IDs are missing for the scope
+        예외:
+            ValueError: 범위에 필요한 ID가 누락된 경우
         """
         if scope == "session":
             return None
@@ -110,13 +110,13 @@ class EvaluationClient:
             raise ValueError(f"Invalid scope: {scope}. Must be 'session', 'trace', or 'span'")
 
     def _extract_raw_spans(self, trace_data: TraceData) -> List[Dict[str, Any]]:
-        """Extract raw span documents from TraceData.
+        """TraceData에서 원시 span 문서를 추출합니다.
 
-        Args:
-            trace_data: TraceData containing spans and runtime logs
+        인수:
+            trace_data: span과 Runtime 로그가 포함된 TraceData
 
-        Returns:
-            List of raw span documents
+        반환값:
+            원시 span 문서 목록
         """
         raw_spans = []
 
@@ -131,17 +131,17 @@ class EvaluationClient:
         return raw_spans
 
     def _filter_relevant_spans(self, raw_spans: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Filter to only high-signal spans for evaluation.
+        """평가에 유용한 신호가 많은 span만 필터링합니다.
 
-        Keeps only:
-        - Spans with gen_ai.* attributes (LLM calls, agent operations)
-        - Log events with conversation data (input/output messages)
+        다음 항목만 유지합니다:
+        - gen_ai.* 속성이 있는 span(LLM 호출, 에이전트 작업)
+        - 대화 데이터가 있는 로그 이벤트(입력/출력 메시지)
 
-        Args:
-            raw_spans: List of raw span/log documents
+        인수:
+            raw_spans: 원시 span/로그 문서 목록
 
-        Returns:
-            Filtered list of relevant spans
+        반환값:
+            관련 span을 필터링한 목록
         """
         relevant_spans = []
         for span_doc in raw_spans:
@@ -159,14 +159,14 @@ class EvaluationClient:
     def _get_most_recent_session_spans(
         self, trace_data: TraceData, max_items: int = DEFAULT_MAX_EVALUATION_ITEMS
     ) -> List[Dict[str, Any]]:
-        """Get most recent relevant spans across all traces in session.
+        """세션의 모든 trace에서 가장 최근의 관련 span을 가져옵니다.
 
-        Args:
-            trace_data: TraceData containing all session data
-            max_items: Maximum number of items to return
+        인수:
+            trace_data: 모든 세션 데이터가 포함된 TraceData
+            max_items: 반환할 최대 항목 수
 
-        Returns:
-            List of raw span documents, most recent first
+        반환값:
+            최신순으로 정렬된 원시 span 문서 목록
         """
         raw_spans = self._extract_raw_spans(trace_data)
 
@@ -183,18 +183,18 @@ class EvaluationClient:
         return relevant_spans[:max_items]
 
     def _fetch_session_data(self, session_id: str, agent_id: str, region: str) -> TraceData:
-        """Fetch session data from CloudWatch.
+        """CloudWatch에서 세션 데이터를 가져옵니다.
 
-        Args:
-            session_id: Session ID to fetch
-            agent_id: Agent ID for filtering
-            region: AWS region
+        인수:
+            session_id: 가져올 세션 ID
+            agent_id: 필터링용 Agent ID
+            region: AWS 리전
 
-        Returns:
-            TraceData with session spans and logs
+        반환값:
+            세션 span과 로그가 포함된 TraceData
 
-        Raises:
-            RuntimeError: If session data cannot be fetched
+        예외:
+            RuntimeError: 세션 데이터를 가져올 수 없는 경우
         """
         obs_client = ObservabilityClient(region_name=region, agent_id=agent_id, runtime_suffix=DEFAULT_RUNTIME_SUFFIX)
 
@@ -219,13 +219,13 @@ class EvaluationClient:
         return trace_data
 
     def _count_span_types(self, raw_spans: List[Dict[str, Any]]) -> tuple:
-        """Count spans, logs, and gen_ai spans.
+        """span, 로그, gen_ai span의 수를 계산합니다.
 
-        Args:
-            raw_spans: List of raw span documents
+        인수:
+            raw_spans: 원시 span 문서 목록
 
-        Returns:
-            Tuple of (spans_count, logs_count, genai_spans_count)
+        반환값:
+            (spans_count, logs_count, genai_spans_count) 튜플
         """
         spans_count = sum(1 for item in raw_spans if "spanId" in item and "startTimeUnixNano" in item)
         logs_count = sum(1 for item in raw_spans if "body" in item and "timeUnixNano" in item)
@@ -241,16 +241,16 @@ class EvaluationClient:
         session_id: str,
         otel_spans: List[Dict[str, Any]],
     ) -> str:
-        """Save input data to JSON file.
+        """입력 데이터를 JSON 파일로 저장합니다.
 
-        Saves only the spans that are sent to the evaluate API.
+        evaluate API로 전송되는 span만 저장합니다.
 
-        Args:
-            session_id: Session ID
-            otel_spans: Spans being sent to API
+        인수:
+            session_id: 세션 ID
+            otel_spans: API로 전송되는 span
 
-        Returns:
-            Path to saved file
+        반환값:
+            저장된 파일의 경로
         """
         from .constants import EVALUATION_INPUT_DIR
 
@@ -260,7 +260,7 @@ class EvaluationClient:
         session_short = session_id[:16] if len(session_id) > 16 else session_id
         filename = f"{EVALUATION_INPUT_DIR}/input_{session_short}_{timestamp}.json"
 
-        # Save only the spans (the actual API input)
+        # 실제 API 입력인 span만 저장
         with open(filename, "w", encoding=DEFAULT_FILE_ENCODING) as f:
             json.dump(otel_spans, f, indent=2)
 
@@ -268,13 +268,13 @@ class EvaluationClient:
         return filename
 
     def _save_output(self, results: EvaluationResults) -> str:
-        """Save evaluation results to JSON file.
+        """평가 결과를 JSON 파일로 저장합니다.
 
-        Args:
-            results: EvaluationResults object
+        인수:
+            results: EvaluationResults 객체
 
-        Returns:
-            Path to saved file
+        반환값:
+            저장된 파일의 경로
         """
         os.makedirs(EVALUATION_OUTPUT_DIR, exist_ok=True)
 
@@ -289,13 +289,13 @@ class EvaluationClient:
         return filename
 
     def _scan_evaluation_outputs(self) -> List[Path]:
-        """Scan evaluation output directory for JSON files.
+        """평가 출력 디렉터리에서 JSON 파일을 검색합니다.
 
-        Returns:
-            List of Path objects for JSON files found
+        반환값:
+            발견된 JSON 파일의 Path 객체 목록
 
-        Raises:
-            FileNotFoundError: If output directory doesn't exist
+        예외:
+            FileNotFoundError: 출력 디렉터리가 없는 경우
         """
         output_dir = Path.cwd() / EVALUATION_OUTPUT_DIR
 
@@ -314,10 +314,10 @@ class EvaluationClient:
         return sorted(json_files)
 
     def _scan_evaluation_inputs(self) -> List[Path]:
-        """Scan evaluation_input directory for JSON files.
+        """evaluation_input 디렉터리에서 JSON 파일을 검색합니다.
 
-        Returns:
-            List of Path objects for input JSON files found
+        반환값:
+            발견된 입력 JSON 파일의 Path 객체 목록
         """
         from .constants import EVALUATION_INPUT_DIR
 
@@ -329,13 +329,13 @@ class EvaluationClient:
         return list(input_dir.glob("input_*.json"))
 
     def _extract_trace_data_from_input(self, input_file: Path) -> Optional[Dict[str, Any]]:
-        """Parse input file and extract trace-level information.
+        """입력 파일을 파싱하고 trace 수준 정보를 추출합니다.
 
-        Args:
-            input_file: Path to input JSON file
+        인수:
+            input_file: 입력 JSON 파일의 경로
 
-        Returns:
-            Dictionary with trace data or None if extraction fails
+        반환값:
+            trace 데이터가 포함된 딕셔너리, 추출에 실패하면 None
         """
         try:
             with open(input_file, "r", encoding=DEFAULT_FILE_ENCODING) as f:
@@ -344,7 +344,7 @@ class EvaluationClient:
             if not isinstance(spans, list) or not spans:
                 return None
 
-            # Extract session_id and trace_id from first span
+            # 첫 번째 span에서 session_id와 trace_id 추출
             first_span = spans[0]
             session_id = first_span.get("attributes", {}).get("session.id")
             trace_id = first_span.get("traceId")
@@ -352,7 +352,7 @@ class EvaluationClient:
             if not session_id or not trace_id:
                 return None
 
-            # Extract input and output messages
+            # 입력 및 출력 메시지 추출
             input_messages = []
             output_messages = []
             tools_used = []
@@ -360,21 +360,21 @@ class EvaluationClient:
             for span in spans:
                 body = span.get("body", {})
 
-                # Extract input messages
+                # 입력 메시지 추출
                 if "input" in body and isinstance(body["input"], dict):
                     messages = body["input"].get("messages", [])
                     for msg in messages:
                         if isinstance(msg, dict):
                             input_messages.append(msg)
 
-                # Extract output messages
+                # 출력 메시지 추출
                 if "output" in body and isinstance(body["output"], dict):
                     messages = body["output"].get("messages", [])
                     for msg in messages:
                         if isinstance(msg, dict):
                             output_messages.append(msg)
 
-                            # Extract tools from message content
+                            # 메시지 내용에서 도구 추출
                             content = msg.get("content", {})
                             if isinstance(content, dict):
                                 message_str = content.get("message", "")
@@ -383,10 +383,10 @@ class EvaluationClient:
                             else:
                                 message_str = ""
 
-                            # Try to find toolUse in content
+                            # 내용에서 toolUse 검색 시도
                             if "toolUse" in message_str:
                                 try:
-                                    # Content might be double-encoded JSON
+                                    # 내용이 이중 인코딩된 JSON일 수 있음
                                     parsed = json.loads(message_str) if message_str.startswith("[") else None
                                     if isinstance(parsed, list):
                                         for item in parsed:
@@ -397,17 +397,17 @@ class EvaluationClient:
                                 except (json.JSONDecodeError, TypeError):
                                     pass
 
-            # Get unique tools with counts
+            # 고유한 도구와 사용 횟수 가져오기
             tools_with_counts = {}
             for tool in tools_used:
                 tools_with_counts[tool] = tools_with_counts.get(tool, 0) + 1
 
-            # Get timestamps for this trace
+            # 이 trace의 타임스탬프 가져오기
             timestamps = [span.get("timeUnixNano") for span in spans if span.get("timeUnixNano")]
             min_timestamp = min(timestamps) if timestamps else None
             max_timestamp = max(timestamps) if timestamps else None
 
-            # Extract token usage from spans if available
+            # 가능한 경우 span에서 토큰 사용량 추출
             total_input_tokens = 0
             total_output_tokens = 0
 
@@ -416,10 +416,10 @@ class EvaluationClient:
                 total_input_tokens += attrs.get("gen_ai.usage.input_tokens", 0)
                 total_output_tokens += attrs.get("gen_ai.usage.output_tokens", 0)
 
-            # Calculate latency in milliseconds if timestamps available
+            # timestamp가 있으면 지연 시간을 밀리초 단위로 계산
             latency_ms = None
             if min_timestamp and max_timestamp:
-                latency_ms = (max_timestamp - min_timestamp) / 1_000_000  # Convert nanoseconds to milliseconds
+                latency_ms = (max_timestamp - min_timestamp) / 1_000_000  # 나노초를 밀리초로 변환
 
             return {
                 "session_id": session_id,
@@ -446,16 +446,16 @@ class EvaluationClient:
     def _match_input_output_files(
         self, output_files: List[Path], input_files: List[Path]
     ) -> Dict[str, Optional[Dict[str, Any]]]:
-        """Match output files to their input files and extract trace data.
+        """출력 파일을 입력 파일과 연결하고 trace 데이터를 추출합니다.
 
-        Args:
-            output_files: List of evaluation output file paths
-            input_files: List of evaluation input file paths
+        인수:
+            output_files: 평가 출력 파일 경로 목록
+            input_files: 평가 입력 파일 경로 목록
 
-        Returns:
-            Dictionary mapping (session_id, trace_id) tuples to trace data
+        반환값:
+            (session_id, trace_id) 튜플을 trace 데이터에 매핑한 딕셔너리
         """
-        # Build a map of input data by (session_id, trace_id)
+        # (session_id, trace_id)를 기준으로 입력 데이터 맵 생성
         trace_data_map = {}
 
         for input_file in input_files:
@@ -467,18 +467,18 @@ class EvaluationClient:
         return trace_data_map
 
     def _aggregate_evaluation_data(self, json_files: List[Path]) -> List[Dict[str, Any]]:
-        """Aggregate evaluation data from JSON files by session_id with trace-level detail.
+        """JSON 파일의 평가 데이터를 trace 수준 세부 정보와 함께 session_id별로 집계합니다.
 
-        Args:
-            json_files: List of JSON file paths to process
+        인수:
+            json_files: 처리할 JSON 파일 경로 목록
 
-        Returns:
-            List of aggregated session data dictionaries with trace-level information
+        반환값:
+            trace 수준 정보가 포함된 집계 세션 데이터 딕셔너리 목록
         """
         sessions_map = {}
         skipped_files = []
 
-        # Scan for input files and extract trace data
+        # 입력 파일을 검색하고 trace 데이터 추출
         input_files = self._scan_evaluation_inputs()
         trace_data_map = self._match_input_output_files(json_files, input_files)
 
@@ -501,25 +501,25 @@ class EvaluationClient:
                             "metadata": data.get("metadata", {}),
                             "source_files": [],
                             "evaluation_runs": 0,
-                            "traces": {},  # New: map of trace_id to trace data
+                            "traces": {},  # 신규: trace_id와 trace 데이터의 맵
                         }
 
-                    # Only increment if there are actual results
+                    # 실제 결과가 있는 경우에만 증가
                     results = data.get("results", [])
                     if results:
                         sessions_map[session_id]["results"].extend(results)
                         sessions_map[session_id]["evaluation_runs"] += 1
 
-                        # Group results by trace_id
+                        # trace_id별 결과 그룹화
                         for result in results:
                             context = result.get("context", {})
                             span_context = context.get("spanContext", {})
                             trace_id = span_context.get("traceId")
 
                             if trace_id:
-                                # Get or create trace entry
+                                # trace 항목을 가져오거나 생성
                                 if trace_id not in sessions_map[session_id]["traces"]:
-                                    # Try to get trace data from input files
+                                    # 입력 파일에서 trace 데이터 가져오기 시도
                                     trace_key = (session_id, trace_id)
                                     trace_data = trace_data_map.get(trace_key, {})
 
@@ -538,12 +538,12 @@ class EvaluationClient:
                                         "total_tokens": trace_data.get("total_tokens", 0),
                                     }
 
-                                # Add result to this trace
+                                # 이 trace에 결과 추가
                                 sessions_map[session_id]["traces"][trace_id]["results"].append(result)
 
                     sessions_map[session_id]["source_files"].append(json_file.name)
 
-                    # Merge metadata (later files override earlier ones)
+                    # 메타데이터 병합(나중 파일이 이전 파일을 재정의)
                     if data.get("metadata"):
                         sessions_map[session_id]["metadata"].update(data.get("metadata", {}))
 
@@ -554,11 +554,11 @@ class EvaluationClient:
             except Exception as e:
                 skipped_files.append((json_file.name, f"Error: {e}"))
 
-        # Convert traces dict to list for each session
+        # 각 세션의 trace 딕셔너리를 목록으로 변환
         for session in sessions_map.values():
             session["traces"] = list(session["traces"].values())
 
-        # Report skipped files
+        # 건너뛴 파일 보고
         if skipped_files:
             print(f"Warning: Skipped {len(skipped_files)} file(s):")
             for filename, reason in skipped_files:
@@ -567,16 +567,16 @@ class EvaluationClient:
         return list(sessions_map.values())
 
     def _write_dashboard_data(self, evaluation_data: List[Dict[str, Any]]) -> Path:
-        """Write aggregated evaluation data to dashboard_data.js file.
+        """집계된 평가 데이터를 dashboard_data.js 파일에 씁니다.
 
-        Args:
-            evaluation_data: List of aggregated session data
+        인수:
+            evaluation_data: 집계된 세션 데이터 목록
 
-        Returns:
-            Path to the generated dashboard_data.js file
+        반환값:
+            생성된 dashboard_data.js 파일의 경로
 
-        Raises:
-            IOError: If file write fails
+        예외:
+            IOError: 파일 쓰기에 실패하는 경우
         """
         js_content = f"""// Auto-generated dashboard data
 // Generated from {EVALUATION_OUTPUT_DIR} directory
@@ -603,20 +603,20 @@ if (typeof window !== 'undefined') {{
         return dashboard_data_path
 
     def _open_dashboard_in_browser(self, dashboard_html_path: Path) -> bool:
-        """Open dashboard HTML file in default browser.
+        """기본 브라우저에서 대시보드 HTML 파일을 엽니다.
 
-        Args:
-            dashboard_html_path: Path to the dashboard HTML file
+        인수:
+            dashboard_html_path: 대시보드 HTML 파일의 경로
 
-        Returns:
-            True if browser opened successfully, False otherwise
+        반환값:
+            브라우저를 성공적으로 열면 True, 그렇지 않으면 False
         """
         if not dashboard_html_path.exists():
             print(f"Warning: {DASHBOARD_HTML_FILE} not found at {dashboard_html_path}")
             return False
 
         try:
-            # Use as_uri() for proper cross-platform file:// URL handling
+            # 플랫폼 간 file:// URL을 올바르게 처리하기 위해 as_uri() 사용
             dashboard_url = dashboard_html_path.as_uri()
             success = webbrowser.open(dashboard_url)
 
@@ -634,21 +634,21 @@ if (typeof window !== 'undefined') {{
             return False
 
     def _create_dashboard(self) -> None:
-        """Generate dashboard data and open dashboard in browser.
+        """대시보드 데이터를 생성하고 브라우저에서 대시보드를 엽니다.
 
-        This method aggregates all evaluation outputs from the evaluation_output/
-        directory, generates dashboard_data.js file, and opens the dashboard HTML
-        in the default browser.
+        이 메서드는 evaluation_output/ 디렉터리의 모든 평가 출력을 집계하고
+        dashboard_data.js 파일을 생성한 뒤, 기본 브라우저에서 대시보드 HTML을
+        엽니다.
 
-        Note: This aggregates ALL evaluation output files in the directory, not just
-        the current session's evaluation.
+        참고: 현재 세션의 평가뿐 아니라 디렉터리에 있는 모든 평가 출력 파일을
+        집계합니다.
 
-        Raises:
-            FileNotFoundError: If evaluation_output directory doesn't exist
-            IOError: If dashboard data file cannot be written
+        예외:
+            FileNotFoundError: evaluation_output 디렉터리가 없는 경우
+            IOError: 대시보드 데이터 파일을 쓸 수 없는 경우
         """
         try:
-            # Step 1: Scan for JSON files
+            # 1단계: JSON 파일 검색
             json_files = self._scan_evaluation_outputs()
 
             if not json_files:
@@ -657,20 +657,20 @@ if (typeof window !== 'undefined') {{
 
             print(f"Found {len(json_files)} evaluation output file(s)")
 
-            # Step 2: Aggregate data
+            # 2단계: 데이터 집계
             evaluation_data = self._aggregate_evaluation_data(json_files)
 
             if not evaluation_data:
                 print("No valid evaluation data found to generate dashboard")
                 return
 
-            # Step 3: Write dashboard data file
+            # 3단계: 대시보드 데이터 파일 쓰기
             dashboard_data_path = self._write_dashboard_data(evaluation_data)  # noqa: F841
 
             total_evaluations = sum(len(session.get("results", [])) for session in evaluation_data)
             print(f"Dashboard data generated: {len(evaluation_data)} session(s), {total_evaluations} evaluation(s)")
 
-            # Step 4: Open dashboard in browser
+            # 4단계: 브라우저에서 대시보드 열기
             dashboard_html_path = Path.cwd() / DASHBOARD_HTML_FILE
             self._open_dashboard_in_browser(dashboard_html_path)
 
@@ -688,18 +688,18 @@ if (typeof window !== 'undefined') {{
         session_spans: List[Dict[str, Any]],
         evaluation_target: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Call evaluation API with transformed spans.
+        """변환된 span으로 평가 API를 호출합니다.
 
-        Args:
-            evaluator_id: Single evaluator identifier
-            session_spans: List of OpenTelemetry-formatted span documents
-            evaluation_target: Optional dict with spanIds or traceIds to evaluate
+        인수:
+            evaluator_id: 단일 Evaluator 식별자
+            session_spans: OpenTelemetry 형식의 span 문서 목록
+            evaluation_target: 평가할 spanIds 또는 traceIds가 포함된 선택적 딕셔너리
 
-        Returns:
-            Raw API response with evaluationResults
+        반환값:
+            evaluationResults가 포함된 원시 API 응답
 
-        Raises:
-            RuntimeError: If API call fails
+        예외:
+            RuntimeError: API 호출에 실패하는 경우
         """
         request = EvaluationRequest(
             evaluator_id=evaluator_id,
@@ -731,35 +731,36 @@ if (typeof window !== 'undefined') {{
         auto_create_dashboard: bool = False,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> EvaluationResults:
-        """Evaluate a session using one or more evaluators.
+        """하나 이상의 Evaluator를 사용하여 세션을 평가합니다.
 
-        Args:
-            session_id: Session ID to evaluate
-            evaluator_ids: List of evaluator identifiers (e.g., ["Builtin.Helpfulness"])
-            agent_id: Agent ID for fetching session data
-            region: AWS region for ObservabilityClient
-            scope: Evaluation scope - "session", "trace", or "span"
-            trace_id: Trace ID for trace scope (optional)
-            span_filter: Filter for span scope (optional dict, e.g., {"tool_name": "calculate_bmi"})
-            auto_save_input: If True, saves input spans to evaluation_input/ folder
-            auto_save_output: If True, saves results to evaluation_output/ folder
-            auto_create_dashboard: If True, aggregates all evaluation outputs, generates
-                dashboard_data.js, and opens dashboard in browser. Requires auto_save_output=True.
-                Note: Aggregates ALL evaluation outputs in the directory, not just current session.
-            metadata: Optional metadata dict for tracking experiments, descriptions, etc.
+        인수:
+            session_id: 평가할 세션 ID
+            evaluator_ids: Evaluator 식별자 목록(예: ["Builtin.Helpfulness"])
+            agent_id: 세션 데이터를 가져오는 데 사용할 Agent ID
+            region: ObservabilityClient용 AWS 리전
+            scope: 평가 범위 - "session", "trace" 또는 "span"
+            trace_id: trace 범위용 trace ID(선택 사항)
+            span_filter: span 범위용 필터(선택적 딕셔너리, 예: {"tool_name": "calculate_bmi"})
+            auto_save_input: True이면 입력 span을 evaluation_input/ 폴더에 저장
+            auto_save_output: True이면 결과를 evaluation_output/ 폴더에 저장
+            auto_create_dashboard: True이면 모든 평가 출력을 집계하고
+                dashboard_data.js를 생성하여 브라우저에서 대시보드를 엽니다.
+                auto_save_output=True가 필요합니다. 참고: 현재 세션뿐 아니라
+                디렉터리의 모든 평가 출력을 집계합니다.
+            metadata: 실험, 설명 등을 추적하기 위한 선택적 메타데이터 딕셔너리
 
-        Returns:
-            EvaluationResults containing evaluation results
+        반환값:
+            평가 결과가 포함된 EvaluationResults
 
-        Raises:
-            RuntimeError: If session data cannot be fetched or evaluation fails
-            ValueError: If scope-evaluator combination is invalid or required IDs are missing
+        예외:
+            RuntimeError: 세션 데이터를 가져올 수 없거나 평가가 실패하는 경우
+            ValueError: 범위와 Evaluator의 조합이 유효하지 않거나 필요한 ID가 누락된 경우
         """
-        # Validate evaluator_ids is not empty
+        # evaluator_ids가 비어 있지 않은지 검증
         if not evaluator_ids:
             raise ValueError("evaluator_ids cannot be empty")
 
-        # Validate scope for all evaluators first
+        # 먼저 모든 Evaluator의 범위 검증
         for evaluator_id in evaluator_ids:
             self._validate_scope_compatibility(evaluator_id, scope)
 
@@ -769,7 +770,7 @@ if (typeof window !== 'undefined') {{
         num_spans = len(trace_data.spans)
         print(f"Found {num_spans} spans across {num_traces} traces in session")
 
-        # Auto-discover span IDs if scope is "span"
+        # 범위가 "span"이면 span ID 자동 검색
         span_ids = None
         if scope == "span":
             tool_name_filter = (span_filter or {}).get("tool_name")
@@ -781,7 +782,7 @@ if (typeof window !== 'undefined') {{
 
             print(f"Found {len(span_ids)} tool execution spans for evaluation")
 
-        # Build evaluation target based on scope
+        # 범위에 따라 평가 대상 생성
         evaluation_target = self._build_evaluation_target(scope=scope, trace_id=trace_id, span_ids=span_ids)
 
         if evaluation_target:
@@ -802,7 +803,7 @@ if (typeof window !== 'undefined') {{
             f"{logs_count} log events) to evaluation API"
         )
 
-        # Save input if requested (only the spans sent to API)
+        # 요청된 경우 입력 저장(API로 전송한 span만 저장)
         if auto_save_input:
             self._save_input(session_id, otel_spans)
 
@@ -836,13 +837,13 @@ if (typeof window !== 'undefined') {{
                 )
                 results.add_result(error_result)
 
-        # results.input_data = {"spans": otel_spans} # commenting out, will think later if this is meaningful to add
+        # results.input_data = {"spans": otel_spans} # 추가할 의미가 있는지 나중에 검토하기 위해 주석 처리
 
-        # Save output if requested
+        # 요청된 경우 출력 저장
         if auto_save_output:
             self._save_output(results)
 
-        # Create dashboard if requested
+        # 요청된 경우 대시보드 생성
         if auto_create_dashboard:
             if auto_save_output:
                 self._create_dashboard()

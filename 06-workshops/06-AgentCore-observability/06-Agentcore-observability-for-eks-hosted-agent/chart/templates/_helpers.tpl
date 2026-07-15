@@ -1,14 +1,14 @@
 {{/*
-Expand the name of the chart.
+chart 이름을 확장합니다.
 */}}
 {{- define "strands-agents-travel.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
-Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
+기본 정규화된 앱 이름을 생성합니다.
+일부 Kubernetes 이름 필드는 DNS 명명 사양에 따라 63자로 제한되므로 잘라냅니다.
+release 이름에 chart 이름이 포함되어 있으면 전체 이름으로 사용합니다.
 */}}
 {{- define "strands-agents-travel.fullname" -}}
 {{- if .Values.fullnameOverride }}
@@ -24,14 +24,14 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
-Create chart name and version as used by the chart label.
+chart label에 사용할 chart 이름과 version을 생성합니다.
 */}}
 {{- define "strands-agents-travel.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
-Common labels
+공통 label
 */}}
 {{- define "strands-agents-travel.labels" -}}
 helm.sh/chart: {{ include "strands-agents-travel.chart" . }}
@@ -43,7 +43,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Selector labels
+선택기 label
 */}}
 {{- define "strands-agents-travel.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "strands-agents-travel.name" . }}
@@ -51,7 +51,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
+사용할 service account 이름 생성
 */}}
 {{- define "strands-agents-travel.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}

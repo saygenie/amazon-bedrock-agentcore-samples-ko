@@ -24,7 +24,7 @@ from tools import (
 
 app = BedrockAgentCoreApp()
 
-# Create the agent with all tools
+# 모든 도구가 포함된 Agent 생성
 model_id = "global.anthropic.claude-sonnet-4-20250514-v1:0"
 model = BedrockModel(model_id=model_id)
 
@@ -100,18 +100,18 @@ IMPORTANT: After creating the report content, you MUST:
 Work systematically through data collection, analysis, visualization, synthesis, saving, and uploading.""",
 )
 
-# Track active tasks count for ping handler
+# ping 핸들러를 위해 활성 작업 수 추적
 _active_task_count = 0
 
 
 def system_busy():
-    """Check if system has active tasks."""
+    """시스템에 활성 작업이 있는지 확인합니다."""
     return _active_task_count > 0
 
 
 @app.ping
 def ping():
-    """Ping handler to report agent health status."""
+    """Agent 상태를 보고하는 ping 핸들러입니다."""
     if system_busy():
         return PingStatus.HEALTHY_BUSY
     return PingStatus.HEALTHY
@@ -120,34 +120,34 @@ def ping():
 @app.entrypoint
 def agent(payload):
     """
-    Invoke the weekly update agent with a payload.
-    Supports method routing for ping checks and report generation.
+    페이로드로 주간 업데이트 Agent를 호출합니다.
+    ping 확인 및 보고서 생성을 위한 메서드 라우팅을 지원합니다.
     """
     global _active_task_count
 
-    # Check if this is a ping request
+    # ping 요청인지 확인
     method = payload.get("method")
     if method == "ping":
         status = "Healthy" if _active_task_count == 0 else "HealthyBusy"
         return {"status": status, "active_tasks": _active_task_count}
 
-    # Normal report generation request
+    # 일반 보고서 생성 요청
     user_input = payload.get("prompt")
     print(f"📥 Received request: {user_input}")
 
-    # Start tracking the async task
+    # 비동기 작업 추적 시작
     task_id = app.add_async_task("weekly_report_generation", {"prompt": user_input})
     _active_task_count += 1
     print(f"🔄 Started async task: {task_id} (active: {_active_task_count})")
 
-    # Run the agent in a background thread
+    # 백그라운드 스레드에서 Agent 실행
     def generate_report():
         global _active_task_count
         try:
             print("🤖 Agent is processing...")
             response = weekly_update_agent(user_input)
 
-            # Handle different response types
+            # 다양한 응답 유형 처리
             if isinstance(response, str):
                 result = response
             elif hasattr(response, "message"):
@@ -164,12 +164,12 @@ def agent(payload):
             print(f"❌ Report generation failed: {e}")
             traceback.print_exc()
         finally:
-            # Mark task as complete
+            # 작업을 완료로 표시
             app.complete_async_task(task_id)
             _active_task_count -= 1
             print(f"✅ Task {task_id} marked as complete (active: {_active_task_count})")
 
-    # Start background thread
+    # 백그라운드 스레드 시작
     threading.Thread(target=generate_report, daemon=True).start()
 
     return {

@@ -1,5 +1,5 @@
 """
-Helper functions to retrieve infrastructure resource IDs from SSM Parameter Store
+SSM Parameter Store에서 인프라 리소스 ID를 가져오는 헬퍼 함수
 """
 
 import boto3
@@ -9,17 +9,17 @@ from botocore.exceptions import ClientError
 
 def get_stack_resources(region_name: str, profile_name: str = None) -> Dict[str, str]:
     """
-    Retrieve key resource identifiers from the CloudFormation stack via SSM.
+    SSM을 통해 CloudFormation 스택의 주요 리소스 식별자를 가져옵니다.
 
-    Args:
-        region_name: AWS region
-        profile_name: AWS profile name (optional)
+    인자:
+        region_name: AWS 리전
+        profile_name: AWS profile 이름(선택 사항)
 
-    Returns:
-        Dictionary of resource identifiers
+    반환:
+        리소스 식별자 딕셔너리
     """
     try:
-        # Create session with profile if provided
+        # 제공된 경우 profile로 세션 생성
         if profile_name:
             session = boto3.Session(profile_name=profile_name, region_name=region_name)
             ssm = session.client("ssm")
@@ -32,7 +32,7 @@ def get_stack_resources(region_name: str, profile_name: str = None) -> Dict[str,
 
         resources = {}
 
-        # SSM parameter mappings created by the CloudFormation template
+        # CloudFormation template에서 생성한 SSM 파라미터 매핑
         ssm_mappings = {
             "nginx_instance_id": "/sre-workshop/ec2/nginx-instance-id",
             "app_instance_id": "/sre-workshop/ec2/app-instance-id",
@@ -53,7 +53,7 @@ def get_stack_resources(region_name: str, profile_name: str = None) -> Dict[str,
             except ClientError as e:
                 print(f"  ⚠️  Could not retrieve {param_name}: {e}")
 
-        # Get EC2 instance role name (needed for IAM operations)
+        # IAM 작업에 필요한 EC2 인스턴스 역할 이름 가져오기
         if resources.get("app_instance_id"):
             try:
                 instance_info = ec2.describe_instances(InstanceIds=[resources["app_instance_id"]])

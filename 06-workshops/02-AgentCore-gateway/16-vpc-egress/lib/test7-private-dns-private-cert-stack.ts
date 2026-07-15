@@ -26,9 +26,9 @@ export class PrivateDnsPrivateCertStack extends cdk.Stack {
 
     const privateDomain = `test7.internal.${props.baseDomain}`;
 
-    // --- Private Certificate (represents customer's existing private cert) ---
-    // This cert is issued by AWS Private CA. AgentCore cannot verify it because
-    // it only trusts public CAs. The ALB workaround below solves this.
+    // --- Private Certificate(고객의 기존 Private Certificate를 나타냄) ---
+    // 이 Certificate는 AWS Private CA에서 발급합니다. AgentCore는 Public CA만
+    // 신뢰하므로 이를 검증할 수 없으며, 아래 ALB 우회 방식으로 해결합니다.
     const privateCert = new acm.PrivateCertificate(this, "PrivateCert", {
       domainName: privateDomain,
       certificateAuthority:
@@ -39,7 +39,7 @@ export class PrivateDnsPrivateCertStack extends cdk.Stack {
         ),
     });
 
-    // --- EC2 Instance running simple REST API on HTTP :8000 ---
+    // --- HTTP :8000에서 간단한 REST API를 실행하는 EC2 인스턴스 ---
     const ec2Sg = new ec2.SecurityGroup(this, "Ec2Sg", {
       vpc: props.vpc,
       description: "Simple API EC2 instance",
@@ -115,8 +115,8 @@ export class PrivateDnsPrivateCertStack extends cdk.Stack {
     );
 
     // --- Route 53 Private Hosted Zone ---
-    // Maps test7.internal.{baseDomain} to the EC2 private IP.
-    // This domain is only resolvable inside the VPC.
+    // test7.internal.{baseDomain}을 EC2 Private IP에 매핑합니다.
+    // 이 도메인은 VPC 내부에서만 확인할 수 있습니다.
     const privateZone = new route53.PrivateHostedZone(this, "PrivateZone", {
       zoneName: `internal.${props.baseDomain}`,
       vpc: props.vpc,
@@ -128,9 +128,9 @@ export class PrivateDnsPrivateCertStack extends cdk.Stack {
       target: route53.RecordTarget.fromIpAddresses(instance.instancePrivateIp),
     });
 
-    // --- Internal ALB with public cert (the workaround) ---
-    // AgentCore requires a publicly trusted TLS certificate. Since the customer's
-    // resource uses a private cert, we place an ALB in front with a public cert.
+    // --- Public Certificate가 있는 Internal ALB(우회 방식) ---
+    // AgentCore에는 공개적으로 신뢰되는 TLS Certificate가 필요합니다. 고객
+    // 리소스가 Private Certificate를 사용하므로 앞에 Public Certificate가 있는 ALB를 배치합니다.
     const albSg = new ec2.SecurityGroup(this, "AlbSg", {
       vpc: props.vpc,
       description: "Internal ALB - HTTPS from VPC",
@@ -143,7 +143,7 @@ export class PrivateDnsPrivateCertStack extends cdk.Stack {
       "Allow HTTPS from VPC",
     );
 
-    // Allow ALB to reach EC2 on port 8000
+    // ALB가 8000 포트의 EC2에 접근하도록 허용
     ec2Sg.addIngressRule(albSg, ec2.Port.tcp(8000), "Allow traffic from ALB");
 
     const publicCert = acm.Certificate.fromCertificateArn(
@@ -169,7 +169,7 @@ export class PrivateDnsPrivateCertStack extends cdk.Stack {
 
     alb.logAccessLogs(accessLogBucket, "alb-logs");
 
-    // HTTPS listener with public cert — terminates TLS and forwards HTTP to EC2
+    // Public Certificate가 있는 HTTPS Listener - TLS를 종료하고 EC2에 HTTP 전달
     const httpsListener = alb.addListener("HttpsListener", {
       port: 443,
       protocol: elbv2.ApplicationProtocol.HTTPS,
@@ -187,7 +187,7 @@ export class PrivateDnsPrivateCertStack extends cdk.Stack {
       },
     });
 
-    // --- Outputs ---
+    // --- 출력 ---
     new cdk.CfnOutput(this, "AlbDnsName", {
       value: alb.loadBalancerDnsName,
       description:

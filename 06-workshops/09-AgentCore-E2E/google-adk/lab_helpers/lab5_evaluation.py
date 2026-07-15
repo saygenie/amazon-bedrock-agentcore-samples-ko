@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""AgentCore Evaluation helpers for Lab 5 - retrieves agent role and attaches evaluation policy."""
+"""에이전트 역할을 조회하고 평가 정책을 연결하는 Lab 5용 AgentCore Evaluation 헬퍼."""
 
 import json
 import os
@@ -15,15 +15,15 @@ EVALUATION_POLICY_SUFFIX = "AgentCoreEvaluationPolicy"
 
 
 def get_execution_role_arn_from_runtime():
-    """Retrieve the execution role ARN from the AgentCore runtime agent configuration.
+    """AgentCore Runtime 에이전트 설정에서 실행 역할 ARN을 조회한다.
 
-    Falls back to SSM parameter if runtime lookup fails.
+    Runtime 조회에 실패하면 SSM 파라미터를 대신 사용한다.
 
-    Returns:
-        str: The execution role ARN
+    반환:
+        str: 실행 역할 ARN
     """
     try:
-        # Try SSM first (stored in lab04 via create_agentcore_runtime_execution_role)
+        # SSM 먼저 시도(lab04에서 create_agentcore_runtime_execution_role을 통해 저장됨)
         role_arn = get_ssm_parameter("/app/customersupport/agentcore/runtime_execution_role_arn")
         if role_arn:
             print(f"✅ Retrieved execution_role_arn from SSM: {role_arn}")
@@ -31,7 +31,7 @@ def get_execution_role_arn_from_runtime():
     except Exception:
         pass
 
-    # Fallback: get from the runtime agent configuration
+    # 대체 처리: Runtime 에이전트 설정에서 가져오기
     try:
         agent_arn = get_ssm_parameter("/app/customersupport/agentcore/runtime_arn")
         runtime_id = agent_arn.split(":")[-1].split("/")[-1]
@@ -50,15 +50,15 @@ def get_execution_role_arn_from_runtime():
 
 
 def attach_evaluation_policy(execution_role_arn: str, policy_json_path: str = None):
-    """Attach the AgentCore evaluation policy to the agent's execution role.
+    """에이전트 실행 역할에 AgentCore Evaluations 정책을 연결한다.
 
-    Args:
-        execution_role_arn: The IAM role ARN to attach the policy to.
-        policy_json_path: Path to the evaluation policy JSON file.
-                          Defaults to lab_helpers/lab5_evaluation/agentcore-evaluation-policy.json
+    인수:
+        execution_role_arn: 정책을 연결할 IAM 역할 ARN.
+        policy_json_path: 평가 정책 JSON 파일 경로.
+                          기본값은 lab_helpers/lab5_evaluation/agentcore-evaluation-policy.json이다.
 
-    Returns:
-        str: The policy ARN that was attached
+    반환:
+        str: 연결된 정책 ARN
     """
     if not policy_json_path:
         policy_json_path = os.path.join(
@@ -67,7 +67,7 @@ def attach_evaluation_policy(execution_role_arn: str, policy_json_path: str = No
             "agentcore-evaluation-policy.json",
         )
 
-    # Load the policy document
+    # 정책 문서 로드
     with open(policy_json_path, "r") as f:
         policy_document = json.load(f)
 
@@ -77,7 +77,7 @@ def attach_evaluation_policy(execution_role_arn: str, policy_json_path: str = No
     policy_name = f"{role_name}-{EVALUATION_POLICY_SUFFIX}"
     policy_arn = f"arn:aws:iam::{account_id}:policy/{policy_name}"
 
-    # Check if policy already attached
+    # 정책이 이미 연결되어 있는지 확인
     try:
         attached = iam.list_attached_role_policies(RoleName=role_name)
         for p in attached.get("AttachedPolicies", []):
@@ -87,7 +87,7 @@ def attach_evaluation_policy(execution_role_arn: str, policy_json_path: str = No
     except Exception:
         pass
 
-    # Create or update the policy
+    # 정책 생성 또는 업데이트
     try:
         iam.get_policy(PolicyArn=policy_arn)
         print(f"ℹ️  Policy {policy_name} already exists")
@@ -99,31 +99,31 @@ def attach_evaluation_policy(execution_role_arn: str, policy_json_path: str = No
         )
         print(f"✅ Created policy: {policy_name}")
 
-    # Attach to role
+    # 역할에 연결
     iam.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
     print(f"✅ Attached evaluation policy to role: {role_name}")
     return policy_arn
 
 
 def ensure_evaluation_role(execution_role_arn: str = None):
-    """Ensure the execution role has evaluation permissions.
+    """실행 역할에 평가 권한이 있는지 확인한다.
 
-    If execution_role_arn is None or empty, retrieves it from the runtime.
-    Then attaches the evaluation policy if not already attached.
+    execution_role_arn이 None이거나 비어 있으면 Runtime에서 조회한다.
+    그다음 평가 정책이 아직 연결되지 않은 경우 연결한다.
 
-    Args:
-        execution_role_arn: Optional role ARN. If empty/None, auto-retrieves.
+    인수:
+        execution_role_arn: 선택적 역할 ARN. 비어 있거나 None이면 자동으로 조회한다.
 
-    Returns:
-        str: The validated execution_role_arn
+    반환:
+        str: 검증된 execution_role_arn
     """
     if not execution_role_arn or not execution_role_arn.strip():
         print("⚠️  execution_role_arn is empty, retrieving from runtime...")
         execution_role_arn = get_execution_role_arn_from_runtime()
 
-    # Validate format
+    # 형식 검증
     if not execution_role_arn.startswith("arn:aws:iam::"):
-        # Looser check - just ensure it looks like an ARN
+        # 완화된 검사 - ARN처럼 보이는지만 확인
         if "arn:" not in execution_role_arn or ":role/" not in execution_role_arn:
             raise ValueError(f"Invalid execution_role_arn format: {execution_role_arn}")
 

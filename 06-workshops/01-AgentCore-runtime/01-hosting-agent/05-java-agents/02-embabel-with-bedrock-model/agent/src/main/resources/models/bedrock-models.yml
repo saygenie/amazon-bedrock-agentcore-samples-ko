@@ -1,12 +1,12 @@
 # ============================================
 # bedrock-models.yml
 # ============================================
-# Custom override: adds Claude Haiku 4.5 to the built-in Bedrock model list.
-# This file shadows the one inside embabel-agent-bedrock-autoconfigure JAR.
+# 사용자 지정 재정의: 기본 제공 Bedrock 모델 목록에 Claude Haiku 4.5를 추가합니다.
+# 이 파일은 embabel-agent-bedrock-autoconfigure JAR 내부의 파일을 재정의합니다.
 
 models:
   # ========================================
-  # CUSTOM MODELS
+  # 사용자 지정 모델
   # ========================================
 
   # Claude Haiku 4.5 - US
@@ -20,7 +20,7 @@ models:
       usd_per1m_output_tokens: 4.0
 
   # ========================================
-  # US REGION MODELS
+  # US 리전 모델
   # ========================================
 
   - name: "us_claude_3_5_sonnet"
@@ -78,7 +78,7 @@ models:
       usd_per1m_output_tokens: 75.0
 
   # ========================================
-  # EU REGION MODELS
+  # EU 리전 모델
   # ========================================
 
   - name: "eu_claude_3_5_sonnet"
@@ -136,7 +136,7 @@ models:
       usd_per1m_output_tokens: 75.0
 
   # ========================================
-  # APAC REGION MODELS
+  # APAC 리전 모델
   # ========================================
 
   - name: "apac_claude_3_5_sonnet"
@@ -194,7 +194,7 @@ models:
       usd_per1m_output_tokens: 75.0
 
 # ========================================
-# EMBEDDING MODELS
+# 임베딩 모델
 # ========================================
 embedding_models:
   - name: "titan_embed_image_v1"

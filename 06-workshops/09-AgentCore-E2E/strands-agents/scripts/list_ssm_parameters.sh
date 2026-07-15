@@ -10,7 +10,7 @@ echo "🔍 Listing SSM parameters under namespace: $NAMESPACE/*"
 echo "📍 Region: $REGION"
 echo ""
 
-# Fetch and paginate through all parameters under the given path
+# 지정된 path 아래의 모든 parameter를 pagination으로 가져옵니다.
 aws ssm get-parameters-by-path \
   --path "$NAMESPACE" \
   --recursive \

@@ -1,8 +1,8 @@
-# AgentCore A2A with IAM Authentication Sample
+# IAM 인증을 사용하는 AgentCore A2A 샘플
 
-This sample demonstrates how to deploy an A2A (Agent-to-Agent) agent on Amazon Bedrock AgentCore Runtime using AWS IAM for inbound authentication. It combines the A2A protocol with IAM-based authentication, providing a secure way to deploy agents that communicate using AWS credentials.
+이 샘플은 AWS IAM을 inbound 인증에 사용하여 A2A(Agent-to-Agent) 에이전트를 Amazon Bedrock AgentCore Runtime에 배포하는 방법을 보여 줍니다. A2A 프로토콜과 IAM 기반 인증을 결합하여 AWS 자격 증명으로 통신하는 에이전트를 안전하게 배포합니다.
 
-## Architecture
+## 아키텍처
 
 ```
 ┌─────────────┐         IAM Auth          ┌──────────────────┐
@@ -11,48 +11,48 @@ This sample demonstrates how to deploy an A2A (Agent-to-Agent) agent on Amazon B
 └─────────────┘                           └──────────────────┘
 ```
 
-## Key Features
+## 주요 기능
 
-* A2A protocol for agent-to-agent communication
-* AWS IAM (SigV4) authentication
-* Strands framework for agent implementation
-* Deployment to AgentCore Runtime
+* 에이전트 간 통신을 위한 A2A 프로토콜
+* AWS IAM(SigV4) 인증
+* 에이전트 구현을 위한 Strands 프레임워크
+* AgentCore Runtime에 배포
 
-## Prerequisites
+## 사전 요구 사항
 
 * Python 3.10+
-* AWS CLI configured with credentials
-* Docker running
-* pip installed
+* 자격 증명으로 구성된 AWS CLI
+* Docker 실행
+* pip 설치
 
-## Installation
+## 설치
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Quick Start
+## 빠른 시작
 
-### Option 1: Using Jupyter Notebook (Recommended)
+### 옵션 1: Jupyter Notebook 사용(권장)
 
 ```bash
 jupyter notebook hosting_a2a_iam_auth.ipynb
 ```
 
-Follow the step-by-step instructions in the notebook.
+Notebook의 단계별 지침을 따르세요.
 
-### Option 2: Manual Deployment
+### 옵션 2: 수동 배포
 
-#### Step 1: Test Locally (Optional)
+#### 1단계: 로컬 테스트(선택 사항)
 
 ```bash
-# Terminal 1: Start the agent
+# Terminal 1: 에이전트 시작
 python agent.py
 
-# Terminal 2: Test the agent card
+# Terminal 2: Agent card 테스트
 curl http://localhost:9000/.well-known/agent-card.json | jq .
 
-# Terminal 2: Send a test message
+# Terminal 2: 테스트 message 전송
 curl -X POST http://localhost:9000 \
   -H "Content-Type: application/json" \
   -d '{
@@ -72,29 +72,29 @@ curl -X POST http://localhost:9000 \
   }' | jq .
 ```
 
-#### Step 2: Deploy to AgentCore Runtime
+#### 2단계: AgentCore Runtime에 배포
 
 ```bash
 python deploy.py
 ```
 
-The script will:
-1. Build and push a Docker image to ECR
-2. Create an execution role with necessary permissions
-3. Deploy the agent to AgentCore Runtime
-4. Output the agent ARN
+스크립트는 다음 작업을 수행합니다.
+1. Docker 이미지를 빌드하여 ECR에 push
+2. 필요한 권한이 있는 실행 역할 생성
+3. 에이전트를 AgentCore Runtime에 배포
+4. 에이전트 ARN 출력
 
-#### Step 3: Test Deployed Agent
+#### 3단계: 배포된 에이전트 테스트
 
 ```bash
-# Set the agent ARN from the deploy output
+# 배포 출력의 에이전트 ARN 설정
 export AGENT_ARN="arn:aws:bedrock-agentcore:us-east-1:..."
 
-# Run the test client
+# 테스트 클라이언트 실행
 python client.py
 ```
 
-## Expected Output
+## 예상 출력
 
 ```
 INFO:__main__:Using AWS region: us-east-1
@@ -111,40 +111,40 @@ INFO:__main__:Agent response:
 I am an A2A agent deployed on Amazon Bedrock AgentCore Runtime...
 ```
 
-## Troubleshooting
+## 문제 해결
 
-### Docker Not Running
+### Docker가 실행되지 않음
 
 ```
 Error: Cannot connect to the Docker daemon
 Solution: Start Docker Desktop or Docker daemon
 ```
 
-### AWS Credentials Not Configured
+### AWS 자격 증명이 구성되지 않음
 
 ```
 Error: Unable to locate credentials
 Solution: Run 'aws configure' or set AWS_PROFILE
 ```
 
-### Permission Errors
+### 권한 오류
 
-The deployment requires these IAM permissions:
-- `bedrock-agentcore:*` - AgentCore operations
+배포에는 다음 IAM 권한이 필요합니다.
+- `bedrock-agentcore:*` - AgentCore 작업
 - `ecr:*` - Container registry
-- `iam:CreateRole`, `iam:PutRolePolicy` - Execution role creation
-- `codebuild:*` - Building container images
-- `logs:*` - CloudWatch logs access
+- `iam:CreateRole`, `iam:PutRolePolicy` - 실행 역할 생성
+- `codebuild:*` - 컨테이너 이미지 빌드
+- `logs:*` - CloudWatch log 액세스
 
-The execution role needs:
-- `ecr:GetAuthorizationToken`, `ecr:BatchGetImage`, `ecr:GetDownloadUrlForLayer` - ECR access
-- `bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream` - Bedrock model access
-- `logs:*` - CloudWatch logs
+실행 역할에는 다음 권한이 필요합니다.
+- `ecr:GetAuthorizationToken`, `ecr:BatchGetImage`, `ecr:GetDownloadUrlForLayer` - ECR 액세스
+- `bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream` - Bedrock 모델 액세스
+- `logs:*` - CloudWatch log
 - `bedrock-agentcore:GetWorkloadAccessToken*` - Workload identity
 
-See `execution-role-policy.json` for the complete execution role policy.
+전체 실행 역할 정책은 `execution-role-policy.json`을 참조하세요.
 
-## Cleanup
+## 정리
 
 ```python
 from bedrock_agentcore_starter_toolkit.operations.runtime import destroy_bedrock_agentcore
@@ -156,17 +156,17 @@ destroy_bedrock_agentcore(
 )
 ```
 
-## Files
+## 파일
 
-* `agent.py` - A2A agent implementation with tools
-* `client.py` - Client to test the deployed agent with IAM auth
-* `deploy.py` - Deployment script
-* `requirements.txt` - Python dependencies
-* `execution-role-policy.json` - IAM policy for the execution role
-* `hosting_a2a_iam_auth.ipynb` - Step-by-step tutorial notebook
+* `agent.py` - 도구가 포함된 A2A 에이전트 구현
+* `client.py` - IAM 인증으로 배포된 에이전트를 테스트하는 클라이언트
+* `deploy.py` - 배포 스크립트
+* `requirements.txt` - Python 종속성
+* `execution-role-policy.json` - 실행 역할의 IAM 정책
+* `hosting_a2a_iam_auth.ipynb` - 단계별 자습서 Notebook
 
-## References
+## 참고 자료
 
-* [AgentCore Runtime Documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agents-tools-runtime.html)
-* [A2A Protocol Specification](https://a2a-protocol.org/dev/specification/)
-* [Strands Agents Framework](https://strandsagents.com/latest/)
+* [AgentCore Runtime 문서](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agents-tools-runtime.html)
+* [A2A Protocol 사양](https://a2a-protocol.org/dev/specification/)
+* [Strands Agents 프레임워크](https://strandsagents.com/latest/)

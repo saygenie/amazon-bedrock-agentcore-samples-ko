@@ -1,17 +1,17 @@
 """
-Lab 02: Strands Diagnostics Agent Lambda Handler
+Lab 02: Strands Diagnostics Agent Lambda 핸들러
 
-This module provides the Lambda handler function for the diagnostics agent.
-It's designed to work with AgentCore Gateway and MCP protocol.
+이 모듈은 diagnostics agent의 Lambda 핸들러 함수를 제공합니다.
+AgentCore Gateway 및 MCP 프로토콜과 함께 작동하도록 설계되었습니다.
 
-Features:
-- Accepts actor_id and session_id for user context propagation
-- Integrates with AgentCore Memory via agent state
-- Defines diagnostic tools (EC2, NGINX, DynamoDB logs, metrics)
-- Handles async agent invocation within Lambda's synchronous context
-- Returns structured responses compatible with MCP
+기능:
+- 사용자 컨텍스트 전파를 위한 actor_id 및 session_id 수락
+- Agent 상태를 통한 AgentCore Memory 연동
+- 진단 도구(EC2, NGINX, DynamoDB 로그, 지표) 정의
+- Lambda의 동기 컨텍스트에서 비동기 Agent 호출 처리
+- MCP와 호환되는 구조화된 응답 반환
 
-Event structure (from Gateway via MCP):
+이벤트 구조(MCP를 통해 Gateway에서 전달):
 {
     "query": "User's diagnostic query",
     "actor_id": "user-identifier-from-jwt",
@@ -25,21 +25,21 @@ import os
 
 def lambda_handler(event, context):
     """
-    Lambda handler for AgentCore Gateway invoking Strands diagnostics agent.
+    Strands diagnostics agent를 호출하는 AgentCore Gateway용 Lambda 핸들러입니다.
 
-    Receives query, actor_id, and session_id from Gateway via MCP protocol.
-    Creates Strands agent with memory hooks and invokes it asynchronously.
-    Returns structured response with agent output and request metadata.
+    MCP 프로토콜을 통해 Gateway에서 query, actor_id 및 session_id를 받습니다.
+    Memory hook이 포함된 Strands agent를 생성하고 비동기 방식으로 호출합니다.
+    Agent 출력과 요청 메타데이터가 포함된 구조화된 응답을 반환합니다.
 
-    Args:
-        event: Dictionary with keys:
-            - query (string): User's diagnostic query
-            - actor_id (string): User identifier from JWT token
-            - session_id (string): Session ID for grouping related calls
-        context: Lambda context object
+    인자:
+        event: 다음 키가 포함된 딕셔너리:
+            - query (string): 사용자의 진단 쿼리
+            - actor_id (string): JWT 토큰의 사용자 식별자
+            - session_id (string): 관련 호출을 그룹화하는 세션 ID
+        context: Lambda 컨텍스트 객체
 
-    Returns:
-        Dictionary with response structure:
+    반환:
+        다음 구조의 응답 딕셔너리:
             {
                 "status": "success" | "error",
                 "request_id": "session-id or aws_request_id",
@@ -49,7 +49,7 @@ def lambda_handler(event, context):
             }
     """
     try:
-        # Add lib/ to Python path to find pip-installed packages
+        # pip으로 설치한 패키지를 찾도록 Python 경로에 lib/ 추가
         import sys
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -60,11 +60,11 @@ def lambda_handler(event, context):
         from strands import Agent, tool
         from lab_helpers import mock_data
 
-        # Get model ID from environment variable (set by Lambda configuration)
+        # 환경 변수에서 모델 ID 가져오기(Lambda 구성에서 설정)
         MODEL_ID = os.getenv("MODEL_ID", "global.anthropic.claude-sonnet-4-20250514-v1:0")
 
         # ===================================================================
-        # DEFINE DIAGNOSTIC TOOLS
+        # 진단 도구 정의
         # ===================================================================
 
         @tool(description="Fetch EC2 application logs to identify application errors and issues")
@@ -114,22 +114,22 @@ def lambda_handler(event, context):
             }
 
         # ===================================================================
-        # EXTRACT REQUEST CONTEXT
+        # 요청 컨텍스트 추출
         # ===================================================================
 
-        # Extract parameters from Gateway event
+        # Gateway 이벤트에서 파라미터 추출
         agent_input = event.get("query", "Analyze system logs for issues")
         actor_id = event.get("actor_id", "unknown-actor")
         session_id = event.get("session_id", "default-session")
 
-        # Use session_id as request tracking ID (unique per user interaction)
+        # session_id를 요청 추적 ID로 사용(사용자 상호작용마다 고유)
         request_id = session_id
 
-        # Store in agent state for memory hooks to access
+        # Memory hook에서 접근할 수 있도록 Agent 상태에 저장
         agent_state = {"actor_id": actor_id, "session_id": session_id}
 
         # ===================================================================
-        # CREATE STRANDS AGENT
+        # STRANDS AGENT 생성
         # ===================================================================
 
         diagnostic_agent = Agent(
@@ -150,19 +150,19 @@ When diagnosing system issues:
 4. Provide a clear assessment of severity and recommended actions
 
 Always be thorough in your investigation and provide evidence-based conclusions.""",
-            state=agent_state,  # Pass actor_id and session_id for memory hooks
+            state=agent_state,  # Memory hook에 actor_id와 session_id 전달
         )
 
         # ===================================================================
-        # RUN AGENT ASYNCHRONOUSLY
+        # AGENT를 비동기 방식으로 실행
         # ===================================================================
 
-        # Create async function to run agent
+        # Agent 실행을 위한 비동기 함수 생성
         async def run_agent():
-            """Run agent asynchronously and return response"""
+            """Agent를 비동기 방식으로 실행하고 응답을 반환합니다."""
             return await diagnostic_agent.invoke_async(agent_input)
 
-        # Execute async function within sync Lambda context
+        # 동기 Lambda 컨텍스트에서 비동기 함수 실행
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
@@ -171,7 +171,7 @@ Always be thorough in your investigation and provide evidence-based conclusions.
             loop.close()
 
         # ===================================================================
-        # RETURN RESPONSE
+        # 응답 반환
         # ===================================================================
 
         return {

@@ -8,7 +8,7 @@ def lambda_handler(event, context):
     logger.info("Pre Token Generation Lambda triggered")
     logger.info("Trigger Source: %s", event.get("triggerSource", "Unknown"))
 
-    # V3_0 format for both ID and access token customization
+    # ID 및 액세스 토큰 사용자 지정을 위한 V3_0 형식
     event["response"]["claimsAndScopeOverrideDetails"] = {
         "idTokenGeneration": {
             "claimsToAddOrOverride": {

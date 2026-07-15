@@ -1,15 +1,15 @@
 """
-Post-deploy script: Applies JWT inbound auth on the runtime, sets the gateway
-URL environment variable, attaches IAM permissions for outbound credential
-retrieval, and ensures the managed gateway credential exists.
+배포 후 스크립트: 런타임에 JWT 인바운드 인증을 적용하고, Gateway URL 환경 변수를
+설정하고, 아웃바운드 자격 증명 조회용 IAM 권한을 연결하고, 관리형 Gateway 자격 증명이
+있는지 확인합니다.
 
-Note: The CLI correctly applies authorizerConfiguration for standalone runtimes
-(samples 09, 11), but when a project has both an agent and a gateway, the
-agent's auth config is not applied during deploy. This script works around that.
+참고: CLI는 독립 실행형 런타임(samples 09, 11)에 authorizerConfiguration을 올바르게
+적용하지만, 프로젝트에 에이전트와 Gateway가 모두 있으면 배포 중 에이전트의 인증 구성이
+적용되지 않습니다. 이 스크립트는 해당 문제를 우회합니다.
 
-Run this once after 'agentcore deploy -y'.
+'agentcore deploy -y' 실행 후 이 스크립트를 한 번 실행합니다.
 
-Usage:
+사용법:
     python configure_inbound_auth.py
 """
 
@@ -29,7 +29,7 @@ def find_project_dir() -> str:
 
 
 def _find_in_json(obj, key):
-    """Recursively search for a key in nested JSON."""
+    """중첩된 JSON에서 키를 재귀적으로 검색합니다."""
     if isinstance(obj, dict):
         if key in obj:
             return obj[key]
@@ -46,9 +46,9 @@ def _find_in_json(obj, key):
 
 
 def get_runtime_id() -> str:
-    """Read the deployed runtime ID from deployed-state.json.
+    """deployed-state.json에서 배포된 런타임 ID를 읽습니다.
 
-    Searches for runtimeId recursively to work across CLI versions.
+    CLI 버전에 관계없이 동작하도록 runtimeId를 재귀적으로 검색합니다.
     """
     project_dir = find_project_dir()
     state_file = os.path.join(project_dir, "agentcore", ".cli", "deployed-state.json")
@@ -92,13 +92,13 @@ def main():
     current = ctrl.get_agent_runtime(agentRuntimeId=runtime_id)
     role_name = current["roleArn"].split("/")[-1]
 
-    # Get gateway URL to set as env var
+    # 환경 변수로 설정할 Gateway URL 가져오기
     gateway_url = get_gateway_url(region)
     print(f"Gateway URL: {gateway_url}")
 
-    # Configure JWT inbound auth + gateway URL env var
-    # Note: The CLI should apply authorizerConfiguration from agentcore.json,
-    # but currently does not when the project also contains a gateway.
+    # JWT 인바운드 인증 및 Gateway URL 환경 변수 구성
+    # 참고: CLI가 agentcore.json의 authorizerConfiguration을 적용해야 하지만
+    # 현재는 프로젝트에 Gateway도 포함된 경우 적용하지 않음
     ctrl.update_agent_runtime(
         agentRuntimeId=runtime_id,
         agentRuntimeArtifact=current["agentRuntimeArtifact"],
@@ -114,7 +114,7 @@ def main():
     )
     print("JWT inbound auth and gateway URL configured.")
 
-    # Fix Cognito agent client OAuth settings (CDK deploy resets these)
+    # Cognito 에이전트 클라이언트 OAuth 설정 수정(CDK 배포 시 재설정됨)
     cognito = boto3.client("cognito-idp", region_name=region)
     print("Fixing Cognito agent client OAuth config...")
     cognito.update_user_pool_client(
@@ -127,7 +127,7 @@ def main():
     )
     print("Cognito agent client OAuth config fixed.")
 
-    # Attach IAM policy for AgentCore Identity outbound credential retrieval
+    # AgentCore Identity 아웃바운드 자격 증명 조회용 IAM 정책 연결
     print(f"Attaching IAM policy to role: {role_name}")
     iam.put_role_policy(
         RoleName=role_name,
@@ -155,7 +155,7 @@ def main():
     )
     print("IAM policy attached.")
 
-    # Ensure the managed gateway credential exists (recreate if missing)
+    # 관리형 Gateway 자격 증명 확인(없으면 다시 생성)
     providers = ctrl.list_oauth2_credential_providers()
     existing = {p["name"] for p in providers.get("credentialProviders", [])}
     if "MyGateway-oauth" not in existing:

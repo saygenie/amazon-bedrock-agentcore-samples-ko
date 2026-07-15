@@ -1,19 +1,18 @@
 """
-Customer Query Tool - Mock database query API for Gateway
+고객 query 도구 - Gateway용 모의 데이터베이스 query API
 
-This tool simulates a database query interface that accepts query strings
-and returns mock customer data. It demonstrates what would happen if
-this were a real database without proper input sanitization.
+이 도구는 query 문자열을 받아 모의 고객 데이터를 반환하는 데이터베이스 query
+인터페이스를 시뮬레이션합니다. 적절한 입력 정제 없이 실제 데이터베이스를 사용할 때
+발생할 수 있는 동작을 보여 줍니다.
 
-The tool accepts any query string - whether natural language, SQL, or other formats.
-The Gateway REQUEST interceptor protects against SQL injection by analyzing the
-query parameter before it reaches this tool.
+이 도구는 자연어, SQL 또는 기타 형식의 모든 query 문자열을 허용합니다.
+Gateway 요청 인터셉터는 query 매개변수가 이 도구에 도달하기 전에 분석하여
+SQL Injection을 방지합니다.
 
-WARNING: This tool would be vulnerable to SQL injection if not protected by
-the Gateway REQUEST interceptor.
+주의: Gateway 요청 인터셉터로 보호하지 않으면 이 도구는 SQL Injection에 취약합니다.
 
-Note: This is a MOCK tool - no real database is used. It returns simulated
-data to demonstrate the security pattern without requiring infrastructure setup.
+참고: 실제 데이터베이스를 사용하지 않는 모의 도구입니다. 인프라 설정 없이 보안
+패턴을 시연할 수 있도록 시뮬레이션 데이터를 반환합니다.
 """
 
 import json
@@ -22,18 +21,18 @@ import random
 
 def lambda_handler(event, context):
     """
-    Lambda handler for customer query tool.
+    고객 query 도구의 Lambda 핸들러입니다.
 
-    Expected input:
+    예상 입력:
     {
         "query": "Show me customer with ID 12345"
     }
 
-    Returns mock customer data simulating a database query result.
+    데이터베이스 query 결과를 시뮬레이션한 모의 고객 데이터를 반환합니다.
     """
     print(f"Customer query tool received event: {json.dumps(event)}")
 
-    # Parse input
+    # 입력 파싱
     body = event if isinstance(event, dict) else json.loads(event)
     query = body.get("query", None)
 
@@ -51,9 +50,9 @@ def lambda_handler(event, context):
 
     print(f"Processing query: {query}")
 
-    # Generate mock customer data
-    # In a real implementation, this would execute: SELECT * FROM customers WHERE {query}
-    # Without proper sanitization, this would be vulnerable to SQL injection
+    # 모의 고객 데이터 생성
+    # 실제 구현에서는 다음을 실행: SELECT * FROM customers WHERE {query}
+    # 적절히 정제하지 않으면 SQL Injection에 취약함
 
     customer_ids = [12345, 67890, 11111, 22222, 33333]
     first_names = ["Alice", "Bob", "Carol", "David", "Emma", "Frank", "Grace", "Henry"]
@@ -78,7 +77,7 @@ def lambda_handler(event, context):
         "San Francisco",
     ]
 
-    # Generate 1-3 mock customer records
+    # 모의 고객 레코드 1~3개 생성
     num_results = random.randint(1, 3)
     customers = []
 
@@ -111,7 +110,7 @@ def lambda_handler(event, context):
     return response
 
 
-# MCP Tool Definition for Gateway registration
+# Gateway 등록용 MCP 도구 정의
 TOOL_DEFINITION = {
     "name": "customer_query_tool",
     "description": "Query customer database. Accepts query string parameter. Protected by Gateway interceptor against SQL injection attacks. Note: Uses mock data for demonstration.",
@@ -129,12 +128,12 @@ TOOL_DEFINITION = {
 
 
 if __name__ == "__main__":
-    # Test the tool locally
+    # 로컬에서 도구 테스트
     test_queries = [
         {"query": "Show me customer with ID 12345"},
         {"query": "Find customers in Boston"},
         {"query": "Get customer email for John Smith"},
-        {},  # Test missing query
+        {},  # query 누락 테스트
     ]
 
     for test_event in test_queries:

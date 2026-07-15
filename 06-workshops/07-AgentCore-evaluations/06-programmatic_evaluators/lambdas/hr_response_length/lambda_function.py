@@ -1,15 +1,15 @@
 # pylint: disable=duplicate-code
 """
-HRResponseLength — Code-Based Evaluator (TRACE level)
+HRResponseLength - Code-Based Evaluator(TRACE 수준)
 
-Uses the SDK 1.6 @custom_code_based_evaluator() decorator.
-Checks that the agent's response is between MIN_LENGTH and MAX_LENGTH characters.
-Strips thinking blocks (<thinking>...</thinking>) before measuring.
+SDK 1.6의 @custom_code_based_evaluator() 데코레이터를 사용합니다.
+에이전트 응답의 문자 수가 MIN_LENGTH와 MAX_LENGTH 사이인지 검사합니다.
+측정 전에 thinking 블록(<thinking>...</thinking>)을 제거합니다.
 
-Returns:
-    value       — 1.0 (PASS) if within range, 0.0 (FAIL) otherwise
-    label       — "PASS" or "FAIL"
-    explanation — actual length and acceptable range
+반환값:
+    value       - 범위 내이면 1.0(PASS), 그렇지 않으면 0.0(FAIL)
+    label       - "PASS" 또는 "FAIL"
+    explanation - 실제 길이와 허용 범위
 """
 
 import re
@@ -27,7 +27,7 @@ _THINKING_RE = re.compile(r"<thinking>.*?</thinking>", re.DOTALL)
 
 
 def _first_clean_message(span: dict) -> str:
-    """Return the first non-empty cleaned message from a span's events."""
+    """span 이벤트에서 정리된 첫 번째 비어 있지 않은 메시지를 반환합니다."""
     for se in span.get("span_events", []):
         body = se.get("body", {})
         if not isinstance(body, dict):
@@ -44,7 +44,7 @@ def _first_clean_message(span: dict) -> str:
 
 
 def _extract_final_response(spans: list) -> str:
-    """Extract final visible response text from the invoke_agent span."""
+    """invoke_agent span에서 최종적으로 표시되는 응답 텍스트를 추출합니다."""
     for span in spans:
         name = (span.get("name") or "").lower()
         if "invoke_agent" not in name:
@@ -56,7 +56,7 @@ def _extract_final_response(spans: list) -> str:
 
 
 def _extract_fallback_response(spans: list) -> str:
-    """Fallback: scan all span_events for any non-empty content message."""
+    """대체 방식: 모든 span_events에서 비어 있지 않은 content 메시지를 찾습니다."""
     for span in reversed(spans):
         for se in span.get("span_events", []):
             body = se.get("body", {})
@@ -73,10 +73,10 @@ def _extract_fallback_response(spans: list) -> str:
 
 @custom_code_based_evaluator()
 def lambda_handler(evaluator_input: EvaluatorInput, _context) -> EvaluatorOutput:
-    """Evaluate response length for a single agent trace."""
+    """단일 에이전트 trace의 응답 길이를 평가합니다."""
     spans = evaluator_input.session_spans
 
-    # For TRACE level, target_trace_id identifies which trace to evaluate.
+    # TRACE 수준에서는 target_trace_id가 평가할 trace를 식별
     if evaluator_input.evaluation_level == "TRACE" and evaluator_input.target_trace_id:
         spans = [
             s

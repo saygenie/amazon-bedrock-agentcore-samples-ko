@@ -1,7 +1,7 @@
 #!/bin/bash
-# Creates an Amazon Cognito user pool to use as the OAuth authorization server.
-# If you already have an OAuth server with a client ID, client secret, and test user,
-# skip this script and set ISSUER_URL, CLIENT_ID, and CLIENT_SECRET manually.
+# OAuth 권한 부여 서버로 사용할 Amazon Cognito 사용자 풀을 생성함.
+# 클라이언트 ID, 클라이언트 보안 암호, 테스트 사용자가 있는 OAuth 서버를 이미 보유한 경우
+# 이 스크립트를 건너뛰고 ISSUER_URL, CLIENT_ID, CLIENT_SECRET을 직접 설정.
 
 REGION=${AWS_REGION:-$(aws configure get region 2>/dev/null)}
 REGION=${REGION:-us-east-1}

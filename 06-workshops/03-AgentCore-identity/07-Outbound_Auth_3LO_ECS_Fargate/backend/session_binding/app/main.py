@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-"""Session binding service - FastAPI application."""
+"""세션 바인딩 서비스용 FastAPI 애플리케이션."""
 
 import logging
 

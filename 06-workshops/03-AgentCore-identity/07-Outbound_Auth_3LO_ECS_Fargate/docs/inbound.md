@@ -1,6 +1,6 @@
-# Inbound Authentication Flow
+# 인바운드 인증 흐름
 
-### ALB OIDC authentication with Entra ID
+### Entra ID를 사용한 ALB OIDC 인증
 
 ```mermaid
 sequenceDiagram

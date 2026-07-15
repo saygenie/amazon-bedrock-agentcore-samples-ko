@@ -1,10 +1,10 @@
 """
-Environment-aware OAuth2 token callback server for Entra ID.
+환경을 인식하는 Entra ID용 OAuth2 토큰 콜백 서버입니다.
 
-Captures the authorization code from Entra ID and exchanges it for tokens.
-Automatically detects local vs SageMaker Workshop Studio environments.
+Entra ID의 authorization code를 캡처하여 토큰으로 교환합니다.
+로컬 환경과 SageMaker Workshop Studio 환경을 자동으로 감지합니다.
 
-Usage:
+사용법:
     python3 token_callback_server.py <tenant-id> <client-id> <client-secret>
 """
 
@@ -26,7 +26,7 @@ TOKEN_ENDPOINT = "/token"
 
 logger = logging.getLogger(__name__)
 
-# Global token storage
+# 전역 토큰 저장소
 _captured_token = None
 
 
@@ -40,7 +40,7 @@ def _is_workshop_studio() -> bool:
 
 
 def get_callback_base_url() -> str:
-    """Get the browser-accessible base URL (environment-aware)."""
+    """환경을 인식하여 브라우저에서 접근 가능한 기본 URL을 가져옵니다."""
     if not _is_workshop_studio():
         return f"http://localhost:{PORT}"
     try:
@@ -65,7 +65,7 @@ def is_server_running() -> bool:
 
 
 def get_captured_token() -> str:
-    """Retrieve the captured token from a running server."""
+    """실행 중인 서버에서 캡처된 토큰을 가져옵니다."""
     try:
         r = requests.get(f"http://localhost:{PORT}{TOKEN_ENDPOINT}", timeout=2)
         if r.status_code == 200:
@@ -76,7 +76,7 @@ def get_captured_token() -> str:
 
 
 def wait_for_token(timeout=120) -> str:
-    """Poll the server until a token is captured."""
+    """토큰이 캡처될 때까지 서버를 폴링합니다."""
     start = time.time()
     while time.time() - start < timeout:
         token = get_captured_token()

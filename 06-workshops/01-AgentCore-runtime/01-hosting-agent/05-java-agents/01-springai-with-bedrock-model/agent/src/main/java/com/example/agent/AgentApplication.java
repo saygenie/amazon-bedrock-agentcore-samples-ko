@@ -15,8 +15,8 @@ public class AgentApplication {
     }
 
     /**
-     * Minimal conversational agent hosted on AgentCore Runtime.
-     * Receives a user message via the /invoke endpoint and returns the LLM response.
+     * AgentCore Runtime에서 호스팅되는 최소 구성의 대화형 에이전트입니다.
+     * /invoke 엔드포인트를 통해 사용자 메시지를 받아 LLM 응답을 반환합니다.
      */
     public record AgentRequest(String message) {}
 

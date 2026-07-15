@@ -1,10 +1,10 @@
 """
-AgentCore Runtime agent with:
-  - Inbound Auth:  Cognito JWT validates callers (configured in agentcore.json)
-  - Outbound Auth: API key retrieved from AgentCore Identity at runtime
+다음 인증 방식을 사용하는 AgentCore Runtime 에이전트입니다.
+  - 인바운드 인증: Cognito JWT로 호출자 검증(agentcore.json에서 구성)
+  - 아웃바운드 인증: 런타임에 AgentCore Identity에서 API 키 가져오기
 
-The @requires_api_key decorator fetches the stored API key from AgentCore Identity
-(backed by Secrets Manager) so the key never appears in environment variables or code.
+@requires_api_key 데코레이터는 AgentCore Identity(Secrets Manager 기반)에 저장된
+API 키를 가져오므로 키가 환경 변수나 코드에 노출되지 않습니다.
 """
 
 import json
@@ -18,13 +18,13 @@ from bedrock_agentcore.identity.auth import requires_api_key
 
 app = BedrockAgentCoreApp()
 
-# Cache for outbound API key fetched from AgentCore Identity
+# AgentCore Identity에서 가져온 아웃바운드 API 키 캐시
 _api_key_cache: dict = {}
 
 
 @requires_api_key(provider_name="OutboundApiKey")
 async def _fetch_api_key(*, api_key: str) -> None:
-    """Retrieve the outbound API key from AgentCore Identity."""
+    """AgentCore Identity에서 아웃바운드 API 키를 가져옵니다."""
     _api_key_cache["key"] = api_key
 
 
@@ -89,7 +89,7 @@ _agent: Agent | None = None
 async def handler(payload: dict) -> str:
     global _agent
 
-    # Fetch the outbound API key on first invocation
+    # 최초 호출 시 아웃바운드 API 키 가져오기
     if "key" not in _api_key_cache:
         await _fetch_api_key(api_key="")
         os.environ["OUTBOUND_API_KEY"] = _api_key_cache.get("key", "")

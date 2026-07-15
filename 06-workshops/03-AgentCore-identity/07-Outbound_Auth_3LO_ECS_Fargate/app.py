@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""CDK application entry point."""
+"""CDK 애플리케이션 진입점."""
 
 import os
 

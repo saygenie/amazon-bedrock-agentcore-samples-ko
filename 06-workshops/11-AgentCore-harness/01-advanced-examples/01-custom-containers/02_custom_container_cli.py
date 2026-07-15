@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 """
-Custom Container + Command Line Example for AgentCore Harness
+AgentCore Harness의 사용자 지정 컨테이너 및 명령줄 예제
 
-This script demonstrates:
-  1. Creating a Harness with a custom container image
-  2. Invoking the agent to write and run code in that runtime
-  3. Running commands directly on the agent's VM via ExecuteCommand
-  4. Cleaning up resources
+이 스크립트에서는 다음 작업을 보여 준다.
+  1. 사용자 지정 컨테이너 이미지로 Harness 생성
+  2. 에이전트를 호출하여 해당 런타임에서 코드 작성 및 실행
+  3. ExecuteCommand를 통해 에이전트 VM에서 직접 명령 실행
+  4. 리소스 정리
 
-Usage:
-    # Pick a language preset (node, go, python)
+사용법:
+    # 언어 프리셋 선택(node, go, python)
     python 03_custom_container_cli.py --language node
     python 03_custom_container_cli.py --language go
     python 03_custom_container_cli.py --language python
 
-    # Or specify a container image directly
+    # 또는 컨테이너 이미지 직접 지정
     python 03_custom_container_cli.py --container public.ecr.aws/docker/library/rust:slim
 
-    # Bring your own IAM role
+    # 기존 IAM 역할 사용
     python 03_custom_container_cli.py --role-arn arn:aws:iam::123456789012:role/MyRole
 
-    # Other options
+    # 기타 옵션
     python 03_custom_container_cli.py --model us.anthropic.claude-sonnet-4-6
     python 03_custom_container_cli.py --skip-cleanup
     python 03_custom_container_cli.py --raw-events
@@ -34,7 +34,7 @@ import sys
 import time
 import uuid
 
-# Add project root so helpers are importable
+# 도우미를 가져올 수 있도록 프로젝트 루트를 추가한다.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from helper.iam import create_harness_role
@@ -43,7 +43,7 @@ from helper.client import get_agentcore_client
 REGION = os.getenv("AWS_DEFAULT_REGION")
 
 # ---------------------------------------------------------------------------
-# Language presets — map friendly names to container URIs + demo messages
+# 언어 프리셋: 친숙한 이름을 컨테이너 URI와 데모 메시지에 매핑한다.
 # ---------------------------------------------------------------------------
 LANGUAGE_PRESETS = {
     "node": {
@@ -77,7 +77,7 @@ LANGUAGE_PRESETS = {
 }
 
 # ---------------------------------------------------------------------------
-# CLI args
+# CLI 인자
 # ---------------------------------------------------------------------------
 DEFAULT_MODEL = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
 
@@ -135,10 +135,10 @@ args = parser.parse_args()
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# 도우미
 # ---------------------------------------------------------------------------
 def aws_cp(*cli_args: str) -> dict:
-    """Run an aws bedrock-agentcore-control command and return parsed JSON."""
+    """aws bedrock-agentcore-control 명령을 실행하고 파싱한 JSON을 반환한다."""
     cmd = ["aws", "bedrock-agentcore-control", "--region", REGION]
     cmd.extend(cli_args)
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -148,7 +148,7 @@ def aws_cp(*cli_args: str) -> dict:
 
 
 def wait_ready(harness_id: str, timeout: int = 120):
-    """Poll until harness is READY."""
+    """Harness가 READY 상태가 될 때까지 폴링한다."""
     deadline = time.monotonic() + timeout
     while True:
         status = aws_cp("get-harness", "--harness-id", harness_id)["harness"]["status"]
@@ -161,7 +161,7 @@ def wait_ready(harness_id: str, timeout: int = 120):
 
 
 def stream_invoke(client, harness_arn, session_id, message, model_id):
-    """Invoke a harness and stream the response."""
+    """Harness를 호출하고 응답을 스트리밍한다."""
     response = client.invoke_harness(
         harnessArn=harness_arn,
         runtimeSessionId=session_id,
@@ -186,7 +186,7 @@ def stream_invoke(client, harness_arn, session_id, message, model_id):
 
 
 def run_command(client, harness_arn, session_id, command):
-    """Execute a command on the agent's VM."""
+    """에이전트 VM에서 명령을 실행한다."""
     print(f"  $ {command}")
     resp = client.invoke_agent_runtime_command(
         agentRuntimeArn=harness_arn,
@@ -210,16 +210,16 @@ def run_command(client, harness_arn, session_id, command):
 
 
 # ---------------------------------------------------------------------------
-# Main
+# 메인
 # ---------------------------------------------------------------------------
 def main():
-    # Resolve language preset — explicit --container / --message override the preset
+    # 언어 프리셋을 결정한다. 명시적인 --container/--message 값은 프리셋보다 우선한다.
     preset = LANGUAGE_PRESETS[args.language]
     container_uri = args.container or preset["container"]
     message = args.message or preset["message"]
     model_id = args.model
 
-    # Auto-generate system prompt from the container image name if not provided
+    # 지정하지 않은 경우 컨테이너 이미지 이름으로 system prompt를 자동 생성한다.
     if args.system_prompt:
         system_prompt = args.system_prompt
     else:
@@ -231,7 +231,7 @@ def main():
 
     harness_id = None
     try:
-        # Step 0: IAM role
+        # 0단계: IAM 역할
         print("=" * 60)
         print("Step 0: IAM execution role")
         print("=" * 60)
@@ -241,7 +241,7 @@ def main():
         else:
             role_arn = create_harness_role()
 
-        # Step 1: Create harness
+        # 1단계: Harness 생성
         print("\n" + "=" * 60)
         print("Step 1: Create Harness")
         print("=" * 60)
@@ -253,7 +253,7 @@ def main():
         print(f"  Harness ARN: {harness_arn}")
         wait_ready(harness_id)
 
-        # Step 2: Attach custom container
+        # 2단계: 사용자 지정 컨테이너 연결
         print("\n" + "=" * 60)
         print(f"Step 2: Attach custom container ({container_uri})")
         print("=" * 60)
@@ -268,7 +268,7 @@ def main():
         )
         wait_ready(harness_id)
 
-        # Step 3: Invoke agent
+        # 3단계: 에이전트 호출
         print("\n" + "=" * 60)
         print("Step 3: Invoke agent")
         print("=" * 60)
@@ -280,7 +280,7 @@ def main():
         print(f"  Message:    {message[:80]}{'...' if len(message) > 80 else ''}\n")
         stream_invoke(client, harness_arn, session_id, message, model_id)
 
-        # Step 4: ExecuteCommand
+        # 4단계: ExecuteCommand
         print("\n" + "=" * 60)
         print("Step 4: Run commands on the agent's VM (ExecuteCommand)")
         print("=" * 60)

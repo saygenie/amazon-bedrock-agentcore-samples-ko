@@ -1,80 +1,80 @@
-# AgentCore Browser with Chrome Enterprise Policies and Custom Root CAs
+# Chrome 엔터프라이즈 정책과 사용자 지정 루트 CA를 사용하는 AgentCore Browser
 
-This example demonstrates how to use [Chrome enterprise policies](https://chromeenterprise.google/policies/) and custom root CA certificates with Amazon Bedrock AgentCore Browser and Code Interpreter.
+이 예제에서는 Amazon Bedrock AgentCore Browser 및 Code Interpreter에서 [Chrome 엔터프라이즈 정책](https://chromeenterprise.google/policies/)과 사용자 지정 루트 CA 인증서를 사용하는 방법을 살펴봅니다.
 
-## Overview
+## 개요
 
-Chrome enterprise policies let you:
-- **Restrict agent navigation**: Define URL allow lists and block lists that limit where agents can browse
-- **Disable risky features**: Turn off the password manager, block downloads, disable DevTools
-- **Enforce compliance**: Apply managed policies at the browser level that cannot be overridden by sessions
+Chrome 엔터프라이즈 정책을 사용하면 다음 작업을 수행할 수 있습니다.
+- **에이전트 탐색 제한**: 에이전트가 탐색할 수 있는 위치를 제한하는 URL 허용 목록과 차단 목록 정의
+- **위험한 기능 비활성화**: 암호 관리자 끄기, 다운로드 차단, DevTools 비활성화
+- **규정 준수 적용**: 세션에서 재정의할 수 없는 관리형 정책을 브라우저 수준에 적용
 
-Custom root CA certificates let you:
-- **Connect to internal services**: Trust certificates signed by your organization's private CA (Jira, Artifactory, HR portals)
-- **Work with corporate proxies**: Trust SSL-intercepting proxy root CAs (Zscaler, Palo Alto Networks)
+사용자 지정 루트 CA 인증서를 사용하면 다음 작업을 수행할 수 있습니다.
+- **내부 서비스에 연결**: 조직의 프라이빗 CA에서 서명한 인증서 신뢰(Jira, Artifactory, HR 포털)
+- **기업 프록시 사용**: SSL을 가로채는 프록시의 루트 CA 신뢰(Zscaler, Palo Alto Networks)
 
-## Use Cases
+## 사용 사례
 
-- Lock down a data-entry agent to only access a specific corporate portal
-- Prevent agents from storing credentials or downloading files
-- Enable agents to connect to internal infrastructure that uses private PKI
-- Route agent traffic through SSL-intercepting corporate proxies
+- 데이터 입력 에이전트가 특정 기업 포털에만 액세스하도록 제한
+- 에이전트가 자격 증명을 저장하거나 파일을 다운로드하지 못하도록 방지
+- 에이전트가 프라이빗 PKI를 사용하는 내부 인프라에 연결하도록 지원
+- SSL을 가로채는 기업 프록시를 통해 에이전트 트래픽 라우팅
 
-## Getting Started
+## 시작하기
 
-### Prerequisites
+### 사전 요구 사항
 
-- Python 3.10 or later
-- An AWS account with Amazon Bedrock AgentCore access enabled
-- AWS credentials configured (`aws sts get-caller-identity`)
-- An AWS Region where Amazon Bedrock AgentCore is available
+- Python 3.10 이상
+- Amazon Bedrock AgentCore 액세스가 활성화된 AWS 계정
+- 구성된 AWS 자격 증명(`aws sts get-caller-identity`)
+- Amazon Bedrock AgentCore를 사용할 수 있는 AWS 리전
 
-> **Note:** The notebook creates all required resources (S3 bucket, IAM role, AgentCore Browser, Code Interpreter) automatically. You do not need to pre-create any resources.
+> **참고:** 노트북에서 필요한 모든 리소스(Amazon S3 버킷, IAM 역할, AgentCore Browser, Code Interpreter)를 자동으로 생성합니다. 리소스를 미리 생성할 필요는 없습니다.
 
-### Installation
+### 설치
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Run
+### 실행
 
 ```bash
 jupyter notebook browser-chrome-policies.ipynb
 ```
 
-Run the cells sequentially. Part 1 covers Chrome enterprise policies, Part 2 covers custom root CA certificates.
+셀을 순서대로 실행합니다. 파트 1에서는 Chrome 엔터프라이즈 정책을, 파트 2에서는 사용자 지정 루트 CA 인증서를 다룹니다.
 
-## Notebook Walkthrough
+## 노트북 둘러보기
 
-The [browser-chrome-policies.ipynb](browser-chrome-policies.ipynb) notebook demonstrates:
+[browser-chrome-policies.ipynb 노트북](browser-chrome-policies.ipynb)에서는 다음 내용을 살펴봅니다.
 
-### Setup
+### 설정
 
-- Creates an S3 bucket for policy files and session recordings
-- Creates an IAM execution role with a trust policy for `bedrock-agentcore.amazonaws.com` and S3 permissions
+- 정책 파일과 세션 녹화물을 저장할 Amazon S3 버킷 생성
+- `bedrock-agentcore.amazonaws.com`에 대한 신뢰 정책과 Amazon S3 권한이 있는 IAM 실행 역할 생성
 
-### Part 1: Chrome Enterprise Policies
+### 파트 1: Chrome 엔터프라이즈 정책
 
-1. **Create Chrome policy** — Define a policy JSON that blocks all URLs except AWS documentation and disables risky features, then upload it to S3
-2. **Create browser with managed policies** — Create a custom AgentCore Browser with the policy enforced via `enterprise_policies` with `type: "MANAGED"` and session recording enabled
-3. **Demonstrate with Playwright** — Navigate to an allowed URL (page loads) and a blocked URL (Chrome displays an error page), showing browser-level enforcement independent of any agent logic
-4. **Review session recording** — Replay the session in the AgentCore console to observe the policy enforcement
-5. **(Optional) Run a Strands agent** — Use the restricted browser with an AI agent framework to show end-to-end agent behavior under policy restrictions
+1. **Chrome 정책 생성**: AWS 문서를 제외한 모든 URL을 차단하고 위험한 기능을 비활성화하는 정책 JSON을 정의한 후 Amazon S3에 업로드
+2. **관리형 정책이 적용된 Browser 생성**: `enterprise_policies`에 `type: "MANAGED"`를 지정하여 정책을 적용하고 세션 녹화를 활성화한 사용자 지정 AgentCore Browser 생성
+3. **Playwright로 시연**: 허용된 URL(페이지 로드)과 차단된 URL(Chrome에서 오류 페이지 표시)로 이동하여 에이전트 로직과 독립적으로 브라우저 수준에서 정책이 적용되는지 확인
+4. **세션 녹화 검토**: AgentCore 콘솔에서 세션을 재생하여 정책 적용 확인
+5. **선택 사항: Strands 에이전트 실행**: 제한된 Browser를 AI 에이전트 프레임워크와 함께 사용하여 정책 제한이 적용된 엔드 투 엔드 에이전트 동작 확인
 
-### Part 2: Custom Root CA Certificates
+### 파트 2: 사용자 지정 루트 CA 인증서
 
-6. **Store root CA in Secrets Manager** — Store the [BadSSL](https://badssl.com) untrusted root CA certificate (a public test certificate) in AWS Secrets Manager
-7. **Code Interpreter WITHOUT root CA** — Show the `SSLCertVerificationError` when connecting to a site with an untrusted certificate
-8. **Code Interpreter WITH root CA** — Create a custom Code Interpreter with `Certificate.from_secret_arn()` and show a successful HTTP 200 connection
+6. **AWS Secrets Manager에 루트 CA 저장**: 신뢰할 수 없는 [BadSSL](https://badssl.com) 루트 CA 인증서(공개 테스트 인증서)를 AWS Secrets Manager에 저장
+7. **루트 CA가 없는 Code Interpreter**: 신뢰할 수 없는 인증서를 사용하는 사이트에 연결할 때 발생하는 `SSLCertVerificationError` 확인
+8. **루트 CA가 있는 Code Interpreter**: `Certificate.from_secret_arn()`으로 사용자 지정 Code Interpreter를 생성하고 HTTP 200 연결 성공 확인
 
-### Cleanup
+### 리소스 정리
 
-Deletes all resources: custom browser, Code Interpreter, IAM role, Secrets Manager secret, and S3 policy file.
+사용자 지정 Browser, Code Interpreter, IAM 역할, AWS Secrets Manager 보안 암호, Amazon S3 정책 파일을 비롯한 모든 리소스를 삭제합니다.
 
-## Key SDK Patterns
+## 주요 SDK 패턴
 
-### Managed Chrome policies (browser level)
+### 관리형 Chrome 정책(브라우저 수준)
 
 ```python
 from bedrock_agentcore.tools import BrowserClient
@@ -99,7 +99,7 @@ response = client.create_browser(
 )
 ```
 
-### Custom root CA certificates
+### 사용자 지정 루트 CA 인증서
 
 ```python
 from bedrock_agentcore.tools import CodeInterpreter, Certificate
@@ -116,40 +116,40 @@ response = ci_client.create_code_interpreter(
 )
 ```
 
-### Policy enforcement levels
+### 정책 적용 수준
 
-| Level | Parameter | When set | Chrome directory | Can override? |
+| 수준 | 파라미터 | 설정 시점 | Chrome 디렉터리 | 재정의 가능 여부 |
 |-------|-----------|----------|------------------|---------------|
-| Managed | `type: "MANAGED"` | `create_browser()` | `/etc/chromium/policies/managed/` | No |
-| Recommended | `type: "RECOMMENDED"` | `start()` / `browser_session()` | `/etc/chromium/policies/recommended/` | Yes (by managed) |
+| Managed | `type: "MANAGED"` | `create_browser()` | `/etc/chromium/policies/managed/` | 아니요 |
+| Recommended | `type: "RECOMMENDED"` | `start()` / `browser_session()` | `/etc/chromium/policies/recommended/` | 예(Managed에서 재정의 가능) |
 
-## What to Observe
+## 확인할 내용
 
-- **In your terminal**: Playwright output showing the allowed page title and the blocked URL error
-- **In the AgentCore console**: Navigate to **Built-in tools** → your browser → active session → **View live session** to watch in real time
-- **Session replay**: After the session ends, choose **View Recording** on the terminated session to see the timeline with the blocked URL attempt
-- **Root CA demo**: Terminal output shows the SSL error (without cert) and successful 200 response (with cert)
+- **터미널**: 허용된 페이지 제목과 차단된 URL 오류를 보여 주는 Playwright 출력
+- **AgentCore 콘솔**: **Built-in tools** → 사용 중인 Browser → 활성 세션 → **View live session**으로 이동하여 실시간으로 확인
+- **세션 재생**: 세션이 종료된 후 종료된 세션에서 **View Recording**을 선택하여 차단된 URL 접근 시도가 포함된 타임라인 확인
+- **루트 CA 데모**: 인증서가 없을 때의 SSL 오류와 인증서가 있을 때의 200 성공 응답을 터미널 출력에서 확인
 
-## Files
+## 파일
 
-| File | Description |
+| 파일 | 설명 |
 |------|-------------|
-| `browser-chrome-policies.ipynb` | Complete tutorial notebook with setup, Chrome policies, root CA demo, and cleanup |
-| `requirements.txt` | Python dependencies |
-| `README.md` | This file |
+| `browser-chrome-policies.ipynb` | 설정, Chrome 정책, 루트 CA 데모, 리소스 정리가 포함된 전체 튜토리얼 노트북 |
+| `requirements.txt` | Python 종속성 |
+| `README.md` | 현재 파일 |
 
-## Security Considerations
+## 보안 고려 사항
 
-- Chrome policies enforce restrictions at the browser level, independent of agent prompts
-- Managed policies cannot be overridden by session-level recommended policies
-- Root CA certificates should be rotated before expiration
-- Use IAM least-privilege policies for S3 and Secrets Manager access
-- Session recordings may contain sensitive page content — apply appropriate S3 access controls
+- Chrome 정책은 에이전트 프롬프트와 독립적으로 브라우저 수준에서 제한을 적용합니다.
+- 관리형 정책은 세션 수준의 권장 정책으로 재정의할 수 없습니다.
+- 루트 CA 인증서는 만료되기 전에 교체해야 합니다.
+- Amazon S3 및 AWS Secrets Manager 액세스에는 최소 권한 IAM 정책을 사용합니다.
+- 세션 녹화물에는 민감한 페이지 콘텐츠가 포함될 수 있으므로 적절한 Amazon S3 액세스 제어를 적용합니다.
 
-## Additional Resources
+## 추가 리소스
 
-- [Amazon Bedrock AgentCore Browser documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/browser-tool.html)
-- [Chrome Enterprise policy list](https://chromeenterprise.google/policies/)
-- [AWS Secrets Manager documentation](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html)
-- [Strands Agents — Model Providers](https://strandsagents.com/latest/user-guide/concepts/model-providers/)
+- [Amazon Bedrock AgentCore Browser 문서](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/browser-tool.html)
+- [Chrome Enterprise 정책 목록](https://chromeenterprise.google/policies/)
+- [AWS Secrets Manager 문서](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html)
+- [Strands Agents 모델 공급자](https://strandsagents.com/latest/user-guide/concepts/model-providers/)
 - [Amazon Bedrock AgentCore Python SDK](https://github.com/aws/bedrock-agentcore-sdk-python)

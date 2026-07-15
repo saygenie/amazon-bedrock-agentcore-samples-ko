@@ -2,29 +2,29 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 # =============================================================================
-# Create a demo user in an EntraID tenant for testing the auth flow.
+# 인증 흐름을 테스트할 데모 사용자를 EntraID tenant에 생성합니다.
 #
-# Usage:
+# 사용법:
 #   ./create-demo-user.sh --tenant-id <id> --domain <domain> <username> [password]
 #
-# Examples:
+# 예:
 #   ./create-demo-user.sh --tenant-id abc123 --domain contoso.onmicrosoft.com demo1
 #   ./create-demo-user.sh --tenant-id abc123 --domain contoso.onmicrosoft.com demo2 MyP@ssw0rd123
 #
-# Prerequisites:
-#   1. Azure CLI installed and logged in:
+# 사전 요구 사항:
+#   1. Azure CLI 설치 및 로그인:
 #        az login --tenant <tenant-id> --allow-no-subscriptions
-#      (--allow-no-subscriptions is needed for CIAM-only tenants)
-#      The logged-in user must have User Administrator (or Global Admin) role.
-#   2. jq must be installed
+#      (CIAM 전용 tenant에는 --allow-no-subscriptions가 필요함)
+#      로그인한 사용자에게 User Administrator(또는 Global Admin) 역할이 있어야 함
+#   2. jq 설치
 #
-# The script uses the Azure CLI token (from `az login`) to call the Graph API.
-# No application permissions needed — it runs under the admin user's identity.
+# 이 스크립트는 Azure CLI 토큰(`az login`에서 가져옴)을 사용하여 Graph API를 호출합니다.
+# 관리자 사용자 ID로 실행되므로 애플리케이션 권한은 필요하지 않습니다.
 # =============================================================================
 
 set -euo pipefail
 
-# --- Parse arguments ---
+# --- 인자 파싱 ---
 TENANT_ID=""
 DOMAIN=""
 USERNAME=""
@@ -55,7 +55,7 @@ if [ -z "$TENANT_ID" ] || [ -z "$DOMAIN" ] || [ -z "$USERNAME" ]; then
   exit 1
 fi
 
-# Auto-generate password if not provided
+# 암호가 제공되지 않으면 자동 생성
 if [ -z "$PASSWORD" ]; then
   PASSWORD="Demo$(date +%s | shasum | head -c 8)!Aa1"  # pragma: allowlist secret
 fi
@@ -66,7 +66,7 @@ echo "Creating user: ${EMAIL}"
 echo "Password: ${PASSWORD}"
 echo ""
 
-# --- Step 1: Get Graph API token from Azure CLI ---
+# --- 1단계: Azure CLI에서 Graph API 토큰 가져오기 ---
 echo "→ Getting Graph API token from Azure CLI..."
 ACCESS_TOKEN=$(az account get-access-token \
   --resource https://graph.microsoft.com \
@@ -82,7 +82,7 @@ ACCESS_TOKEN=$(az account get-access-token \
 
 echo "✓ Got Graph API token (via az cli)"
 
-# --- Step 2: Create user via Graph API ---
+# --- 2단계: Graph API를 통해 사용자 생성 ---
 echo "→ Creating user..."
 CREATE_RESPONSE=$(curl -s -X POST \
   "https://graph.microsoft.com/v1.0/users" \

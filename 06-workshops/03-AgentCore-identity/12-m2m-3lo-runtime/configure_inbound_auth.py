@@ -1,12 +1,12 @@
 """
-Post-deploy script: Attaches IAM permissions for outbound credential retrieval,
-KMS access for the token vault, and registers OAuth2 callback URLs for 3LO flows.
+배포 후 스크립트: 아웃바운드 자격 증명 조회용 IAM 권한과 토큰 볼트용 KMS 액세스를
+연결하고, 3LO 흐름의 OAuth2 콜백 URL을 등록합니다.
 
-JWT inbound auth is now handled natively by the CLI via agentcore.json.
+이제 CLI가 agentcore.json을 통해 JWT 인바운드 인증을 기본으로 처리합니다.
 
-Run this once after 'agentcore deploy -y'.
+'agentcore deploy -y' 실행 후 이 스크립트를 한 번 실행합니다.
 
-Usage:
+사용법:
     python configure_inbound_auth.py
 """
 
@@ -26,7 +26,7 @@ def find_project_dir() -> str:
 
 
 def _find_in_json(obj, key):
-    """Recursively search for a key in nested JSON."""
+    """중첩된 JSON에서 키를 재귀적으로 검색합니다."""
     if isinstance(obj, dict):
         if key in obj:
             return obj[key]
@@ -43,9 +43,9 @@ def _find_in_json(obj, key):
 
 
 def get_runtime_id() -> str:
-    """Read the deployed runtime ID from deployed-state.json.
+    """deployed-state.json에서 배포된 런타임 ID를 읽습니다.
 
-    Searches for runtimeId recursively to work across CLI versions.
+    CLI 버전에 관계없이 동작하도록 runtimeId를 재귀적으로 검색합니다.
     """
     project_dir = find_project_dir()
     state_file = os.path.join(project_dir, "agentcore", ".cli", "deployed-state.json")
@@ -72,10 +72,10 @@ def main():
 
     ctrl = boto3.client("bedrock-agentcore-control", region_name=config["region"])
 
-    # Fetch current runtime config to extract role ARN
+    # 역할 ARN을 추출하기 위해 현재 런타임 구성 가져오기
     current = ctrl.get_agent_runtime(agentRuntimeId=runtime_id)
 
-    # Attach IAM policy for AgentCore Identity outbound credential retrieval
+    # AgentCore Identity 아웃바운드 자격 증명 조회용 IAM 정책 연결
     region = config["region"]
     account = boto3.client("sts").get_caller_identity()["Account"]
     role_name = current["roleArn"].split("/")[-1]
@@ -107,7 +107,7 @@ def main():
     )
     print("IAM policy attached.")
 
-    # Attach KMS policy so the runtime can use the token vault CMK for USER_FEDERATION flows
+    # 런타임이 USER_FEDERATION 흐름의 토큰 볼트 CMK를 사용하도록 KMS 정책 연결
     tv = boto3.client("bedrock-agentcore-control", region_name=region).get_token_vault(tokenVaultId="default")
     kms_key_arn = tv.get("kmsConfiguration", {}).get("kmsKeyArn", "")
     if kms_key_arn:
@@ -134,8 +134,8 @@ def main():
         )
         print("KMS policy attached.")
 
-    # Register allowed callback URLs in the workload identity
-    # Required for USER_FEDERATION (3LO) flows
+    # 워크로드 자격 증명에 허용된 콜백 URL 등록
+    # USER_FEDERATION(3LO) 흐름에 필요
     callback_url = os.environ.get("CALLBACK_URL", "http://localhost:9090/oauth2/callback")
     print(f"\nRegistering callback URL in workload identity: {callback_url}")
     ctrl.update_workload_identity(

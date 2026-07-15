@@ -26,7 +26,7 @@ fi
 
 echo ""
 
-# Step 1: Delete gateway (best-effort)
+# 1단계: Gateway 삭제(가능한 범위에서 시도)
 echo "Deleting AgentCore Gateway..."
 GATEWAY_ID=$(aws bedrock-agentcore-control list-gateways \
     --query 'items[?name==`PingGateway`].gatewayId' --output text 2>/dev/null || echo "")
@@ -38,7 +38,7 @@ else
 fi
 echo ""
 
-# Step 2: Delete credential provider (best-effort)
+# 2단계: 자격 증명 공급자 삭제(가능한 범위에서 시도)
 echo "Deleting AgentCore credential provider..."
 if aws bedrock-agentcore-control delete-oauth2-credential-provider \
     --name "ping-private-idp" 2>/dev/null; then
@@ -48,7 +48,7 @@ else
 fi
 echo ""
 
-# Step 3: Delete agent runtime stack (best-effort)
+# 3단계: 에이전트 런타임 스택 삭제(가능한 범위에서 시도)
 AGENT_STACK="AgentCore-PrivateIdpPingAgent-default"
 if aws cloudformation describe-stacks --stack-name "$AGENT_STACK" &>/dev/null; then
     echo "Deleting agent runtime stack ($AGENT_STACK)..."
@@ -61,23 +61,23 @@ else
 fi
 echo ""
 
-# Step 4: Delete PrivateIdpLatticeStack (if it exists)
+# 4단계: PrivateIdpLatticeStack이 있으면 삭제
 if aws cloudformation describe-stacks --stack-name PrivateIdpLatticeStack &>/dev/null; then
     echo "Destroying PrivateIdpLatticeStack..."
     uv run cdk destroy PrivateIdpLatticeStack --force
 fi
 
-# Step 5: Delete PrivateIdpGatewayInfraStack
+# 5단계: PrivateIdpGatewayInfraStack 삭제
 if aws cloudformation describe-stacks --stack-name PrivateIdpGatewayInfraStack &>/dev/null; then
     echo "Destroying PrivateIdpGatewayInfraStack..."
     uv run cdk destroy PrivateIdpGatewayInfraStack --force
 fi
 
-# Step 6: Delete PrivateIdpPingFederateStack
+# 6단계: PrivateIdpPingFederateStack 삭제
 echo "Destroying PrivateIdpPingFederateStack..."
 uv run cdk destroy PrivateIdpPingFederateStack --force
 
-# Step 7: Try to delete PrivateIdpVpcStack — may fail if Lattice ENIs not yet released
+# 7단계: PrivateIdpVpcStack 삭제 시도(Lattice ENI가 아직 해제되지 않았다면 실패할 수 있음)
 echo "Destroying PrivateIdpVpcStack..."
 if uv run cdk destroy PrivateIdpVpcStack --force; then
     echo ""

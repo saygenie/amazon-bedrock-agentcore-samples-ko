@@ -68,24 +68,24 @@ def get_cognito_client_secret() -> str:
 
 def read_config(file_path: str) -> Dict[str, Any]:
     """
-    Read configuration from a file path. Supports JSON, YAML, and YML formats.
+    파일 경로에서 설정을 읽는다. JSON, YAML 및 YML 형식을 지원한다.
 
-    Args:
-        file_path (str): Path to the configuration file
+    인수:
+        file_path (str): 설정 파일 경로
 
-    Returns:
-        Dict[str, Any]: Configuration data as a dictionary
+    반환:
+        Dict[str, Any]: 딕셔너리 형태의 설정 데이터
 
-    Raises:
-        FileNotFoundError: If the file doesn't exist
-        ValueError: If the file format is not supported or invalid
-        yaml.YAMLError: If YAML parsing fails
-        json.JSONDecodeError: If JSON parsing fails
+    예외:
+        FileNotFoundError: 파일이 없는 경우
+        ValueError: 파일 형식이 지원되지 않거나 유효하지 않은 경우
+        yaml.YAMLError: YAML 파싱에 실패한 경우
+        json.JSONDecodeError: JSON 파싱에 실패한 경우
     """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Configuration file not found: {file_path}")
 
-    # Get file extension to determine format
+    # 형식을 판별하기 위해 파일 확장자 가져오기
     _, ext = os.path.splitext(file_path.lower())
 
     try:
@@ -95,15 +95,15 @@ def read_config(file_path: str) -> Dict[str, Any]:
             elif ext in [".yaml", ".yml"]:
                 return yaml.safe_load(file)
             else:
-                # Try to auto-detect format by attempting JSON first, then YAML
+                # JSON을 먼저 시도한 다음 YAML을 시도하여 형식 자동 감지
                 content = file.read()
                 file.seek(0)
 
-                # Try JSON first
+                # JSON 먼저 시도
                 try:
                     return json.loads(content)
                 except json.JSONDecodeError:
-                    # Try YAML
+                    # YAML 시도
                     try:
                         return yaml.safe_load(content)
                     except yaml.YAMLError:
@@ -120,7 +120,7 @@ def read_config(file_path: str) -> Dict[str, Any]:
 
 
 def make_urls_clickable(text):
-    """Convert URLs in text to clickable HTML links."""
+    """텍스트의 URL을 클릭할 수 있는 HTML 링크로 변환한다."""
     url_pattern = r"https?://(?:[-\w.])+(?:\:[0-9]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:\#(?:[\w.])*)?)?"
 
     def replace_url(match):
@@ -131,12 +131,12 @@ def make_urls_clickable(text):
 
 
 def create_safe_markdown_text(text, message_placeholder):
-    """Create safe markdown text with proper encoding and newline handling"""
-    # First encode/decode for safety
+    """적절한 인코딩과 줄 바꿈 처리를 적용한 안전한 Markdown 텍스트를 생성한다."""
+    # 안전을 위해 먼저 인코딩 및 디코딩
     safe_text = text.encode("utf-16", "surrogatepass").decode("utf-16")
 
-    # Convert newlines to HTML breaks for proper rendering
-    # This handles both actual newlines and any remaining escaped ones
+    # 올바르게 렌더링되도록 줄 바꿈을 HTML 줄 바꿈으로 변환
+    # 실제 줄 바꿈과 남아 있는 이스케이프된 줄 바꿈을 모두 처리함
     safe_text = safe_text.replace("\n", "<br>")
     safe_text = safe_text.replace("\\n", "<br>")
 

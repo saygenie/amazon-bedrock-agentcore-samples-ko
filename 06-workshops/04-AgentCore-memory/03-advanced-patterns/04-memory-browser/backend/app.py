@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-AgentCore Memory Dashboard Backend - List Memory Records Only
-Simple approach to just list all memory records without semantic search
+AgentCore Memory Dashboard Backend - Memory 레코드 목록 전용
+시맨틱 검색 없이 모든 Memory 레코드를 나열하는 간단한 접근 방식
 """
 
 from fastapi import FastAPI, HTTPException
@@ -14,27 +14,27 @@ from datetime import datetime
 from bedrock_agentcore.memory import MemoryClient
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# .env 파일에서 환경 변수 로드
 load_dotenv()
 
 
 def get_namespaces(mem_client: MemoryClient, memory_id: str) -> Dict:
-    """Get namespace mapping for memory strategies."""
+    """Memory Strategy의 네임스페이스 매핑을 가져옵니다."""
     strategies = mem_client.get_memory_strategies(memory_id)
     return {i["type"]: i["namespaces"][0] for i in strategies}
 
 
 def clean_aws_error_message(error_message: str) -> str:
-    """Clean up AWS error messages by removing ARNs and sensitive information."""
+    """ARN과 민감한 정보를 제거하여 AWS 오류 메시지를 정리합니다."""
     import re
 
-    # Remove ARN patterns (arn:aws:...)
+    # ARN 패턴 제거(arn:aws:...)
     error_message = re.sub(r"arn:aws:[^:\s]+:[^:\s]*:[^:\s]*:[^\s]+", "[AWS Resource]", error_message)
 
-    # Remove account IDs (12-digit numbers)
+    # 계정 ID(12자리 숫자) 제거
     error_message = re.sub(r"\b\d{12}\b", "[Account]", error_message)
 
-    # Clean up common AWS error patterns
+    # 일반적인 AWS 오류 패턴 정리
     if "AccessDeniedException" in error_message:
         if "bedrock-agentcore:GetMemory" in error_message:
             return "Access denied: Missing required permission 'bedrock-agentcore:GetMemory'. Please check your IAM permissions."
@@ -49,11 +49,11 @@ def clean_aws_error_message(error_message: str) -> str:
     if "ValidationException" in error_message:
         return "Invalid request parameters. Please check your Memory ID format."
 
-    # Return cleaned message
+    # 정리된 메시지 반환
     return error_message
 
 
-# Configure logging
+# 로깅 구성
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Configure CORS for React frontend
+# React 프런트엔드용 CORS 구성
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -73,39 +73,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuration
-MEMORY_ID = os.getenv("AGENTCORE_MEMORY_ID")  # No default - must be provided by user
+# 구성
+MEMORY_ID = os.getenv("AGENTCORE_MEMORY_ID")  # 기본값 없음 - 사용자가 제공해야 함
 
 
-# AWS Region detection - try multiple sources
+# AWS 리전 감지 - 여러 소스 시도
 def get_aws_region():
-    """Get AWS region from environment, AWS CLI config, or default"""
-    # 1. Check environment variable first
+    """환경, AWS CLI 구성 또는 기본값에서 AWS 리전을 가져옵니다."""
+    # 1. 환경 변수 먼저 확인
     region = os.getenv("AWS_REGION")
     if region:
         logger.info(f"Using AWS region from environment: {region}")
         return region
 
-    # 2. Try to get from AWS CLI configuration
+    # 2. AWS CLI 구성에서 가져오기 시도
     try:
-        import subprocess  # nosec B404 - subprocess usage is necessary and properly secured
+        import subprocess  # nosec B404 - subprocess 사용이 필요하며 적절하게 보호됨
         import shutil
 
-        # Security: Use full path to aws executable to prevent PATH hijacking (B607)
+        # 보안: PATH 하이재킹을 방지하도록 aws 실행 파일의 전체 경로 사용(B607)
         aws_path = shutil.which("aws")
         if aws_path:
-            # Security: Use list format with full path to prevent command injection (B603)
-            # Validate that aws_path is an absolute path to prevent PATH manipulation
+            # 보안: 명령 삽입을 방지하도록 전체 경로를 포함한 목록 형식 사용(B603)
+            # PATH 조작을 방지하도록 aws_path가 절대 경로인지 검증
             if not aws_path.startswith("/"):
                 logger.warning(f"AWS CLI path is not absolute: {aws_path}, skipping")
             else:
-                # Using validated full path and hardcoded arguments only, no user input
+                # 검증된 전체 경로와 하드코딩된 인수만 사용하며 사용자 입력은 사용하지 않음
                 result = subprocess.run(  # nosec B603
                     [aws_path, "configure", "get", "region"],
                     capture_output=True,
                     text=True,
                     timeout=5,
-                    check=False,  # Don't raise exception on non-zero return
+                    check=False,  # 0이 아닌 반환 코드에서 예외를 발생시키지 않음
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     region = result.stdout.strip()
@@ -116,7 +116,7 @@ def get_aws_region():
     except Exception as e:
         logger.debug(f"Could not get region from AWS CLI: {e}")
 
-    # 3. Try to get from boto3 session (respects AWS_DEFAULT_REGION, profiles, etc.)
+    # 3. boto3 세션에서 가져오기 시도(AWS_DEFAULT_REGION, profile 등을 따름)
     try:
         import boto3
 
@@ -128,14 +128,14 @@ def get_aws_region():
     except Exception as e:
         logger.debug(f"Could not get region from boto3 session: {e}")
 
-    # 4. Fall back to default
+    # 4. 기본값으로 대체
     logger.warning("No AWS region configured, using default: us-east-1")
     return "us-east-1"
 
 
 AWS_REGION = get_aws_region()
 
-# Initialize AgentCore Memory client
+# AgentCore Memory 클라이언트 초기화
 try:
     memory_client = MemoryClient()
     logger.info("✅ AgentCore Memory client initialized")
@@ -169,17 +169,17 @@ class ShortTermMemoryQuery(BaseModel):
     session_id: str
     max_results: Optional[int] = 20
     memory_id: Optional[str] = None
-    # Existing filters
+    # 기존 필터
     event_type: Optional[str] = "all"
     role_filter: Optional[str] = "all"
     sort_by: Optional[str] = "timestamp"
     sort_order: Optional[str] = "desc"
-    # Essential filters only
+    # 필수 필터만 포함
     content_search: Optional[str] = None
 
 
 class LongTermMemoryQuery(BaseModel):
-    namespace: str  # Required field
+    namespace: str  # 필수 필드
     max_results: Optional[int] = 20
     memory_id: Optional[str] = None
     content_type: Optional[str] = "all"
@@ -195,27 +195,27 @@ class LongTermMemoryQuery(BaseModel):
 
 
 def apply_short_term_filters(memories: List[Dict[str, Any]], query: ShortTermMemoryQuery) -> List[Dict[str, Any]]:
-    """Apply client-side filters to short-term memory results"""
+    """Short-term Memory 결과에 클라이언트 측 필터를 적용합니다."""
     filtered_memories = memories.copy()
 
-    # Content search filtering
+    # 콘텐츠 검색 필터링
     if query.content_search and query.content_search.strip():
         search_term = query.content_search.strip().lower()
         filtered_memories = [m for m in filtered_memories if search_term in m.get("content", "").lower()]
 
-    # Role filtering (existing)
+    # Role 필터링(기존)
     if query.role_filter != "all":
         filtered_memories = [m for m in filtered_memories if m.get("role", "").upper() == query.role_filter.upper()]
 
-    # Event type filtering (existing)
+    # 이벤트 유형 필터링(기존)
     if query.event_type != "all":
         filtered_memories = [m for m in filtered_memories if m.get("type", "") == query.event_type]
 
-    # Simple sorting with consistent string conversion
+    # 일관된 문자열 변환을 사용한 단순 정렬
     reverse_order = query.sort_order == "desc"
 
     if query.sort_by == "timestamp":
-        # Convert all timestamps to strings for consistent sorting
+        # 일관된 정렬을 위해 모든 타임스탬프를 문자열로 변환
         filtered_memories.sort(key=lambda x: str(x.get("timestamp", "")), reverse=reverse_order)
     elif query.sort_by == "size":
         filtered_memories.sort(key=lambda x: int(x.get("size", 0)), reverse=reverse_order)
@@ -230,7 +230,7 @@ async def get_short_term_memory(query: ShortTermMemoryQuery):
         if not memory_client:
             raise HTTPException(status_code=503, detail="AgentCore Memory client not available")
 
-        # Use provided memory_id or fall back to environment default
+        # 제공된 memory_id를 사용하고, 없으면 환경 기본값으로 대체
         memory_id = query.memory_id or MEMORY_ID
 
         if not memory_id:
@@ -245,7 +245,7 @@ async def get_short_term_memory(query: ShortTermMemoryQuery):
         logger.info(f"📋 Memory ID: {memory_id}")
         logger.info(f"📋 Max results: {query.max_results}")
 
-        # Method 1: Try ListEvents API
+        # 방법 1: ListEvents API 시도
         try:
             logger.info("📞 Using ListEvents API")
             events = memory_client.list_events(
@@ -262,12 +262,12 @@ async def get_short_term_memory(query: ShortTermMemoryQuery):
                     payload = event.get("payload", {})
                     content_text = ""
 
-                    # Handle the actual payload structure from MemoryClient.list_events
+                    # MemoryClient.list_events의 실제 payload 구조 처리
                     if isinstance(payload, list) and len(payload) > 0:
-                        # Payload is a list, get first item
+                        # Payload가 목록이면 첫 번째 항목 가져오기
                         first_item = payload[0]
                         if isinstance(first_item, dict):
-                            # Look for conversational content
+                            # 대화 콘텐츠 찾기
                             if "conversational" in first_item:
                                 conversational = first_item["conversational"]
                                 if isinstance(conversational, dict):
@@ -277,7 +277,7 @@ async def get_short_term_memory(query: ShortTermMemoryQuery):
                                     else:
                                         content_text = str(conversational)
                             else:
-                                # Fallback to any content field
+                                # 임의의 content 필드로 대체
                                 if "content" in first_item:
                                     content = first_item["content"]
                                     if isinstance(content, dict) and "text" in content:
@@ -289,7 +289,7 @@ async def get_short_term_memory(query: ShortTermMemoryQuery):
                         else:
                             content_text = str(first_item)
                     elif isinstance(payload, dict):
-                        # Handle dict payload
+                        # 딕셔너리 payload 처리
                         if "content" in payload:
                             content = payload["content"]
                             if isinstance(content, dict) and "text" in content:
@@ -322,10 +322,10 @@ async def get_short_term_memory(query: ShortTermMemoryQuery):
             logger.warning(f"ListEvents failed for {query.actor_id}/{query.session_id}: {e}")
             logger.warning(f"ListEvents error type: {type(e).__name__}")
 
-            # Clean the error message to remove ARNs and sensitive info
+            # ARN과 민감한 정보를 제거하도록 오류 메시지 정리
             clean_error = clean_aws_error_message(str(e))
 
-            # Check for specific Memory ID not found errors
+            # 특정 Memory ID를 찾을 수 없음 오류인지 확인
             if any(
                 keyword in error_msg
                 for keyword in [
@@ -353,7 +353,7 @@ async def get_short_term_memory(query: ShortTermMemoryQuery):
                 logger.error(f"❌ Access denied for Memory ID '{memory_id}'")
                 raise HTTPException(status_code=403, detail=clean_error)
 
-        # Method 2: Try get_last_k_turns
+        # 방법 2: get_last_k_turns 시도
         try:
             logger.info("🔄 Using get_last_k_turns API")
             recent_turns = memory_client.get_last_k_turns(
@@ -394,10 +394,10 @@ async def get_short_term_memory(query: ShortTermMemoryQuery):
             logger.warning(f"get_last_k_turns failed for {query.actor_id}/{query.session_id}: {e}")
             logger.warning(f"get_last_k_turns error type: {type(e).__name__}")
 
-            # Clean the error message to remove ARNs and sensitive info
+            # ARN과 민감한 정보를 제거하도록 오류 메시지 정리
             clean_error = clean_aws_error_message(str(e))
 
-            # Check for specific Memory ID not found errors
+            # 특정 Memory ID를 찾을 수 없음 오류인지 확인
             if any(
                 keyword in error_msg
                 for keyword in [
@@ -427,7 +427,7 @@ async def get_short_term_memory(query: ShortTermMemoryQuery):
 
         logger.info(f"✅ Total short-term memories found: {len(short_term_memories)}")
 
-        # Apply filters
+        # 필터 적용
         filtered_memories = apply_short_term_filters(short_term_memories, query)
         logger.info(f"🔍 After filtering: {len(filtered_memories)} memories remain")
 
@@ -455,7 +455,7 @@ async def get_short_term_memory(query: ShortTermMemoryQuery):
 class EventQuery(BaseModel):
     event_id: str
     memory_id: Optional[str] = None
-    # Optional: if you have these, retrieval is more efficient
+    # 선택 사항: 다음 값이 있으면 더 효율적으로 검색할 수 있음
     actor_id: Optional[str] = None
     session_id: Optional[str] = None
 
@@ -463,7 +463,7 @@ class EventQuery(BaseModel):
 class EventSearchQuery(BaseModel):
     event_id: str
     memory_id: Optional[str] = None
-    # Search parameters to find the event
+    # 이벤트를 찾기 위한 검색 매개변수
     search_all_sessions: bool = False
     known_actor_ids: Optional[List[str]] = None
 
@@ -480,10 +480,10 @@ async def search_event_by_id(query: EventSearchQuery):
         logger.info(f"🔍 Searching for event ID: {query.event_id}")
         logger.info(f"📋 Memory ID: {memory_id}")
 
-        # Common actor IDs to try (only if provided by user)
+        # 시도할 일반적인 Actor ID(사용자가 제공한 경우에만)
         actor_ids_to_try = query.known_actor_ids or []
 
-        # Session IDs must be provided by user - no hardcoded defaults
+        # Session ID는 사용자가 제공해야 하며 하드코딩된 기본값은 없음
         session_ids_to_try = []
 
         for actor_id in actor_ids_to_try:
@@ -495,17 +495,17 @@ async def search_event_by_id(query: EventSearchQuery):
                         memory_id=memory_id,
                         actor_id=actor_id,
                         session_id=session_id,
-                        max_results=100,  # Search more events
+                        max_results=100,  # 더 많은 이벤트 검색
                     )
 
-                    # Look for the specific event ID
+                    # 특정 Event ID 찾기
                     for event in events:
                         if event.get("eventId") == query.event_id:
                             logger.info(f"✅ Found event {query.event_id} in {actor_id}/{session_id}")
 
-                            # Process the event (same logic as before)
+                            # 이벤트 처리(이전과 동일한 로직)
                             payload = event.get("payload", {})
-                            content_text = str(payload)  # Simplified for now
+                            content_text = str(payload)  # 현재는 단순화하여 처리
 
                             event_data = {
                                 "id": query.event_id,
@@ -564,17 +564,17 @@ async def get_event_by_id(query: EventQuery):
         logger.info(f"🔍 Fetching event by ID: {query.event_id}")
         logger.info(f"📋 Memory ID: {memory_id}")
 
-        # Try to get the specific event
+        # 특정 이벤트 가져오기 시도
         try:
-            # Note: This assumes there's a get_event method in the memory client
-            # You may need to check the actual AgentCore Memory client API
+            # 참고: Memory 클라이언트에 get_event 메서드가 있다고 가정함
+            # 실제 AgentCore Memory 클라이언트 API를 확인해야 할 수 있음
             event = memory_client.get_event(memory_id=memory_id, event_id=query.event_id)
 
             if event:
                 payload = event.get("payload", {})
                 content_text = ""
 
-                # Handle payload structure (same logic as in list_events)
+                # Payload 구조 처리(list_events와 동일한 로직)
                 if isinstance(payload, list) and len(payload) > 0:
                     first_item = payload[0]
                     if isinstance(first_item, dict):
@@ -622,7 +622,7 @@ async def get_event_by_id(query: EventQuery):
                     "session_id": event.get("sessionId", "unknown"),
                     "timestamp": str(event.get("eventTimestamp", datetime.now().isoformat() + "Z")),
                     "size": len(content_text),
-                    "raw_event": event,  # Include full event data for debugging
+                    "raw_event": event,  # 디버깅을 위해 전체 이벤트 데이터 포함
                 }
 
                 return {
@@ -640,14 +640,14 @@ async def get_event_by_id(query: EventQuery):
                 }
 
         except AttributeError:
-            # If get_event method doesn't exist, try alternative approach
+            # get_event 메서드가 없으면 대체 접근 방식 시도
             logger.warning("get_event method not available, trying alternative approach")
 
-            # Alternative: Search through all events to find the specific one
-            # This is less efficient but works if direct event retrieval isn't available
+            # 대안: 모든 이벤트를 검색하여 특정 이벤트 찾기
+            # 효율성은 떨어지지만 직접 이벤트를 검색할 수 없을 때 사용할 수 있음
             try:
-                # We'd need actor_id and session_id for this approach
-                # This is a limitation of the current API
+                # 이 접근 방식에는 actor_id와 session_id가 필요함
+                # 현재 API의 제약 사항임
                 return {
                     "event": None,
                     "found": False,
@@ -672,7 +672,7 @@ async def list_namespaces_old(query: MemoryQuery):
         if not memory_client:
             raise HTTPException(status_code=503, detail="AgentCore Memory client not available")
 
-        # Use provided memory_id or fall back to environment default
+        # 제공된 memory_id를 사용하고, 없으면 환경 기본값으로 대체
         memory_id = query.memory_id or MEMORY_ID
 
         if not memory_id:
@@ -683,7 +683,7 @@ async def list_namespaces_old(query: MemoryQuery):
 
         logger.info(f"🔍 Listing namespaces for memory ID: {memory_id}")
 
-        # Get memory strategies to discover namespaces
+        # 네임스페이스 검색을 위해 Memory Strategy 가져오기
         try:
             strategies = memory_client.get_memory_strategies(memory_id)
             logger.info(f"✅ Found {len(strategies)} memory strategies")
@@ -698,8 +698,8 @@ async def list_namespaces_old(query: MemoryQuery):
                         {
                             "namespace": namespace,
                             "type": strategy_type,
-                            "count": 0,  # We could add a count query here if needed
-                            "sample_content": "",  # We could add sample content if needed
+                            "count": 0,  # 필요한 경우 여기에 개수 쿼리를 추가할 수 있음
+                            "sample_content": "",  # 필요한 경우 샘플 콘텐츠를 추가할 수 있음
                         }
                     )
 
@@ -715,10 +715,10 @@ async def list_namespaces_old(query: MemoryQuery):
             error_msg = str(e).lower()
             logger.error(f"Failed to get memory strategies: {e}")
 
-            # Clean the error message to remove ARNs and sensitive info
+            # ARN과 민감한 정보를 제거하도록 오류 메시지 정리
             clean_error = clean_aws_error_message(str(e))
 
-            # Check for specific Memory ID not found errors
+            # 특정 Memory ID를 찾을 수 없음 오류인지 확인
             if any(
                 keyword in error_msg
                 for keyword in [
@@ -764,7 +764,7 @@ async def get_long_term_memory(query: LongTermMemoryQuery):
         if not memory_client:
             raise HTTPException(status_code=503, detail="AgentCore Memory client not available")
 
-        # Use provided memory_id or fall back to environment default
+        # 제공된 memory_id를 사용하고, 없으면 환경 기본값으로 대체
         memory_id = query.memory_id or MEMORY_ID
 
         if not memory_id:
@@ -781,15 +781,15 @@ async def get_long_term_memory(query: LongTermMemoryQuery):
             f"📋 Filters: content_type={query.content_type}, sort_by={query.sort_by}, sort_order={query.sort_order}"
         )
 
-        # Use retrieve_memories to get long-term memory directly from AgentCore
+        # retrieve_memories를 사용하여 AgentCore에서 Long-term Memory를 직접 가져오기
         try:
             logger.info("📚 Using retrieve_memories API")
 
-            # Use retrieve_memories for semantic search
+            # 시맨틱 검색에 retrieve_memories 사용
             memory_results = memory_client.retrieve_memories(
                 memory_id=memory_id,
                 namespace=query.namespace,
-                query="*",  # Get all content - could be made configurable
+                query="*",  # 모든 콘텐츠 가져오기 - 구성 가능하도록 만들 수 있음
                 top_k=query.max_results,
             )
 
@@ -802,7 +802,7 @@ async def get_long_term_memory(query: LongTermMemoryQuery):
                 logger.info(f"✅ Found {len(memory_records)} memory records")
 
                 for memory_idx, memory in enumerate(memory_records):
-                    # Debug: log the raw memory structure
+                    # 디버그: 원시 Memory 구조 기록
                     logger.info(f"📋 Raw memory record {memory_idx}: {memory}")
 
                     content = memory.get("content", {})
@@ -811,7 +811,7 @@ async def get_long_term_memory(query: LongTermMemoryQuery):
                     else:
                         content_text = str(content)
 
-                    # Apply content type filter
+                    # 콘텐츠 유형 필터 적용
                     memory_namespaces = memory.get("namespaces", [])
                     namespace_str = memory_namespaces[0] if memory_namespaces else query.namespace
 
@@ -846,10 +846,10 @@ async def get_long_term_memory(query: LongTermMemoryQuery):
             error_msg = str(e).lower()
             logger.error(f"retrieve_memories failed: {e}")
 
-            # Clean the error message to remove ARNs and sensitive info
+            # ARN과 민감한 정보를 제거하도록 오류 메시지 정리
             clean_error = clean_aws_error_message(str(e))
 
-            # Check for specific Memory ID not found errors
+            # 특정 Memory ID를 찾을 수 없음 오류인지 확인
             if any(
                 keyword in error_msg
                 for keyword in [
@@ -888,7 +888,7 @@ async def get_long_term_memory(query: LongTermMemoryQuery):
                     detail=f"Failed to retrieve memories from AgentCore: {clean_error}",
                 )
 
-        # Apply sorting
+        # 정렬 적용
         if query.sort_by == "timestamp":
             long_term_memories.sort(key=lambda x: x["timestamp"], reverse=(query.sort_order == "desc"))
         elif query.sort_by == "namespace":
@@ -919,7 +919,7 @@ async def get_memory_entries(query: MemoryQuery):
         if not memory_client:
             raise HTTPException(status_code=503, detail="AgentCore Memory client not available")
 
-        # Use provided memory_id or fall back to environment default
+        # 제공된 memory_id를 사용하고, 없으면 환경 기본값으로 대체
         memory_id = query.memory_id or MEMORY_ID
 
         if not memory_id:
@@ -930,12 +930,12 @@ async def get_memory_entries(query: MemoryQuery):
 
         all_memories = []
 
-        # Use ListMemoryRecords operation to browse all records without semantic search
+        # 시맨틱 검색 없이 모든 레코드를 탐색하도록 ListMemoryRecords 작업 사용
         logger.info("🔍 Listing memory records using ListMemoryRecords operation")
         logger.info(f"📋 Memory ID: {memory_id}")
 
-        # AgentCore Memory typically requires a namespace for efficient queries
-        # If no namespace provided, return helpful message
+        # AgentCore Memory의 효율적인 쿼리에는 일반적으로 네임스페이스가 필요함
+        # 네임스페이스가 제공되지 않으면 안내 메시지 반환
         if not query.namespace:
             logger.info("📋 No namespace provided - AgentCore Memory requires namespace for queries")
             return {
@@ -946,7 +946,7 @@ async def get_memory_entries(query: MemoryQuery):
                 "message": "No namespace provided. AgentCore Memory requires a namespace to query data efficiently. Please provide a namespace in your request.",
             }
 
-        # Try listing memory records with provided namespace
+        # 제공된 네임스페이스로 Memory 레코드 나열 시도
         try:
             logger.info(f"📋 Listing memory records from namespace: {query.namespace}")
 
@@ -956,7 +956,7 @@ async def get_memory_entries(query: MemoryQuery):
                 maxResults=query.max_results or 50,
             )
 
-            # Handle the actual response structure
+            # 실제 응답 구조 처리
             if isinstance(memories, dict) and "memoryRecordSummaries" in memories:
                 memory_records = memories["memoryRecordSummaries"]
                 logger.info(f"📋 Processing {len(memory_records)} actual memory records")
@@ -965,9 +965,9 @@ async def get_memory_entries(query: MemoryQuery):
 
             logger.info(f"✅ Found {len(memory_records)} memory records")
 
-            # Convert memories to our format
+            # Memory를 자체 형식으로 변환
             for memory in memory_records:
-                # Handle both dict and string formats
+                # 딕셔너리 형식과 문자열 형식 모두 처리
                 if isinstance(memory, dict):
                     content = memory.get("content", {})
                     if isinstance(content, dict):
@@ -985,7 +985,7 @@ async def get_memory_entries(query: MemoryQuery):
                         "size": len(content_text),
                     }
                 else:
-                    # Handle string format
+                    # 문자열 형식 처리
                     content_text = str(memory)
                     memory_entry = {
                         "id": f"memory-{len(all_memories)}",
@@ -1001,7 +1001,7 @@ async def get_memory_entries(query: MemoryQuery):
 
         except Exception as e:
             logger.warning(f"Could not list memory records from namespace '{query.namespace}': {e}")
-            # Clean error message to avoid exposing internal details
+            # 내부 세부 정보가 노출되지 않도록 오류 메시지 정리
             clean_error = clean_aws_error_message(str(e))
             return {
                 "memories": [],
@@ -1047,17 +1047,17 @@ async def list_namespaces_v2(query: ListNamespacesQuery):
 
         logger.info(f"🔍 Listing namespaces for memory ID: {memory_id}")
 
-        # Use the correct AgentCore Memory SDK approach to get namespaces
+        # 올바른 AgentCore Memory SDK 접근 방식으로 네임스페이스 가져오기
         try:
             logger.info("📋 Getting memory strategies to discover namespaces...")
 
-            # Get memory strategies which contain namespace information
+            # 네임스페이스 정보가 포함된 Memory Strategy 가져오기
             strategies = memory_client.get_memory_strategies(memory_id)
             logger.info(f"✅ Found {len(strategies)} memory strategies")
 
             found_namespaces = []
 
-            # Extract namespaces from strategies
+            # Strategy에서 네임스페이스 추출
             for strategy in strategies:
                 strategy_type = strategy.get("type", "unknown")
                 namespaces = strategy.get("namespaces", [])
@@ -1065,14 +1065,14 @@ async def list_namespaces_v2(query: ListNamespacesQuery):
                 logger.info(f"📋 Strategy '{strategy_type}' has namespaces: {namespaces}")
 
                 for namespace in namespaces:
-                    # Try to get a sample of records from this namespace to count them
+                    # 개수를 확인하기 위해 이 네임스페이스의 레코드 샘플 가져오기 시도
                     try:
-                        # Use retrieve_memories to get sample content
+                        # retrieve_memories를 사용하여 샘플 콘텐츠 가져오기
                         sample_memories = memory_client.retrieve_memories(
                             memory_id=memory_id,
                             namespace=namespace,
-                            query="*",  # Generic query to get any content
-                            top_k=3,  # Get a few samples
+                            query="*",  # 임의의 콘텐츠를 가져오는 일반 쿼리
+                            top_k=3,  # 샘플 몇 개 가져오기
                         )
 
                         sample_content = ""
@@ -1098,7 +1098,7 @@ async def list_namespaces_v2(query: ListNamespacesQuery):
                         )
 
                     except Exception as e:
-                        # Still add the namespace even if we can't get samples
+                        # 샘플을 가져올 수 없어도 네임스페이스 추가
                         found_namespaces.append(
                             {
                                 "namespace": namespace,
@@ -1111,7 +1111,7 @@ async def list_namespaces_v2(query: ListNamespacesQuery):
                             f"⚠️ Found namespace: {namespace} (type: {strategy_type}) but couldn't retrieve samples: {e}"
                         )
 
-            # Remove duplicates based on namespace
+            # 네임스페이스를 기준으로 중복 제거
             unique_namespaces = []
             seen_namespaces = set()
             for ns in found_namespaces:
@@ -1132,11 +1132,11 @@ async def list_namespaces_v2(query: ListNamespacesQuery):
         except Exception as e:
             logger.warning(f"Failed to get memory strategies: {e}")
 
-            # Fallback to the old pattern-based approach
+            # 이전 패턴 기반 접근 방식으로 대체
             logger.info("🔄 Falling back to pattern-based namespace discovery...")
 
             try:
-                # Common namespace patterns for AgentCore Memory
+                # AgentCore Memory의 일반적인 네임스페이스 패턴
                 namespace_patterns = [
                     "support/user/DEFAULT/",
                     "support/user/DEFAULT/facts/",
@@ -1153,7 +1153,7 @@ async def list_namespaces_v2(query: ListNamespacesQuery):
 
                 for pattern in namespace_patterns:
                     try:
-                        # Use list_memory_records to test namespace existence
+                        # list_memory_records를 사용하여 네임스페이스 존재 여부 테스트
                         memories = memory_client.list_memory_records(
                             memoryId=memory_id, namespace=pattern, maxResults=1
                         )
@@ -1171,7 +1171,7 @@ async def list_namespaces_v2(query: ListNamespacesQuery):
                                 {
                                     "namespace": pattern,
                                     "type": "unknown",
-                                    "count": 1,  # We only queried for 1 record
+                                    "count": 1,  # 레코드 1개만 쿼리함
                                     "sample_content": sample_content,
                                 }
                             )
@@ -1212,11 +1212,11 @@ async def validate_memory_id(query: MemoryIdValidationQuery):
 
         logger.info(f"🔍 Validating memory ID: {query.memory_id}")
 
-        # Try to list memory records to validate the memory ID
+        # Memory ID를 검증하기 위해 Memory 레코드 나열 시도
         try:
             _ = memory_client.list_memory_records(
                 memoryId=query.memory_id,
-                maxResults=1,  # Just check if we can access it
+                maxResults=1,  # 액세스 가능 여부만 확인
             )
 
             return {
@@ -1281,8 +1281,8 @@ async def delete_memory_entries(query: DeleteMemoryEntriesQuery):
 async def search_memory_entries(query: SearchMemoryEntriesQuery):
     """Search memory entries (simplified implementation)"""
     try:
-        # This is a simplified search - in a real implementation you might use
-        # semantic search or other AgentCore Memory search capabilities
+        # 단순화된 검색임 - 실제 구현에서는 시맨틱 검색이나
+        # 다른 AgentCore Memory 검색 기능을 사용할 수 있음
         return {
             "memories": [],
             "total_count": 0,
@@ -1302,7 +1302,7 @@ async def list_namespaces(request: dict):
             raise HTTPException(status_code=503, detail="AgentCore Memory client not available")
 
         memory_id = request.get("memory_id") or MEMORY_ID
-        _ = request.get("max_results", 100)  # Reserved for future use
+        _ = request.get("max_results", 100)  # 향후 사용을 위해 예약
 
         if not memory_id:
             raise HTTPException(
@@ -1313,7 +1313,7 @@ async def list_namespaces(request: dict):
         logger.info(f"🔍 Listing namespaces for memory_id: {memory_id}")
 
         try:
-            # Get memory strategies to discover namespaces
+            # 네임스페이스 검색을 위해 Memory Strategy 가져오기
             strategies = memory_client.get_memory_strategies(memory_id)
             logger.info(f"✅ Found {len(strategies)} memory strategies")
 
@@ -1323,9 +1323,9 @@ async def list_namespaces(request: dict):
                 strategy_namespaces = strategy.get("namespaces", [])
 
                 for namespace in strategy_namespaces:
-                    # Try to get a count of records in this namespace
+                    # 이 네임스페이스의 레코드 개수 가져오기 시도
                     try:
-                        # Sample a few records to get count and sample content
+                        # 개수와 샘플 콘텐츠를 얻기 위해 레코드 몇 개 샘플링
                         sample_memories = memory_client.retrieve_memories(
                             memory_id=memory_id, namespace=namespace, query="*", top_k=5
                         )
@@ -1406,12 +1406,12 @@ async def list_sessions():
 if __name__ == "__main__":
     import uvicorn
 
-    # Security: Bind to localhost only by default to prevent exposure to all network interfaces (B104)
-    # For production deployments, use a reverse proxy (nginx, ALB) and configure host via environment variable
+    # 보안: 모든 네트워크 인터페이스에 노출되지 않도록 기본적으로 localhost에만 바인딩(B104)
+    # 프로덕션 배포에서는 reverse proxy(nginx, ALB)를 사용하고 환경 변수로 host 구성
     host = os.getenv("BACKEND_HOST", "127.0.0.1")
     port = int(os.getenv("BACKEND_PORT", "8000"))
 
-    if host == "0.0.0.0":  # nosec B104 - This is a security check, not a vulnerability
+    if host == "0.0.0.0":  # nosec B104 - 보안 검사이며 취약점이 아님
         logger.warning("⚠️  WARNING: Binding to 0.0.0.0 exposes the service to all network interfaces!")
         logger.warning("⚠️  For production, use a reverse proxy and bind to 127.0.0.1")
 

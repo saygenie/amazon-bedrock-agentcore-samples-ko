@@ -1,7 +1,7 @@
 
-# Outbound Authorization Flow
+# 아웃바운드 권한 부여 흐름
 
-### GitHub OAuth with AgentCore Identity
+### AgentCore Identity를 사용한 GitHub OAuth
 
 ```mermaid
 sequenceDiagram

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Seed .env from env-sample.txt and generate a fresh USER_ID. Idempotent:
-# re-runs leave existing values alone.
+# env-sample.txt를 기반으로 .env를 만들고 새 USER_ID를 생성합니다. 멱등성이 있어
+# 재실행해도 기존 값을 유지합니다.
 #
-# Usage:
+# 사용법:
 #   bash test/integration/setup-env.sh
 
 set -euo pipefail

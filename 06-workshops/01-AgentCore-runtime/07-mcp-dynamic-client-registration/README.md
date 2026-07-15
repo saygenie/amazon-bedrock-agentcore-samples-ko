@@ -1,52 +1,52 @@
-# Dynamic Client Registration with AgentCore Runtime and Auth0
+# AgentCore Runtime 및 Auth0를 사용하는 Dynamic Client Registration
 
-## Overview
+## 개요
 
-In this session, we will discuss how to host MCP tools on Amazon Bedrock AgentCore Runtime. This MCP will be integrated with Auth0's Dynamic Client Registration feature.
+이 세션에서는 Amazon Bedrock AgentCore Runtime에서 MCP 도구를 호스팅하는 방법을 설명합니다. 이 MCP는 Auth0의 Dynamic Client Registration 기능과 통합됩니다.
 
-We will use the Amazon Bedrock AgentCore Python SDK to wrap the agent's functions as an MCP server compatible with Amazon Bedrock AgentCore. It will handle the MCP server details so you can focus on your agent's core functionality.
+Amazon Bedrock AgentCore Python SDK를 사용하여 에이전트 함수를 Amazon Bedrock AgentCore와 호환되는 MCP 서버로 감쌉니다. SDK가 MCP 서버의 세부 사항을 처리하므로 에이전트의 핵심 기능에 집중할 수 있습니다.
 
-The Amazon Bedrock AgentCore Python SDK prepares your agent or tool code to run on AgentCore Runtime.
+Amazon Bedrock AgentCore Python SDK는 AgentCore Runtime에서 실행할 수 있도록 에이전트 또는 도구 코드를 준비합니다.
 
-## Getting Started
+## 시작하기
 
-To get started with this tutorial, open and follow the step-by-step guide in the Jupyter notebook:
+이 자습서를 시작하려면 Jupyter Notebook을 열고 단계별 가이드를 따르세요.
 
-**[📓 deploy_dcr_mcp_agentcore.ipynb](deploy_dcr_mcp_agentcore.ipynb)**
+**[deploy_dcr_mcp_agentcore.ipynb](deploy_dcr_mcp_agentcore.ipynb)**
 
-The notebook contains all the code examples, configurations, and detailed instructions needed to complete this tutorial.
+Notebook에는 자습서를 완료하는 데 필요한 모든 코드 예제, 구성, 세부 지침이 포함되어 있습니다.
 
-## What You'll Learn
+## 학습 내용
 
-In this tutorial, you will learn:
+이 자습서에서는 다음 내용을 학습합니다.
 
-* How to create an MCP server with tools
-* How to test your server locally
-* How to configure your Auth0 tenant to support DCR and add an API and an app
-* How to deploy your server to AWS, integrated with DCR on Auth0
-* How to invoke your deployed server
+* 도구가 포함된 MCP 서버를 생성하는 방법
+* 로컬에서 서버를 테스트하는 방법
+* DCR을 지원하고 API와 앱을 추가하도록 Auth0 tenant를 구성하는 방법
+* Auth0의 DCR과 통합하여 서버를 AWS에 배포하는 방법
+* 배포된 서버를 호출하는 방법
 
-### Tutorial Details
+### 자습서 세부 정보
 
-| Information         | Details                                                   |
+| 정보                | 세부 정보                                                 |
 |:--------------------|:----------------------------------------------------------|
-| Tutorial type       | Hosting Tools + DCR on Auth0                             |
-| Tool type           | MCP server                                                |
-| Tutorial components | Hosting tool on AgentCore Runtime, Creating an MCP server |
-| Tutorial vertical   | Cross-vertical                                            |
-| Example complexity  | Medium                                                    |
-| SDK used            | Amazon BedrockAgentCore Python SDK and MCP Client        |
+| 자습서 유형         | 도구 호스팅 + Auth0의 DCR                                 |
+| 도구 유형           | MCP 서버                                                  |
+| 자습서 구성 요소    | AgentCore Runtime에서 도구 호스팅, MCP 서버 생성          |
+| 자습서 분야         | 여러 산업 분야                                            |
+| 예제 난이도         | 중간                                                      |
+| 사용 SDK            | Amazon BedrockAgentCore Python SDK 및 MCP Client          |
 
-### Tutorial Architecture
+### 자습서 아키텍처
 
-In this tutorial, we will describe how to deploy this example to AgentCore Runtime.
+이 자습서에서는 이 예제를 AgentCore Runtime에 배포하는 방법을 설명합니다.
 
-For demonstration purposes, we will use a very simple MCP server with 3 tools: `add_numbers`, `multiply_numbers`, and `greet_users`.
+데모를 위해 `add_numbers`, `multiply_numbers`, `greet_users`라는 3개의 도구가 포함된 간단한 MCP 서버를 사용합니다.
 
 <img src="images/architecture.png" width="80%">
 
-### Tutorial Key Features
+### 자습서 주요 기능
 
-* Hosting MCP Server
+* MCP 서버 호스팅
 * Dynamic Client Registration (DCR)
 * Auth0

@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Enable strict error handling
+# 엄격한 오류 처리 활성화
 set -euo pipefail
 
-# Logging function
+# 로깅 함수
 log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
 }
 
-# ----- Config -----
+# ----- 구성 -----
 INFRA_STACK_NAME=${1:-AsanaIntegrationStackInfra}
 COGNITO_STACK_NAME=${2:-AsanaIntegrationStackCognito}
 REGION=$(aws configure get region 2>/dev/null || echo "us-east-1")
@@ -18,24 +18,24 @@ log "Region: $REGION"
 log "Infrastructure Stack: $INFRA_STACK_NAME"
 log "Cognito Stack: $COGNITO_STACK_NAME"
 
-# Validate AWS CLI is configured
+# AWS CLI 구성 여부 검증
 if ! aws sts get-caller-identity >/dev/null 2>&1; then
     log "❌ AWS CLI not configured or credentials invalid"
     exit 1
 fi
 
-# Function to delete a CloudFormation stack
+# CloudFormation 스택 삭제 함수
 delete_stack() {
     local stack_name=$1
     
     log "🗑️  Checking if stack $stack_name exists..."
     
-    # Check if stack exists and get its status
+    # 스택이 있는지 확인하고 상태 가져오기
     local stack_status
     if stack_status=$(aws cloudformation describe-stacks --stack-name "$stack_name" --region "$REGION" --query 'Stacks[0].StackStatus' --output text 2>/dev/null); then
         log "📦 Stack $stack_name exists with status: $stack_status"
         
-        # Check if stack is in a deletable state
+        # 스택이 삭제 가능한 상태인지 확인
         case "$stack_status" in
             "DELETE_IN_PROGRESS")
                 log "⏳ Stack $stack_name is already being deleted, waiting..."
@@ -49,7 +49,7 @@ delete_stack() {
                 ;;
         esac
         
-        # Attempt to delete the stack
+        # 스택 삭제 시도
         if aws cloudformation delete-stack --stack-name "$stack_name" --region "$REGION" 2>/dev/null; then
             log "📦 Deletion initiated for stack: $stack_name"
         else
@@ -68,7 +68,7 @@ delete_stack() {
     fi
 }
 
-# Delete stacks in reverse order (infrastructure first, then cognito)
+# 역순으로 스택 삭제(인프라를 먼저 삭제한 다음 Cognito 삭제)
 cleanup_failed=0
 
 log "🔧 Deleting infrastructure stack first..."

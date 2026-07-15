@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
-Delete agent script for CI/CD pipeline cleanup.
-This script deletes the deployed agent using the delete_agent function from utils.agent.
+CI/CD 파이프라인 정리를 위한 에이전트 삭제 스크립트입니다.
+이 스크립트는 utils.agent의 delete_agent 함수를 사용하여 배포된 에이전트를 삭제합니다.
 """
 
 import json
 import sys
 from pathlib import Path
 
-# Add the parent directory to the Python path to import utils
+# utils를 가져올 수 있도록 상위 디렉터리를 Python 경로에 추가
 sys.path.append(str(Path(__file__).parent.parent))
 
 from utils.agent import delete_agent
 
 
 def load_hp_config(config_path="cicd/hp_config.json"):
-    """Load hyperparameters from the configuration file."""
+    """구성 파일에서 하이퍼파라미터를 로드합니다."""
     try:
         with open(config_path, "r") as f:
             config = json.load(f)
@@ -30,13 +30,13 @@ def load_hp_config(config_path="cicd/hp_config.json"):
 
 def get_agent_info_from_deploy_result():
     """
-    Get agent information from the deployment result.
-    In a real CI/CD scenario, this would read from a file or environment variable
-    that was set during the deployment step.
+    배포 결과에서 에이전트 정보를 가져옵니다.
+    실제 CI/CD 시나리오에서는 배포 단계에서 설정된 파일이나 환경 변수에서
+    이 정보를 읽습니다.
     """
-    # For now, we'll construct the agent name from the config and try to find it
-    # In a production scenario, you might want to store the agent info in a file
-    # or pass it as an environment variable between workflow steps
+    # 현재는 구성에서 에이전트 이름을 조합하여 검색
+    # 프로덕션 시나리오에서는 에이전트 정보를 파일에 저장하거나
+    # 워크플로 단계 사이에서 환경 변수로 전달할 수 있음
 
     config = load_hp_config()
     model = config["model"]
@@ -45,7 +45,7 @@ def get_agent_info_from_deploy_result():
 
     agent_name = f"strands_{model['name']}_{system_prompt['name']}_{environment}"
 
-    # Import boto3 to find the agent
+    # 에이전트를 찾기 위해 boto3 가져오기
     import boto3
     from boto3.session import Session
 
@@ -55,11 +55,11 @@ def get_agent_info_from_deploy_result():
     try:
         agentcore_control_client = boto3.client("bedrock-agentcore-control", region_name=region)
 
-        # List all agent runtimes to find our agent
+        # 대상 에이전트를 찾기 위해 모든 에이전트 런타임 조회
         list_response = agentcore_control_client.list_agent_runtimes()
         existing_agents = list_response.get("agentRuntimes", [])
 
-        # Find the agent with our name
+        # 지정한 이름의 에이전트 찾기
         target_agent = None
         for agent_summary in existing_agents:
             if agent_summary.get("agentRuntimeName") == agent_name:
@@ -70,7 +70,7 @@ def get_agent_info_from_deploy_result():
             print(f"Warning: Agent '{agent_name}' not found. It may have already been deleted.")
             return None
 
-        # Get full agent runtime details to extract ECR URI
+        # ECR URI를 추출하기 위해 에이전트 런타임의 전체 세부 정보 가져오기
         agent_runtime_id = target_agent.get("agentRuntimeId")
 
         print(f"Agent Runtime ID: {agent_runtime_id}")
@@ -99,7 +99,7 @@ def get_agent_info_from_deploy_result():
 
 
 def main():
-    """Main function to delete the agent."""
+    """에이전트를 삭제하는 기본 함수입니다."""
     print("Finding deployed agent...")
     agent_info = get_agent_info_from_deploy_result()
 
@@ -113,7 +113,7 @@ def main():
     print(f"  ECR URI: {agent_info['ecr_uri']}")
 
     try:
-        # Delete the agent
+        # 에이전트 삭제
         result = delete_agent(
             agent_runtime_id=agent_info["agent_runtime_id"],
             ecr_uri=agent_info["ecr_uri"],

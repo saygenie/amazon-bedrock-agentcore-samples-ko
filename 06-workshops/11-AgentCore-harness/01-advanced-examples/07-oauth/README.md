@@ -1,26 +1,26 @@
-# harness with OAuth Inbound Auth and OAuth-Protected Gateway
+# OAuth 인바운드 인증 및 OAuth로 보호되는 Gateway를 사용하는 AgentCore Harness
 
-This sample demonstrates end-to-end OAuth integration with AgentCore harness:
+이 샘플은 AgentCore Harness와 OAuth의 엔드 투 엔드 통합을 보여 줍니다.
 
-- **Inbound auth**: User authenticates to the harness via Cognito JWT (USER_PASSWORD_AUTH)
-- **Outbound auth**: harness authenticates to AgentCore Gateway via Cognito M2M (client credentials flow)
-- **Gateway target**: A Lambda function exposed through the Gateway
+- **인바운드 인증**: 사용자가 Cognito JWT (USER_PASSWORD_AUTH)를 통해 AgentCore Harness에 인증
+- **아웃바운드 인증**: AgentCore Harness가 Cognito M2M(클라이언트 자격 증명 흐름)을 통해 AgentCore Gateway에 인증
+- **Gateway 대상**: AgentCore Gateway를 통해 공개되는 Lambda 함수
 
-For full harness documentation, see the [AgentCore harness Developer Guide](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness.html).
+전체 AgentCore Harness 문서는 [AgentCore Harness 개발자 가이드](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness.html)를 참조하세요.
 
-## Architecture
+## 아키텍처
 
-<img src="images/architecture.jpg" alt="Architecture" width="800"/>
+<img src="images/architecture.jpg" alt="아키텍처" width="800"/>
 
-## What you'll learn
+## 학습 내용
 
-- Configuring `CUSTOM_JWT` inbound auth on a harness (any OIDC provider works)
-- Configuring `outboundAuth.oauth` on a gateway tool (client credentials grant)
-- Setting up an OAuth2 credential provider in AgentCore Identity
-- Creating a Gateway with JWT inbound auth and a Lambda target
-- Invoking the harness with a bearer token — secrets never leave the Token Vault
+- AgentCore Harness에 `CUSTOM_JWT` 인바운드 인증 구성(모든 OIDC 공급자 지원)
+- Gateway 도구에 `outboundAuth.oauth` 구성(클라이언트 자격 증명 권한 부여)
+- AgentCore Identity에 OAuth2 자격 증명 공급자 설정
+- JWT 인바운드 인증과 Lambda 대상이 있는 AgentCore Gateway 생성
+- 전달자 토큰으로 AgentCore Harness 호출(Secret은 Token Vault 외부로 노출되지 않음)
 
-## Project structure
+## 프로젝트 구조
 
 ```
 ├── harness_oauth_gateway.ipynb   ← main notebook
@@ -33,22 +33,22 @@ For full harness documentation, see the [AgentCore harness Developer Guide](http
 └── README.md
 ```
 
-## Prerequisites
+## 사전 요구 사항
 
-- AWS account with Bedrock AgentCore access
-- AWS credentials configured (`aws configure` or env vars)
+- Bedrock AgentCore에 액세스할 수 있는 AWS 계정
+- 구성된 AWS 자격 증명(`aws configure` 또는 환경 변수)
 - Python 3.10+, `boto3 >= 1.42.80`, `requests`, `jupyter`
-- Bedrock model access enabled
+- 활성화된 Bedrock 모델 액세스
 
-## How to run
+## 실행 방법
 
 ```bash
 pip install -r requirements.txt
 jupyter notebook harness_oauth_gateway.ipynb
 ```
 
-Run cells top-to-bottom. User credentials are prompted via `getpass` — never visible in the notebook. All cells are idempotent — safe to re-run.
+셀을 위에서 아래로 실행하세요. 사용자 자격 증명은 `getpass`를 통해 입력하므로 노트북에 표시되지 않습니다. 모든 셀은 멱등성을 가지므로 안전하게 다시 실행할 수 있습니다.
 
-## Cleanup
+## 정리
 
-The last cell in the notebook deletes all resources. It discovers resources by name and skips gracefully if they don't exist — works even after a kernel restart.
+노트북의 마지막 셀은 모든 리소스를 삭제합니다. 이름으로 리소스를 검색하고 리소스가 없으면 문제없이 건너뛰므로 커널을 다시 시작한 후에도 사용할 수 있습니다.

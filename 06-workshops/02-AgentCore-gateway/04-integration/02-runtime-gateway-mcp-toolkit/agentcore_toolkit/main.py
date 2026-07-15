@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-AgentCore Gateway and Runtime Setup Toolkit
-Configurable setup script for creating AgentCore runtime and gateway using YAML configuration.
+AgentCore Gateway 및 Runtime 설정 툴킷
+YAML 구성을 사용해 AgentCore Runtime과 Gateway를 생성하는 구성 가능한 설정 스크립트입니다.
 """
 
 import os
@@ -30,7 +30,7 @@ class AgentCoreToolkit:
         self._setup_logging()
 
     def _derive_gateway_names(self, gateway_name):
-        """Derive all gateway-related names from the gateway name"""
+        """Gateway 이름에서 모든 Gateway 관련 이름을 파생합니다."""
         return {
             "iam_role_name": f"{gateway_name}-role",
             "user_pool_name": f"{gateway_name}-pool",
@@ -40,7 +40,7 @@ class AgentCoreToolkit:
         }
 
     def _derive_runtime_names(self, runtime_name):
-        """Derive all runtime-related names from the runtime name"""
+        """Runtime 이름에서 모든 Runtime 관련 이름을 파생합니다."""
         return {
             "user_pool_name": f"{runtime_name}-pool",
             "resource_server_id": f"{runtime_name}-id",
@@ -50,14 +50,14 @@ class AgentCoreToolkit:
         }
 
     def _derive_target_names(self, runtime_name):
-        """Derive target-related names from the runtime name"""
+        """Runtime 이름에서 대상 관련 이름을 파생합니다."""
         return {
             "name": f"{runtime_name}-target",
             "identity_provider_name": f"{runtime_name}-identity",
         }
 
     def _setup_logging(self):
-        """Configure logging"""
+        """로깅을 구성합니다."""
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -66,28 +66,28 @@ class AgentCoreToolkit:
         logging.getLogger("strands").setLevel(logging.INFO)
 
     def _validate_runtime_config(self, runtime_config):
-        """Validate runtime configuration for security"""
+        """보안을 위해 Runtime 구성을 검증합니다."""
         required_fields = ["name", "entrypoint", "requirements_file"]
         for field in required_fields:
             if field not in runtime_config:
                 raise ValueError(f"Missing required field: {field}")
 
-        # Validate file paths
+        # 파일 경로 검증
         entrypoint = runtime_config["entrypoint"]
         requirements_file = runtime_config["requirements_file"]
 
-        # Check for path traversal attempts
+        # 경로 탐색 시도 확인
         if ".." in entrypoint or ".." in requirements_file:
             raise ValueError("Path traversal detected in file paths")
 
-        # Validate file extensions
+        # 파일 확장자 검증
         if not entrypoint.endswith(".py"):
             raise ValueError("Entrypoint must be a Python file (.py)")
         if not requirements_file.endswith(".txt"):
             raise ValueError("Requirements file must be a .txt file")
 
     def setup_gateway_cognito(self):
-        """Setup Cognito resources for gateway"""
+        """Gateway용 Cognito 리소스를 설정합니다."""
         print("Setting up Gateway Cognito resources...")
 
         try:
@@ -101,15 +101,15 @@ class AgentCoreToolkit:
         except KeyError as e:
             raise ValueError(f"Missing required gateway configuration: {e}")
 
-        # Derive names from gateway name
+        # Gateway 이름에서 이름 파생
         derived_names = self._derive_gateway_names(gateway_name)
 
         try:
-            # Create user pool
+            # User Pool 생성
             gw_user_pool_id = utils.get_or_create_user_pool(cognito, derived_names["user_pool_name"])
             print(f"Gateway User Pool ID: {gw_user_pool_id}")
 
-            # Create resource server
+            # 리소스 서버 생성
             if "scopes" not in self.config:
                 raise ValueError("Missing required 'scopes' configuration")
 
@@ -125,7 +125,7 @@ class AgentCoreToolkit:
                 scopes,
             )
 
-            # Create client
+            # 클라이언트 생성
             scope_names = [f"{derived_names['resource_server_id']}/{scope['name']}" for scope in self.config["scopes"]]
             gw_client_id, gw_client_secret = utils.get_or_create_m2m_client(
                 cognito,
@@ -154,7 +154,7 @@ class AgentCoreToolkit:
         }
 
     def setup_runtime_cognito(self, runtime_config):
-        """Setup Cognito resources for a single runtime"""
+        """단일 Runtime용 Cognito 리소스를 설정합니다."""
         print(f"Setting up Runtime Cognito resources for {runtime_config['name']}...")
 
         try:
@@ -167,15 +167,15 @@ class AgentCoreToolkit:
         except KeyError as e:
             raise ValueError(f"Missing required runtime configuration: {e}")
 
-        # Derive names from runtime name
+        # Runtime 이름에서 이름 파생
         derived_names = self._derive_runtime_names(runtime_name)
 
         try:
-            # Create user pool
+            # User Pool 생성
             rt_user_pool_id = utils.get_or_create_user_pool(cognito, derived_names["user_pool_name"])
             print(f"Runtime User Pool ID: {rt_user_pool_id}")
 
-            # Create resource server
+            # 리소스 서버 생성
             if "scopes" not in self.config:
                 raise ValueError("Missing required 'scopes' configuration")
 
@@ -191,7 +191,7 @@ class AgentCoreToolkit:
                 scopes,
             )
 
-            # Create client
+            # 클라이언트 생성
             scope_names = [f"{derived_names['resource_server_id']}/{scope['name']}" for scope in self.config["scopes"]]
             rt_client_id, rt_client_secret = utils.get_or_create_m2m_client(
                 cognito,
@@ -219,7 +219,7 @@ class AgentCoreToolkit:
         }
 
     def create_gateway(self, gateway_cognito):
-        """Create AgentCore Gateway"""
+        """AgentCore Gateway를 생성합니다."""
         print("Creating AgentCore Gateway...")
 
         try:
@@ -229,7 +229,7 @@ class AgentCoreToolkit:
             raise ValueError(f"Missing required gateway configuration: {e}")
 
         try:
-            # Create IAM role
+            # IAM 역할 생성
             iam_role = utils.create_agentcore_gateway_role(derived_names["iam_role_name"], region=self.region)
             print(f"Gateway IAM Role ARN: {iam_role['Role']['Arn']}")
 
@@ -246,7 +246,7 @@ class AgentCoreToolkit:
             raise RuntimeError(f"Failed to create gateway: {e}")
 
     def _create_auth_config(self, cognito_info):
-        """Create authentication configuration"""
+        """인증 구성을 생성합니다."""
         return {
             "customJWTAuthorizer": {
                 "allowedClients": [cognito_info["client_id"]],
@@ -255,9 +255,9 @@ class AgentCoreToolkit:
         }
 
     def _configure_runtime(self, runtime_config, auth_config, agent_name):
-        """Configure AgentCore Runtime with provided settings"""
+        """제공된 설정으로 AgentCore Runtime을 구성합니다."""
         try:
-            # Remove shared Dockerfile so it gets regenerated for this runtime
+            # 이 Runtime용으로 다시 생성되도록 공유 Dockerfile 제거
             dockerfile_path = Path.cwd() / "Dockerfile"
             if dockerfile_path.exists():
                 dockerfile_path.unlink()
@@ -279,7 +279,7 @@ class AgentCoreToolkit:
             raise RuntimeError(f"Failed to configure runtime: {e}")
 
     def _launch_runtime(self, agentcore_runtime, runtime_name):
-        """Launch the configured runtime and return connection info"""
+        """구성된 Runtime을 시작하고 연결 정보를 반환합니다."""
         print(f"Launching MCP server {runtime_name} to AgentCore Runtime...")
         launch_result = agentcore_runtime.launch(auto_update_on_conflict=True)
 
@@ -291,23 +291,23 @@ class AgentCoreToolkit:
         return {"agent_arn": agent_arn, "agent_url": agent_url}
 
     def setup_runtime(self, runtime_config, runtime_cognito):
-        """Setup and launch AgentCore Runtime"""
+        """AgentCore Runtime을 설정하고 시작합니다."""
         print(f"Setting up AgentCore Runtime for {runtime_config['name']}...")
 
-        # Derive agent name from runtime name
+        # Runtime 이름에서 에이전트 이름 파생
         derived_names = self._derive_runtime_names(runtime_config["name"])
 
-        # Create authentication configuration
+        # 인증 구성 생성
         auth_config = self._create_auth_config(runtime_cognito)
 
-        # Configure runtime
+        # Runtime 구성
         agentcore_runtime = self._configure_runtime(runtime_config, auth_config, derived_names["agent_name"])
 
-        # Launch runtime and return connection info
+        # Runtime을 시작하고 연결 정보 반환
         return self._launch_runtime(agentcore_runtime, runtime_config["name"])
 
     def _create_target_params(self, gateway_info, runtime_info, runtime_cognito, target_config, provider_arn):
-        """Create target creation parameters"""
+        """대상 생성 매개변수를 생성합니다."""
         return {
             "gateway_id": gateway_info["gateway_id"],
             "agent_url": runtime_info["agent_url"],
@@ -317,7 +317,7 @@ class AgentCoreToolkit:
         }
 
     def create_gateway_target(self, gateway_info, runtime_info, runtime_cognito, target_config):
-        """Create gateway target and configure authentication"""
+        """Gateway 대상을 생성하고 인증을 구성합니다."""
         print("Creating Oauth Credential Provider")
         cognito_provider_arn = utils.get_or_create_oauth2_credential_provider(
             self.region, target_config["identity_provider_name"], runtime_cognito
@@ -335,36 +335,36 @@ class AgentCoreToolkit:
         return utils.get_or_create_agentcore_gateway_target(self.region, target_params)
 
     def run(self):
-        """Execute the complete setup process"""
+        """전체 설정 프로세스를 실행합니다."""
         print("Starting AgentCore Gateway and Runtime setup...")
 
-        # Setup gateway Cognito resources
+        # Gateway Cognito 리소스 설정
         gateway_cognito = self.setup_gateway_cognito()
 
-        # Create gateway
+        # Gateway 생성
         gateway_info = self.create_gateway(gateway_cognito)
 
-        # Process multiple runtimes and targets
+        # 여러 Runtime 및 대상 처리
         runtime_infos = []
         for runtime_config in self.config["runtime"]:
-            # Setup runtime Cognito resources
+            # Runtime Cognito 리소스 설정
             runtime_cognito = self.setup_runtime_cognito(runtime_config)
 
-            # Setup runtime
+            # Runtime 설정
             runtime_info = self.setup_runtime(runtime_config, runtime_cognito)
             runtime_infos.append(runtime_info)
 
-            # Derive target configuration from runtime name
+            # Runtime 이름에서 대상 구성 파생
             target_config = self._derive_target_names(runtime_config["name"])
             self.create_gateway_target(gateway_info, runtime_info, runtime_cognito, target_config)
 
-        # Display gateway connection information
+        # Gateway 연결 정보 표시
         gateway_info_result = self.display_gateway_info(gateway_info["gateway_id"], gateway_cognito)
         print("\n✅ Setup completed successfully!")
         return gateway_info_result
 
     def _write_credentials_to_file(self, gateway_cognito, access_token, gateway_url):
-        """Write credentials to a secure file with restricted permissions"""
+        """제한된 권한으로 자격 증명을 보안 파일에 씁니다."""
         creds_file = f".agentcore-credentials-{self.config['gateway']['name']}.json"
 
         credentials = {
@@ -379,7 +379,7 @@ class AgentCoreToolkit:
             with open(creds_file, "w") as f:
                 json.dump(credentials, f, indent=2)
 
-            # Set file permissions to owner read/write only (600)
+            # 파일 권한을 소유자 읽기/쓰기로만 설정(600)
             os.chmod(creds_file, stat.S_IRUSR | stat.S_IWUSR)
 
             print(f"Credentials saved to: {creds_file}")
@@ -394,16 +394,16 @@ class AgentCoreToolkit:
         return True
 
     def display_gateway_info(self, gateway_id, gateway_cognito):
-        """Display gateway connection information"""
+        """Gateway 연결 정보를 표시합니다."""
         print("\n" + "=" * 60)
         print("GATEWAY CONNECTION INFORMATION")
         print("=" * 60)
 
-        # Get gateway URL
+        # Gateway URL 가져오기
         gateway_url = f"https://{gateway_id}.gateway.bedrock-agentcore.{self.config['aws']['region']}.amazonaws.com/mcp"
-        # Get access token
+        # 액세스 토큰 가져오기
         access_token = self._get_access_token(gateway_cognito)
-        # Try to write credentials to secure file
+        # 보안 파일에 자격 증명 쓰기 시도
         self._write_credentials_to_file(gateway_cognito, access_token, gateway_url)
         print("=" * 60)
 
@@ -416,15 +416,15 @@ class AgentCoreToolkit:
         }
 
     def _get_access_token(self, gateway_cognito):
-        """Get access token using client credentials flow"""
+        """client credentials 흐름으로 액세스 토큰을 가져옵니다."""
         try:
-            # Get scope configuration
+            # scope 구성 가져오기
             scope_names = [
                 f"{gateway_cognito['resource_server_id']}/{scope['name']}" for scope in self.config["scopes"]
             ]
             scope_string = " ".join(scope_names)
 
-            # Get token using utils
+            # utils를 사용해 토큰 가져오기
             token_response = utils.get_token(
                 gateway_cognito["user_pool_id"],
                 gateway_cognito["client_id"],
@@ -463,11 +463,11 @@ def main():
 
     args = parser.parse_args()
 
-    # Parse runtime configs from JSON
+    # JSON에서 Runtime 구성 파싱
     try:
         runtime_configs = json.loads(args.runtime_configs)
 
-        # Validate runtime configs structure
+        # Runtime 구성 구조 검증
         if not isinstance(runtime_configs, list):
             raise ValueError("Runtime configs must be a JSON array")
 
@@ -481,7 +481,7 @@ def main():
         print(f"Error: {e}")
         return 1
 
-    # Build config structure with hardcoded scope
+    # 하드코딩된 scope로 구성 구조 생성
     config = {
         "aws": {"region": args.region},
         "gateway": {

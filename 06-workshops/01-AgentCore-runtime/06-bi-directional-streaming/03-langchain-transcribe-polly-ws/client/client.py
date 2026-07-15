@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-LangChain Voice Agent Client
+LangChain Voice Agent 클라이언트
 
-Serves the HTML client and manages WebSocket connection details.
-Follows the same pattern as the Strands client.
+HTML Client를 제공하고 WebSocket 연결 세부 정보를 관리합니다.
+Strands Client와 같은 패턴을 따릅니다.
 """
 
 import argparse
@@ -16,19 +16,19 @@ import string
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
-# Import from utils folder websocket_helpers
+# utils 폴더에서 websocket_helpers 가져오기
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../utils"))
 from websocket_helpers import create_presigned_url
 
 
 class LangChainClientHandler(BaseHTTPRequestHandler):
-    """HTTP request handler that serves the LangChain voice agent client."""
+    """LangChain Voice Agent Client를 제공하는 HTTP 요청 핸들러입니다."""
 
     websocket_url = None
     session_id = None
     is_presigned = False
 
-    # Store config for regenerating URLs
+    # URL 재생성용 구성 저장
     runtime_arn = None
     region = None
     service = None
@@ -202,7 +202,7 @@ Examples:
     if args.runtime_arn and args.ws_url:
         parser.error("Cannot specify both --runtime-arn and --ws-url")
 
-    # Extract region from runtime ARN if provided
+    # 제공된 경우 Runtime ARN에서 리전 추출
     if args.runtime_arn:
         arn_parts = args.runtime_arn.split(":")
         if len(arn_parts) >= 4:

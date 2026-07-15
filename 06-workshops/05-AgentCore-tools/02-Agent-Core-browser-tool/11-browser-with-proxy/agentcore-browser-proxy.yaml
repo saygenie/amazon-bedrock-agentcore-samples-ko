@@ -55,7 +55,7 @@ Parameters:
 
 Resources:
   #############################################################################
-  # VPC and Internet Gateway
+  # VPC 및 Internet Gateway
   #############################################################################
 
   VPC:
@@ -88,10 +88,10 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
 
   #############################################################################
-  # Subnets
+  # 서브넷
   #############################################################################
 
-  # Browser lives here — no direct internet access, all traffic via proxy
+  # Browser가 위치하며 인터넷에 직접 접근하지 않고 모든 트래픽이 proxy를 통과함
   PrivateSubnet:
     Type: AWS::EC2::Subnet
     Properties:
@@ -103,7 +103,7 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-private-subnet'
 
-  # Squid proxy lives here — has internet via IGW
+  # Squid proxy가 위치하며 IGW를 통해 인터넷에 접근함
   PublicSubnet:
     Type: AWS::EC2::Subnet
     Metadata:
@@ -122,7 +122,7 @@ Resources:
           Value: !Sub '${AWS::StackName}-public-subnet'
 
   #############################################################################
-  # Route Tables
+  # 라우팅 테이블
   #############################################################################
 
   PrivateRouteTable:
@@ -162,7 +162,7 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
 
   #############################################################################
-  # Security Groups
+  # 보안 그룹
   #############################################################################
 
   BrowserSecurityGroup:
@@ -200,7 +200,7 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-squid-sg'
 
-  # Separate ingress/egress rules to break circular dependency
+  # 순환 종속성을 방지하기 위해 수신/송신 규칙 분리
   BrowserToSquidEgress:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
@@ -221,7 +221,7 @@ Resources:
       SourceSecurityGroupId: !Ref BrowserSecurityGroup
       Description: Browser proxy traffic
 
-  # Self-referencing rule: Squid needs HTTPS to S3/Secrets Manager via VPC endpoints
+  # 자체 참조 규칙: Squid가 VPC 엔드포인트를 통해 S3/Secrets Manager에 HTTPS로 접근
   SquidSecurityGroupSelfIngress:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -233,7 +233,7 @@ Resources:
       Description: VPC endpoint access
 
   #############################################################################
-  # S3 Bucket for Squid Access Logs
+  # Squid 액세스 로그용 S3 버킷
   #############################################################################
 
   LogBucket:
@@ -258,7 +258,7 @@ Resources:
         RestrictPublicBuckets: true
 
   #############################################################################
-  # Secrets Manager — Proxy Credentials
+  # Secrets Manager - proxy 자격 증명
   #############################################################################
 
   ProxyCredentialsSecret:
@@ -274,7 +274,7 @@ Resources:
         IncludeSpace: false
 
   #############################################################################
-  # IAM — Squid EC2 Instance Role
+  # IAM - Squid EC2 인스턴스 역할
   #############################################################################
 
   SquidInstanceRole:
@@ -330,7 +330,7 @@ Resources:
         - !Ref SquidInstanceRole
 
   #############################################################################
-  # IAM — Browser Execution Role
+  # IAM - Browser 실행 역할
   #############################################################################
 
   BrowserExecutionRole:
@@ -359,7 +359,7 @@ Resources:
                 Resource: !Ref ProxyCredentialsSecret
 
   #############################################################################
-  # Squid Proxy EC2 Instance
+  # Squid Proxy EC2 인스턴스
   #############################################################################
 
   SquidInstance:
@@ -380,12 +380,12 @@ Resources:
           #!/bin/bash -xe
           exec > /var/log/user-data.log 2>&1
 
-          # Install Squid and utilities
+          # Squid 및 유틸리티 설치
           dnf install -y squid httpd-tools jq cronie
           systemctl enable crond
           systemctl start crond
 
-          # Read proxy credentials from Secrets Manager
+          # Secrets Manager에서 proxy 자격 증명 읽기
           SECRET=$(aws secretsmanager get-secret-value \
             --secret-id ${ProxyCredentialsSecret} \
             --region ${AWS::Region} \
@@ -393,54 +393,54 @@ Resources:
           USERNAME=$(echo "$SECRET" | jq -r .username)
           PASSWORD=$(echo "$SECRET" | jq -r .password)
 
-          # Create htpasswd file for basic auth (stdin avoids passwords
-          # starting with '-' being parsed as htpasswd flags)
+          # 기본 인증용 htpasswd 파일 생성(stdin을 사용하면 '-'로 시작하는 암호가
+          # htpasswd 플래그로 파싱되는 것을 방지할 수 있음)
           printf '%s' "$PASSWORD" | htpasswd -ci /etc/squid/passwd "$USERNAME"
           chown squid:squid /etc/squid/passwd
 
-          # Write Squid configuration
+          # Squid 구성 작성
           cat > /etc/squid/squid.conf << 'SQUIDCONF'
-          # --- Authentication ---
+          # --- 인증 ---
           auth_param basic program /usr/lib64/squid/basic_ncsa_auth /etc/squid/passwd
           auth_param basic realm AgentCore Browser Proxy
           acl authenticated proxy_auth REQUIRED
 
-          # --- ACLs ---
+          # --- ACL ---
           acl SSL_ports port 443
           acl Safe_ports port 80
           acl Safe_ports port 443
           acl CONNECT method CONNECT
 
-          # --- Access rules ---
+          # --- 액세스 규칙 ---
           http_access deny !Safe_ports
           http_access deny CONNECT !SSL_ports
           http_access allow authenticated
           http_access deny all
 
-          # --- Listener ---
+          # --- 리스너 ---
           http_port 3128
 
-          # --- Logging ---
+          # --- 로깅 ---
           access_log daemon:/var/log/squid/access.log squid
           logfile_rotate 24
 
-          # --- Misc ---
+          # --- 기타 ---
           visible_hostname agentcore-squid-proxy
           forwarded_for off
           SQUIDCONF
 
-          # Start Squid
+          # Squid 시작
           systemctl enable squid
           systemctl start squid
 
-          # Set up log sync to S3 every 5 minutes
+          # 5분마다 S3로 로그를 동기화하도록 설정
           cat > /usr/local/bin/sync-squid-logs.sh << 'LOGSYNC'
           #!/bin/bash
           BUCKET="${LogBucket}"
           DATE=$(date -u +%Y/%m/%d)
           HOUR=$(date -u +%H)
           INSTANCE_ID=$(ec2-metadata -i | cut -d' ' -f2 2>/dev/null || echo "unknown")
-          # Rotate and upload
+          # 순환 후 업로드
           /usr/sbin/squid -k rotate 2>/dev/null
           sleep 2
           for f in /var/log/squid/access.log.*.gz /var/log/squid/access.log.[0-9]*; do
@@ -453,11 +453,11 @@ Resources:
 
           echo "*/5 * * * * root /usr/local/bin/sync-squid-logs.sh" > /etc/cron.d/squid-log-sync
 
-          # Signal success
+          # 성공 신호 전송
           echo "Squid proxy setup complete"
 
   #############################################################################
-  # AgentCore Browser (VPC mode)
+  # AgentCore Browser(VPC 모드)
   #############################################################################
 
   BrowserTool:
@@ -474,7 +474,7 @@ Resources:
             - !Ref PrivateSubnet
 
 #############################################################################
-# Outputs
+# 출력
 #############################################################################
 
 Outputs:

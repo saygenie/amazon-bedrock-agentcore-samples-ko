@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Parse flags
+# 플래그 파싱
 DEPLOY_LATTICE=false
 for arg in "$@"; do
     case $arg in
@@ -23,7 +23,7 @@ echo "AgentCore Private IdP: PingFederate + VPC Lattice"
 echo "=========================================="
 echo ""
 
-# Check prerequisites
+# 사전 요구 사항 확인
 echo "Checking prerequisites..."
 
 if ! command -v uv &> /dev/null; then
@@ -73,7 +73,7 @@ echo ""
 echo "All prerequisites met!"
 echo ""
 
-# Check for PingFederate DevOps credentials
+# PingFederate DevOps 자격 증명 확인
 if [ -f .env ]; then
     echo "Loading configuration from .env..."
     set -a
@@ -110,13 +110,13 @@ fi
 echo "  PING_DOMAIN found ($PING_DOMAIN)"
 echo ""
 
-# Set up virtual environment
+# 가상 환경 설정
 echo "Setting up Python environment..."
 uv sync
 echo "  Dependencies installed"
 echo ""
 
-# Deploy with CDK
+# CDK로 배포
 echo "Deploying with CDK..."
 uv run cdk bootstrap --qualifier pingidp --toolkit-stack-name CDKToolkit-pingidp
 
@@ -133,7 +133,7 @@ echo "PingFederate was configured automatically via a Lambda custom resource"
 echo "running inside the VPC (no public network access required)."
 echo ""
 
-# Get stack outputs
+# 스택 출력 가져오기
 VPC_ID=$(aws cloudformation describe-stacks --stack-name PrivateIdpVpcStack \
     --query 'Stacks[0].Outputs[?OutputKey==`VpcId`].OutputValue' --output text 2>/dev/null || echo "N/A")
 SUBNET_IDS=$(aws cloudformation describe-stacks --stack-name PrivateIdpVpcStack \
@@ -155,11 +155,11 @@ echo "Gateway Role ARN:    $GATEWAY_ROLE_ARN"
 echo "MCP Echo Lambda ARN: $MCP_ECHO_LAMBDA_ARN"
 echo ""
 
-# Check if Lattice stack was deployed (--self-managed-lattice)
+# Lattice 스택 배포 여부 확인(--self-managed-lattice)
 RESOURCE_CONFIG_ID=$(aws cloudformation describe-stacks --stack-name PrivateIdpLatticeStack \
     --query 'Stacks[0].Outputs[?OutputKey==`ResourceConfigurationId`].OutputValue' --output text 2>/dev/null || echo "")
 
-# Convert comma-separated subnet IDs to JSON array
+# 쉼표로 구분된 서브넷 ID를 JSON 배열로 변환
 SUBNET_JSON=$(echo "$SUBNET_IDS" | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
 
 echo "=========================================="
@@ -282,7 +282,7 @@ echo "      }' \\"
 echo "      --credential-provider-configurations '[{\"credentialProviderType\": \"GATEWAY_IAM_ROLE\"}]'"
 echo ""
 
-# Configure agent deployment target
+# 에이전트 배포 대상 구성
 ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text 2>/dev/null || echo "")
 DEPLOY_REGION=${AWS_REGION:-$(aws configure get region 2>/dev/null || echo "us-east-1")}
 
@@ -295,7 +295,7 @@ TARGETS
     echo ""
 fi
 
-# Install agent CDK dependencies
+# 에이전트 CDK 종속성 설치
 echo "Installing agent CDK dependencies..."
 (cd agent/private-idp-ping-agent/agentcore/cdk && npm install --silent)
 echo "  Done"

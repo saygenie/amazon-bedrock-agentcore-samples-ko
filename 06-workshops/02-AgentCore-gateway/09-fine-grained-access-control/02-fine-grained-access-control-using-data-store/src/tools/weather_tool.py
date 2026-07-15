@@ -1,7 +1,7 @@
 """
-Weather Tool - Mock weather API for Gateway
+Weather Tool - Gateway용 모의 날씨 API입니다.
 
-This tool provides mock weather information for different locations.
+이 도구는 여러 위치의 모의 날씨 정보를 제공합니다.
 """
 
 import json
@@ -11,24 +11,24 @@ from datetime import datetime
 
 def lambda_handler(event, context):
     """
-    Lambda handler for weather tool.
+    weather tool용 Lambda 핸들러입니다.
 
-    Expected input:
+    예상 입력:
     {
         "location": "New York",
         "units": "celsius" | "fahrenheit" (optional)
     }
 
-    Returns mock weather data.
+    모의 날씨 데이터를 반환합니다.
     """
     print(f"Weather tool received event: {json.dumps(event)}")
 
-    # Parse input
+        # 입력 파싱
     body = event if isinstance(event, dict) else json.loads(event)
     location = body.get("location", "Unknown")
     units = body.get("units", "celsius")
 
-    # Generate mock weather data
+        # 모의 날씨 데이터 생성
     temp_celsius = random.randint(-10, 35)
     temp_fahrenheit = (temp_celsius * 9 / 5) + 32
 
@@ -61,7 +61,7 @@ def lambda_handler(event, context):
     return response
 
 
-# MCP Tool Definition for Gateway registration
+# Gateway 등록용 MCP Tool Definition
 TOOL_DEFINITION = {
     "name": "weather_tool",
     "description": "Get current weather information for a specific location. Returns temperature, conditions, humidity, and wind speed.",
@@ -83,7 +83,7 @@ TOOL_DEFINITION = {
 
 
 if __name__ == "__main__":
-    # Test the tool locally
+# 로컬에서 도구 테스트
     test_event = {"location": "San Francisco", "units": "fahrenheit"}
 
     result = lambda_handler(test_event, None)

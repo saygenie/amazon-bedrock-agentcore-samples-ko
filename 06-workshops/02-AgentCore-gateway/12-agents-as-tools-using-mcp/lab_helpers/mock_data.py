@@ -1,12 +1,12 @@
 """
-Mock data generator for Lab 2 testing
-Provides realistic CloudWatch logs and metrics without requiring deployed infrastructure
+Lab 2 테스트용 모의 데이터 생성기
+인프라를 배포하지 않고도 현실적인 CloudWatch 로그와 지표를 제공합니다.
 """
 
 import datetime
 import random
 
-# EC2 Application Logs - Mix of normal operations and errors
+# EC2 애플리케이션 로그 - 정상 작업과 오류 혼합
 EC2_APPLICATION_LOGS = [
     {
         "timestamp": int(
@@ -56,7 +56,7 @@ EC2_APPLICATION_LOGS = [
     },
 ]
 
-# NGINX Access/Error Logs - Mix of successful and error requests
+# NGINX 접근/오류 로그 - 성공 및 오류 요청 혼합
 NGINX_LOGS = [
     {
         "timestamp": int(
@@ -106,7 +106,7 @@ NGINX_LOGS = [
     },
 ]
 
-# DynamoDB Operation Logs - Mix of successful and throttled operations
+# DynamoDB 작업 로그 - 성공 및 제한된 작업 혼합
 DYNAMODB_LOGS = [
     {
         "timestamp": int(
@@ -157,13 +157,13 @@ DYNAMODB_LOGS = [
 ]
 
 
-# CloudWatch Metrics - CPU, Memory, Disk with realistic values and spike
+# CloudWatch 지표 - 현실적인 값과 급증이 포함된 CPU, Memory, Disk
 def get_cpu_metrics():
-    """Generate realistic CPU utilization metrics"""
+    """현실적인 CPU 사용률 지표를 생성합니다."""
     now = datetime.datetime.now(datetime.timezone.utc)
     metrics = []
 
-    # Normal values (60-70%)
+    # 정상 값(60~70%)
     for i in range(3):
         metrics.append(
             {
@@ -175,7 +175,7 @@ def get_cpu_metrics():
             }
         )
 
-    # Spike (95%+)
+    # 급증(95% 이상)
     metrics.append(
         {
             "Timestamp": now - datetime.timedelta(minutes=1),
@@ -186,7 +186,7 @@ def get_cpu_metrics():
         }
     )
 
-    # Recent spike continuation
+    # 최근 급증 지속
     metrics.append(
         {
             "Timestamp": now,
@@ -201,11 +201,11 @@ def get_cpu_metrics():
 
 
 def get_memory_metrics():
-    """Generate realistic memory utilization metrics"""
+    """현실적인 메모리 사용률 지표를 생성합니다."""
     now = datetime.datetime.now(datetime.timezone.utc)
     metrics = []
 
-    # Normal values (70-80%)
+    # 정상 값(70~80%)
     for i in range(3):
         metrics.append(
             {
@@ -217,7 +217,7 @@ def get_memory_metrics():
             }
         )
 
-    # Elevated (85%+)
+    # 상승(85% 이상)
     metrics.append(
         {
             "Timestamp": now - datetime.timedelta(minutes=1),
@@ -228,7 +228,7 @@ def get_memory_metrics():
         }
     )
 
-    # High memory usage
+    # 높은 메모리 사용률
     metrics.append(
         {
             "Timestamp": now,
@@ -243,11 +243,11 @@ def get_memory_metrics():
 
 
 def get_disk_metrics():
-    """Generate realistic disk utilization metrics"""
+    """현실적인 디스크 사용률 지표를 생성합니다."""
     now = datetime.datetime.now(datetime.timezone.utc)
     metrics = []
 
-    # Normal values (45-55%)
+    # 정상 값(45~55%)
     for i in range(5):
         metrics.append(
             {
@@ -262,24 +262,24 @@ def get_disk_metrics():
     return metrics
 
 
-# Public API functions
+# Public API 함수
 def get_ec2_logs():
-    """Return mock EC2 application logs"""
+    """모의 EC2 애플리케이션 로그를 반환합니다."""
     return EC2_APPLICATION_LOGS
 
 
 def get_nginx_logs():
-    """Return mock NGINX logs"""
+    """모의 NGINX 로그를 반환합니다."""
     return NGINX_LOGS
 
 
 def get_dynamodb_logs():
-    """Return mock DynamoDB operation logs"""
+    """모의 DynamoDB 작업 로그를 반환합니다."""
     return DYNAMODB_LOGS
 
 
 def get_metrics(metric_name="CPUUtilization"):
-    """Return mock metrics based on metric name"""
+    """지표 이름에 따라 모의 지표를 반환합니다."""
     if metric_name == "CPUUtilization":
         return get_cpu_metrics()
     elif metric_name == "MemoryUtilization":

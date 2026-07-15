@@ -1,11 +1,11 @@
 """
-Setup script: Creates a Cognito User Pool for AgentCore Runtime inbound JWT auth,
-plus a Cognito domain and machine client (client credentials) for the M2M flow.
+설정 스크립트: AgentCore Runtime 인바운드 JWT 인증용 Cognito User Pool과
+M2M 흐름용 Cognito 도메인 및 머신 클라이언트(client credentials)를 생성합니다.
 
-Usage:
+사용법:
     python setup_cognito.py
 
-Outputs:
+출력:
     cognito_config.json
 """
 
@@ -34,14 +34,14 @@ def setup_cognito():
     pool_id = pool["UserPool"]["Id"]
     print(f"  Pool ID: {pool_id}")
 
-    # Cognito domain is required for client_credentials token endpoint
+    # client_credentials 토큰 엔드포인트에는 Cognito 도메인이 필요
     domain_prefix = "m2m-demo-" + re.sub(r"[^a-z0-9]", "-", pool_id.lower())[:18]
     print(f"Creating Cognito domain '{domain_prefix}'...")
     cognito.create_user_pool_domain(Domain=domain_prefix, UserPoolId=pool_id)
     token_endpoint = f"https://{domain_prefix}.auth.{region}.amazoncognito.com/oauth2/token"
     print(f"  Token endpoint: {token_endpoint}")
 
-    # Resource server defines the scopes the machine client can request
+    # 리소스 서버에서 머신 클라이언트가 요청할 수 있는 scope 정의
     print("Creating resource server for M2M scopes...")
     cognito.create_resource_server(
         UserPoolId=pool_id,

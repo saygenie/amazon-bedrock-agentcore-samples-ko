@@ -212,7 +212,7 @@ Resources:
               username = event['userName']
               client = boto3.client('cognito-idp')
 
-              # Add user to 'customer' group
+              # 사용자를 'customer' group에 추가
               try:
                   client.admin_add_user_to_group(
                       UserPoolId=user_pool_id,

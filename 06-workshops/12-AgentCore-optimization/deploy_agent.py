@@ -1,20 +1,20 @@
 """
-deploy_agent.py — Deploy the HR Assistant agent to Amazon Bedrock AgentCore Runtime.
+deploy_agent.py — HR Assistant 에이전트를 Amazon Bedrock AgentCore Runtime에 배포합니다.
 
-Usage:
+사용법:
     python deploy_agent.py --name HRAssistantV1 [--region us-east-1] [--version v1]
 
-Options:
-    --name     Runtime name (alphanumeric, used as resource name prefix). Required.
-    --region   AWS region (default: us-east-1).
-    --version  Agent version for multi-version deployments: v1 (default) or v2.
-               v2 adds "escalate_to_hr_manager" tool and an improved baked-in system prompt,
-               simulating a code-level change for target-based routing demos.
+옵션:
+    --name     Runtime 이름(영숫자, 리소스 이름 접두사로 사용). 필수입니다.
+    --region   AWS 리전(기본값: us-east-1).
+    --version  다중 버전 배포를 위한 에이전트 버전: v1(기본값) 또는 v2.
+               v2는 "escalate_to_hr_manager" 도구와 개선된 내장 system prompt를 추가하여
+               대상 기반 라우팅 데모를 위한 코드 수준의 변경을 시뮬레이션합니다.
 
-Output:
-    Writes agent_state_{name}.json in the current directory with:
+출력:
+    현재 디렉터리의 agent_state_{name}.json에 다음 정보를 기록합니다:
       runtime_id, runtime_arn, log_group, service_name, role_arn, region
-    This state file is loaded by optimization_tutorial.ipynb.
+    이 상태 파일은 optimization_tutorial.ipynb에서 로드합니다.
 """
 
 import argparse
@@ -30,7 +30,7 @@ from pathlib import Path
 import boto3
 
 # ---------------------------------------------------------------------------
-# Parse arguments
+# 인자 파싱
 # ---------------------------------------------------------------------------
 
 parser = argparse.ArgumentParser(description="Deploy HR Assistant to AgentCore Runtime")
@@ -49,7 +49,7 @@ REGION = args.region
 VERSION = args.version
 
 # ---------------------------------------------------------------------------
-# AWS clients
+# AWS 클라이언트
 # ---------------------------------------------------------------------------
 
 sts = boto3.client("sts", region_name=REGION)
@@ -68,7 +68,7 @@ STATE_FILE = Path(f"agent_state_{RUNTIME_NAME}.json")
 print(f"Deploying {RUNTIME_NAME} (version={VERSION}) to {REGION} (account={ACCOUNT_ID})")
 
 # ---------------------------------------------------------------------------
-# IAM role
+# IAM 역할
 # ---------------------------------------------------------------------------
 
 TRUST_POLICY = json.dumps(
@@ -143,18 +143,18 @@ print("IAM policy attached. Waiting 10s for propagation...")
 time.sleep(10)
 
 # ---------------------------------------------------------------------------
-# Agent code
+# 에이전트 코드
 # ---------------------------------------------------------------------------
 
-# v1: standard HR assistant with config bundle hook (reads hr_assistant_agent.py)
-# v2: same agent but with an additional escalation tool and improved baked-in system prompt,
-#     simulating a code-level improvement for the target-based routing demo.
+# v1: 구성 번들 훅을 사용하는 표준 HR Assistant(hr_assistant_agent.py 읽기)
+# v2: 동일한 에이전트에 에스컬레이션 도구와 개선된 내장 system prompt를 추가하여
+#     대상 기반 라우팅 데모를 위한 코드 수준의 개선을 시뮬레이션합니다.
 
 SCRIPT_DIR = Path(__file__).parent
 V1_CODE_PATH = SCRIPT_DIR / "hr_assistant_agent.py"
 
-# v2 adds an escalation tool and a more detailed system prompt baked into the code.
-# This represents a new code deployment (not just a prompt config change).
+# v2는 에스컬레이션 도구와 코드에 내장된 더 상세한 system prompt를 추가합니다.
+# 이는 단순한 prompt 구성 변경이 아니라 새로운 코드 배포를 나타냅니다.
 V2_EXTRA_CODE = '''
 
 # ---------------------------------------------------------------------------
@@ -222,18 +222,18 @@ def build_v1_code() -> str:
 
 def build_v2_code() -> str:
     base = V1_CODE_PATH.read_text()
-    # Inject extra tool before the tools list
+    # 도구 목록 앞에 추가 도구 삽입
     extra = V2_EXTRA_CODE
-    # Update the DEFAULT_SYSTEM_PROMPT to v2 version
+    # DEFAULT_SYSTEM_PROMPT를 v2 버전으로 업데이트
     base = base.replace(
         'DEFAULT_SYSTEM_PROMPT = """You are a helpful HR Assistant for Acme Corp.',
         f'DEFAULT_SYSTEM_PROMPT = """{V2_SYSTEM_PROMPT[V2_SYSTEM_PROMPT.index("You") :]}'.rstrip()
         + "\n\n# (below replaced by v2)\n_PLACEHOLDER_",
     )
-    # Simpler approach: replace the DEFAULT_SYSTEM_PROMPT variable entirely
+    # 더 간단한 방식: DEFAULT_SYSTEM_PROMPT 변수를 통째로 교체
     import re
 
-    # Replace the multiline DEFAULT_SYSTEM_PROMPT
+    # 여러 줄로 된 DEFAULT_SYSTEM_PROMPT 교체
     new_prompt = f'DEFAULT_SYSTEM_PROMPT = """{V2_SYSTEM_PROMPT}"""\n'
     base = re.sub(
         r'DEFAULT_SYSTEM_PROMPT = """.*?"""\n',
@@ -241,12 +241,12 @@ def build_v2_code() -> str:
         base,
         flags=re.DOTALL,
     )
-    # Add extra tool after the last @tool definition and before the _MODEL definition
+    # 마지막 @tool 정의 뒤, _MODEL 정의 앞에 추가 도구 삽입
     base = base.replace(
         "_MODEL = BedrockModel",
         extra + "\n_MODEL = BedrockModel",
     )
-    # Add escalate_to_hr_manager to tools list
+    # 도구 목록에 escalate_to_hr_manager 추가
     base = base.replace(
         "    get_pay_stub,\n]",
         "    get_pay_stub,\n    escalate_to_hr_manager,\n]",
@@ -255,7 +255,7 @@ def build_v2_code() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Build deployment package
+# 배포 패키지 빌드
 # ---------------------------------------------------------------------------
 
 if BUILD_DIR.exists():
@@ -285,12 +285,12 @@ subprocess.run(
     check=True,
 )
 
-# Write the agent code to main.py
+# 에이전트 코드를 main.py에 기록
 agent_code = build_v2_code() if VERSION == "v2" else build_v1_code()
 (PKG_DIR / "main.py").write_text(agent_code)
 print(f"Agent code ({VERSION}) written to {PKG_DIR}/main.py")
 
-# Zip the package
+# 패키지 압축
 ZIP_PATH = BUILD_DIR / "deployment_package.zip"
 with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as zf:
     for root, _, files in os.walk(PKG_DIR):
@@ -304,7 +304,7 @@ size_mb = ZIP_PATH.stat().st_size / (1024 * 1024)
 print(f"Package built: {ZIP_PATH} ({size_mb:.1f} MB)")
 
 # ---------------------------------------------------------------------------
-# Upload to S3
+# S3에 업로드
 # ---------------------------------------------------------------------------
 
 try:
@@ -323,7 +323,7 @@ s3.upload_file(str(ZIP_PATH), S3_BUCKET, S3_KEY)
 print(f"Uploaded to s3://{S3_BUCKET}/{S3_KEY}")
 
 # ---------------------------------------------------------------------------
-# Create AgentCore Runtime
+# AgentCore Runtime 생성
 # ---------------------------------------------------------------------------
 
 resp = ctrl.create_agent_runtime(
@@ -358,7 +358,7 @@ LOG_GROUP = f"/aws/bedrock-agentcore/runtimes/{RUNTIME_ID}-DEFAULT"
 SERVICE_NAME = f"{RUNTIME_NAME}.DEFAULT"
 
 # ---------------------------------------------------------------------------
-# Save state
+# 상태 저장
 # ---------------------------------------------------------------------------
 
 state = {

@@ -1,6 +1,6 @@
 """
-Utility functions for 05_agentic_consumer_discovery.ipynb
-Keeps the notebook focused on API calls and Registry showcase.
+05_agentic_consumer_discovery.ipynb용 유틸리티 함수입니다.
+노트북이 API 호출과 Registry 시연에 집중하도록 합니다.
 """
 
 import json
@@ -12,10 +12,10 @@ import requests
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Step 1 helpers — Lambda, Cognito, Gateway, A2A agent setup
+# 1단계 헬퍼 - Lambda, Cognito, Gateway, A2A 에이전트 설정
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Lambda code for order management — handles get_order_status and update_order tools
+# 주문 관리용 Lambda 코드 - get_order_status 및 update_order 도구 처리
 ORDER_MANAGEMENT_LAMBDA_CODE = """
 import json
 
@@ -82,7 +82,7 @@ def lambda_handler(event, context):
 
 
 def make_lambda_zip(code_str):
-    """Package a Python code string into a Lambda-compatible zip archive."""
+    """Python 코드 문자열을 Lambda 호환 zip 아카이브로 패키징합니다."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as z:
         z.writestr("lambda_function.py", code_str)
@@ -91,7 +91,7 @@ def make_lambda_zip(code_str):
 
 
 def fetch_oauth_token(cognito_domain, client_id, client_secret, scopes, region, max_retries=6):
-    """Fetch OAuth2 access token from Cognito with retry for DNS propagation."""
+    """DNS 전파를 고려해 재시도하며 Cognito에서 OAuth2 액세스 토큰을 가져옵니다."""
     creds = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
     for attempt in range(max_retries):
         try:
@@ -116,7 +116,7 @@ def fetch_oauth_token(cognito_domain, client_id, client_secret, scopes, region, 
     return None
 
 
-# Tool schemas for the order management Gateway target
+# 주문 관리 Gateway 대상의 도구 스키마
 ORDER_TOOL_SCHEMAS = [
     {
         "name": "get_order_status",
@@ -150,7 +150,7 @@ ORDER_TOOL_SCHEMAS = [
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Step 2 helpers — A2A agent code and file writing
+# 2단계 헬퍼 - A2A 에이전트 코드 및 파일 작성
 # ═══════════════════════════════════════════════════════════════════════════════
 
 PRICING_AGENT_CODE = '''
@@ -252,7 +252,7 @@ A2A_REQUIREMENTS = "strands-agents[a2a]\nfastapi\nuvicorn\n"
 
 
 def write_agent_files():
-    """Write agent source files and requirements to disk for the starter toolkit."""
+    """스타터 툴킷용 에이전트 소스 파일과 요구 사항을 디스크에 작성합니다."""
     with open("pricing_agent.py", "w") as f:
         f.write(PRICING_AGENT_CODE)
     with open("customer_support_agent.py", "w") as f:
@@ -263,7 +263,7 @@ def write_agent_files():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Step 3 helpers — Registry metadata parsing and dynamic tool creation
+# 3단계 헬퍼 - Registry 메타데이터 파싱 및 동적 도구 생성
 # ═══════════════════════════════════════════════════════════════════════════════
 
 import uuid  # noqa: E402
@@ -272,9 +272,9 @@ from strands.tools.mcp import MCPClient  # noqa: E402
 
 
 def parse_server_metadata(record):
-    """Extract connection metadata (URL, protocol, tool names) from a Registry record."""
+    """Registry 레코드에서 연결 메타데이터(URL, 프로토콜, 도구 이름)를 추출합니다."""
     descriptors = record.get("descriptors", {})
-    # Derive protocol from descriptor keys (API no longer returns protocol field)
+    # 설명자 키에서 프로토콜 추론(API가 더 이상 protocol 필드를 반환하지 않음)
     if "mcp" in descriptors:
         protocol = "MCP"
     elif "a2a" in descriptors:
@@ -317,7 +317,7 @@ def parse_server_metadata(record):
 
 
 def create_mcp_client_from_metadata(meta, access_token):
-    """Build a Strands MCPClient for a Gateway MCP server (OAuth2 Bearer auth)."""
+    """Gateway MCP 서버용 Strands MCPClient를 생성합니다(OAuth2 Bearer 인증)."""
     if meta["protocol"] != "MCP" or meta["transport_type"] != "streamable_http":
         return None
     url = meta.get("url")
@@ -331,12 +331,12 @@ def create_mcp_client_from_metadata(meta, access_token):
 
 
 def create_a2a_tool_from_metadata(meta, session, region):
-    """Wrap an A2A agent as a Strands @tool (SigV4 auth via boto3).
+    """A2A 에이전트를 Strands @tool로 래핑합니다(boto3를 통한 SigV4 인증).
 
-    Args:
-        meta: Parsed metadata dict from parse_server_metadata.
-        session: boto3.Session for creating the AgentCore data plane client.
-        region: AWS region string.
+    매개변수:
+        meta: parse_server_metadata에서 파싱한 메타데이터 딕셔너리.
+        session: AgentCore 데이터 플레인 클라이언트를 생성하기 위한 boto3.Session.
+        region: AWS 리전 문자열.
     """
     if meta["protocol"] != "A2A":
         return None
@@ -388,18 +388,18 @@ def create_a2a_tool_from_metadata(meta, session, region):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Step 4 helpers — Orchestrator invocation
+# 4단계 헬퍼 - 오케스트레이터 호출
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 def invoke_orchestrator(user_request, data_client, orchestrator_arn, max_retries=3):
-    """Invoke the orchestrator agent on Runtime via A2A JSON-RPC protocol.
+    """A2A JSON-RPC 프로토콜을 통해 Runtime의 오케스트레이터 에이전트를 호출합니다.
 
-    Args:
-        user_request: The user's question or task.
-        data_client: boto3 client for bedrock-agentcore (data plane).
-        orchestrator_arn: ARN of the deployed orchestrator agent.
-        max_retries: Number of retries for cold-start 502 errors.
+    매개변수:
+        user_request: 사용자의 질문 또는 작업.
+        data_client: bedrock-agentcore용 boto3 클라이언트(데이터 플레인).
+        orchestrator_arn: 배포된 오케스트레이터 에이전트의 ARN.
+        max_retries: 콜드 스타트 502 오류 발생 시 재시도 횟수.
     """
     payload = json.dumps(
         {

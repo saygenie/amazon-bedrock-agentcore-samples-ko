@@ -1,25 +1,25 @@
 """
-Setup script: Creates AgentCore Identity credential providers for:
+설정 스크립트: 다음 항목의 AgentCore Identity 자격 증명 공급자를 생성합니다.
 
-  1. M2M  — OAuth2 client credentials (Cognito machine client from cognito_config.json)
-  2. GitHub 3LO — Authorization code grant for GitHub repository access
-  3. Google 3LO — Authorization code grant for Google Calendar access
+  1. M2M: OAuth2 client credentials(cognito_config.json의 Cognito 머신 클라이언트)
+  2. GitHub 3LO: GitHub 리포지터리 액세스용 Authorization code 권한 부여
+  3. Google 3LO: Google Calendar 액세스용 Authorization code 권한 부여
 
-Run setup_cognito.py first — M2M credentials are read from cognito_config.json.
+먼저 setup_cognito.py를 실행합니다. M2M 자격 증명은 cognito_config.json에서 읽습니다.
 
-Usage:
+사용법:
     python setup_oauth_providers.py
 
-Prerequisites:
+사전 요구 사항:
     - cognito_config.json (from setup_cognito.py)
-    - .env file (or environment variables) with:
+    - 다음 값이 있는 .env 파일(또는 환경 변수):
         GITHUB_CLIENT_ID        GitHub OAuth App client ID
         GITHUB_CLIENT_SECRET    GitHub OAuth App client secret
         GOOGLE_CLIENT_ID        Google OAuth2 client ID
         GOOGLE_CLIENT_SECRET    Google OAuth2 client secret
 
-Outputs:
-    oauth_config.json   Provider names and AgentCore callback URLs
+출력:
+    oauth_config.json   공급자 이름 및 AgentCore 콜백 URL
 """
 
 import os
@@ -40,7 +40,7 @@ except ImportError:
 
 
 def create_m2m_provider(identity_client: IdentityClient) -> dict:
-    """Create M2M provider using Cognito machine client from cognito_config.json."""
+    """cognito_config.json의 Cognito 머신 클라이언트로 M2M 공급자를 생성합니다."""
     try:
         with open("cognito_config.json") as f:
             cognito_config = json.load(f)
@@ -80,7 +80,7 @@ def create_m2m_provider(identity_client: IdentityClient) -> dict:
 
 
 def create_github_3lo_provider(identity_client: IdentityClient) -> dict:
-    """Create GitHub OAuth2 3LO credential provider."""
+    """GitHub OAuth2 3LO 자격 증명 공급자를 생성합니다."""
     client_id = os.environ.get("GITHUB_CLIENT_ID", "")
     client_secret = os.environ.get("GITHUB_CLIENT_SECRET", "")
 
@@ -118,7 +118,7 @@ def create_github_3lo_provider(identity_client: IdentityClient) -> dict:
 
 
 def create_google_3lo_provider(identity_client: IdentityClient) -> dict:
-    """Create Google OAuth2 3LO credential provider."""
+    """Google OAuth2 3LO 자격 증명 공급자를 생성합니다."""
     client_id = os.environ.get("GOOGLE_CLIENT_ID", "")
     client_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 

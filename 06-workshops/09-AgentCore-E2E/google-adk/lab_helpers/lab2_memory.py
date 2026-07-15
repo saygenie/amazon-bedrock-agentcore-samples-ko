@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""AgentCore Memory integration for Strands agents."""
+"""Strands 에이전트의 AgentCore Memory 통합."""
 
 import logging
 import uuid
@@ -52,12 +52,12 @@ def create_or_get_memory_resource():
                 },
             ]
             print("Creating AgentCore Memory resources. This can a couple of minutes..")
-            # *** AGENTCORE MEMORY USAGE *** - Create memory resource with semantic and user_pref strategy
+            # *** AGENTCORE MEMORY 사용 *** - semantic 및 user_pref 전략으로 Memory 리소스 생성
             response = memory_client.create_memory_and_wait(
                 name=memory_name,
                 description="Customer support agent memory",
                 strategies=strategies,
-                event_expiry_days=90,  # Memories expire after 90 days
+                event_expiry_days=90,  # 메모리는 90일 후 만료됨
             )
             memory_id = response["id"]
             try:
@@ -80,7 +80,7 @@ def delete_memory(memory_hook):
 
 
 class CustomerSupportMemoryHooks(HookProvider):
-    """Memory hooks for customer support agent"""
+    """고객 지원 에이전트용 메모리 후크"""
 
     def __init__(self, memory_id: str, client: MemoryClient, actor_id: str, session_id: str):
         self.memory_id = memory_id
@@ -90,7 +90,7 @@ class CustomerSupportMemoryHooks(HookProvider):
         self.namespaces = {i["type"]: i["namespaces"][0] for i in self.client.get_memory_strategies(self.memory_id)}
 
     def retrieve_customer_context(self, event: MessageAddedEvent):
-        """Retrieve customer context before processing support query"""
+        """지원 쿼리를 처리하기 전에 고객 컨텍스트 검색"""
         messages = event.agent.messages
         if messages[-1]["role"] == "user" and "toolResult" not in messages[-1]["content"][0]:
             user_query = messages[-1]["content"][0]["text"]
@@ -99,14 +99,14 @@ class CustomerSupportMemoryHooks(HookProvider):
                 all_context = []
 
                 for context_type, namespace in self.namespaces.items():
-                    # *** AGENTCORE MEMORY USAGE *** - Retrieve customer context from each namespace
+                    # *** AGENTCORE MEMORY 사용 *** - 각 네임스페이스에서 고객 컨텍스트 검색
                     memories = self.client.retrieve_memories(
                         memory_id=self.memory_id,
                         namespace=namespace.format(actorId=self.actor_id),
                         query=user_query,
                         top_k=3,
                     )
-                    # Post-processing: Format memories into context strings
+                    # 후처리: Memory를 컨텍스트 문자열로 변환
                     for memory in memories:
                         if isinstance(memory, dict):
                             content = memory.get("content", {})
@@ -115,7 +115,7 @@ class CustomerSupportMemoryHooks(HookProvider):
                                 if text:
                                     all_context.append(f"[{context_type.upper()}] {text}")
 
-                # Inject customer context into the query
+                # 쿼리에 고객 컨텍스트 삽입
                 if all_context:
                     context_text = "\n".join(all_context)
                     original_text = messages[-1]["content"][0]["text"]
@@ -126,11 +126,11 @@ class CustomerSupportMemoryHooks(HookProvider):
                 logger.error(f"Failed to retrieve customer context: {e}")
 
     def save_support_interaction(self, event: AfterInvocationEvent):
-        """Save customer support interaction after agent response"""
+        """에이전트 응답 후 고객 지원 상호 작용 저장"""
         try:
             messages = event.agent.messages
             if len(messages) >= 2 and messages[-1]["role"] == "assistant":
-                # Get last customer query and agent response
+                # 마지막 고객 쿼리와 에이전트 응답 가져오기
                 customer_query = None
                 agent_response = None
 
@@ -142,7 +142,7 @@ class CustomerSupportMemoryHooks(HookProvider):
                         break
 
                 if customer_query and agent_response:
-                    # *** AGENTCORE MEMORY USAGE *** - Save the support interaction
+                    # *** AGENTCORE MEMORY 사용 *** - 지원 상호 작용 저장
                     self.client.create_event(
                         memory_id=self.memory_id,
                         actor_id=self.actor_id,
@@ -158,7 +158,7 @@ class CustomerSupportMemoryHooks(HookProvider):
             logger.error(f"Failed to save support interaction: {e}")
 
     def register_hooks(self, registry: HookRegistry) -> None:
-        """Register customer support memory hooks"""
+        """고객 지원 메모리 후크 등록"""
         registry.add_callback(MessageAddedEvent, self.retrieve_customer_context)
         registry.add_callback(AfterInvocationEvent, self.save_support_interaction)
         logger.info("Customer support memory hooks registered")

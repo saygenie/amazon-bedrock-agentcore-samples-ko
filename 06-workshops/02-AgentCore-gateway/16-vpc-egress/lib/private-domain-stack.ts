@@ -10,18 +10,17 @@ import { NagSuppressions } from "cdk-nag";
 import { Construct } from "constructs";
 
 /**
- * Deploys an EC2 instance running a REST API behind an internal ALB
- * with a public certificate, and a Route 53 private hosted zone
- * that resolves to the ALB within the VPC.
+ * Public Certificate가 있는 Internal ALB 뒤에서 REST API를 실행하는 EC2
+ * 인스턴스와 VPC 내부에서 ALB를 확인하는 Route 53 Private Hosted Zone을 배포합니다.
  *
- * The private hosted zone name matches the target domain covered by
- * the public certificate, with an apex Alias record pointing to the
- * ALB. AgentCore Gateway's managed Resource Gateway resolves this
- * domain via the VPC's Private DNS — no routingDomain needed.
+ * Private Hosted Zone 이름은 Public Certificate가 적용되는 대상 도메인과
+ * 일치하며, apex Alias 레코드는 ALB를 가리킵니다. AgentCore Gateway의
+ * 관리형 Resource Gateway는 VPC의 Private DNS를 통해 이 도메인을 확인하므로
+ * routingDomain이 필요하지 않습니다.
  */
 export interface PrivateDomainStackProps extends cdk.StackProps {
 	vpc: ec2.IVpc;
-	/** FQDN covered by the public certificate, e.g. "internal.example.com" */
+	/** Public Certificate가 적용되는 FQDN(예: "internal.example.com") */
 	privateDomain: string;
 	publicCertArn: string;
 }
@@ -39,7 +38,7 @@ export class PrivateDomainStack extends cdk.Stack {
 			props.publicCertArn,
 		);
 
-		// --- EC2 Instance running simple REST API on HTTP :8000 ---
+		// --- HTTP :8000에서 간단한 REST API를 실행하는 EC2 인스턴스 ---
 		this.ec2Sg = new ec2.SecurityGroup(this, "Ec2Sg", {
 			vpc: props.vpc,
 			description: "Simple API EC2 instance",
@@ -114,7 +113,7 @@ export class PrivateDomainStack extends cdk.Stack {
 			"systemctl start simple-api",
 		);
 
-		// --- Internal ALB with public certificate ---
+		// --- Public Certificate가 있는 Internal ALB ---
 		const albSg = new ec2.SecurityGroup(this, "AlbSg", {
 			vpc: props.vpc,
 			description: "Internal ALB with public cert - HTTPS from VPC",
@@ -168,10 +167,10 @@ export class PrivateDomainStack extends cdk.Stack {
 		});
 
 		// --- Route 53 Private Hosted Zone ---
-		// Zone name matches the target FQDN. An apex Alias record points at
-		// the ALB so `https://<privateDomain>` resolves to ALB private IPs
-		// inside the VPC. AgentCore's Resource Gateway uses Private DNS to
-		// resolve this domain — no routingDomain workaround needed.
+		// Zone 이름은 대상 FQDN과 일치합니다. apex Alias 레코드가 ALB를
+		// 가리키므로 VPC 내부에서 `https://<privateDomain>`이 ALB Private IP로
+		// 확인됩니다. AgentCore Resource Gateway는 Private DNS로 이 도메인을
+		// 확인하므로 routingDomain 우회 방식이 필요하지 않습니다.
 		const privateZone = new route53.PrivateHostedZone(this, "PrivateZone", {
 			zoneName: props.privateDomain,
 			vpc: props.vpc,
@@ -184,7 +183,7 @@ export class PrivateDomainStack extends cdk.Stack {
 			),
 		});
 
-		// --- Outputs ---
+		// --- 출력 ---
 		new cdk.CfnOutput(this, "AlbDnsName", {
 			value: alb.loadBalancerDnsName,
 			description: "Internal ALB DNS (private IPs behind this DNS)",

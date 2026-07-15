@@ -1,8 +1,8 @@
-# End-to-End Flow: AgentCore Gateway with EntraID 3LO
+# End-to-End 흐름: EntraID 3LO를 사용하는 AgentCore Gateway
 
-This document describes the complete working flow for the AgentCore MCP Gateway with EntraID inbound authentication and outbound 3LO (three-legged OAuth) for user-delegated access to downstream APIs.
+이 문서에서는 EntraID 인바운드 인증과 다운스트림 API에 대한 사용자 위임 액세스용 아웃바운드 3LO(three-legged OAuth)를 사용하는 AgentCore MCP Gateway의 전체 작동 흐름을 설명합니다.
 
-## System Overview
+## 시스템 개요
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -32,7 +32,7 @@ This document describes the complete working flow for the AgentCore MCP Gateway 
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## AWS Architecture
+## AWS 아키텍처
 
 ```mermaid
 graph TB
@@ -98,20 +98,20 @@ graph TB
     style Clients fill:#1e1e2e,color:#fff
 ```
 
-## Two Flows, One Token Vault
+## 두 흐름과 하나의 Token Vault
 
-There are two client flows that share the same user identity and token vault:
+동일한 사용자 identity와 token vault를 공유하는 두 가지 클라이언트 흐름이 있습니다.
 
-1. **Auth Onboarding SPA** — browser-based web app where users pre-authorize 3LO access
-2. **VS Code MCP Client** — IDE-based MCP client that calls tools through the proxy
+1. **Auth Onboarding SPA** - 사용자가 3LO 액세스를 미리 승인하는 브라우저 기반 웹 앱
+2. **VS Code MCP Client** - proxy를 통해 도구를 호출하는 IDE 기반 MCP 클라이언트
 
-Both authenticate against the same EntraID App A, so the JWT `sub` claim is identical for the same user. A token authorized via the SPA is immediately usable by VS Code.
+두 흐름 모두 동일한 EntraID App A에서 인증하므로 같은 사용자의 JWT `sub` claim은 동일합니다. SPA를 통해 권한이 부여된 토큰은 VS Code에서 즉시 사용할 수 있습니다.
 
 ---
 
-## Flow 1: Auth Onboarding (First-Time Authorization)
+## 흐름 1: Auth Onboarding(최초 권한 부여)
 
-The user visits the auth onboarding web app to pre-authorize access to downstream APIs before using them from VS Code.
+사용자는 VS Code에서 다운스트림 API를 사용하기 전에 auth onboarding 웹 앱을 방문하여 액세스를 미리 승인합니다.
 
 ```mermaid
 sequenceDiagram
@@ -170,27 +170,27 @@ sequenceDiagram
     end
 ```
 
-### What happens at each step
+### 각 단계의 동작
 
-1. User visits `https://<endpoint>/auth` — proxy Lambda serves the SPA HTML
-2. MSAL.js handles EntraID login via PKCE, gets a JWT with `gateway.access` scope
-3. SPA calls `POST /mcp` with `tools/call getWeather` — same request VS Code would make
-4. Gateway checks the token vault for the user's weather API token — not found
-5. Gateway returns elicitation (-32042) with an `authorizationUrl`
-6. SPA shows the Authorize button. User clicks it. JWT and role ARN are saved to sessionStorage.
-7. Browser redirects to AgentCore's authorize URL → EntraID consent page
-8. User consents. EntraID sends authorization code to AgentCore's callback
-9. AgentCore exchanges the code for a weather token using App B's client secret (from Secrets Manager)
-10. AgentCore stores the token in the token vault, redirects to `/auth/callback?session_id=xxx`
-11. Callback page reads JWT from sessionStorage, calls STS `AssumeRoleWithWebIdentity` to get temp AWS credentials
-12. Callback page calls `CompleteResourceTokenAuth` directly via SigV4 — no Lambda proxy involved
-13. Done. Token is in the vault, bound to this user.
+1. 사용자가 `https://<endpoint>/auth`를 방문하면 proxy Lambda가 SPA HTML을 제공합니다.
+2. MSAL.js가 PKCE를 통해 EntraID 로그인을 처리하고 `gateway.access` scope가 포함된 JWT를 가져옵니다.
+3. SPA가 `tools/call getWeather`와 함께 `POST /mcp`를 호출합니다. VS Code가 보내는 요청과 동일합니다.
+4. Gateway가 token vault에서 사용자의 weather API token을 확인하지만 찾지 못합니다.
+5. Gateway가 `authorizationUrl`이 포함된 elicitation(-32042)을 반환합니다.
+6. SPA가 Authorize 버튼을 표시합니다. 사용자가 버튼을 클릭하면 JWT와 role ARN이 sessionStorage에 저장됩니다.
+7. 브라우저가 AgentCore의 authorize URL에서 EntraID 동의 페이지로 redirect됩니다.
+8. 사용자가 동의하면 EntraID가 AgentCore의 callback으로 authorization code를 전송합니다.
+9. AgentCore가 Secrets Manager의 App B client secret을 사용해 code를 weather token으로 교환합니다.
+10. AgentCore가 token vault에 토큰을 저장하고 `/auth/callback?session_id=xxx`로 redirect합니다.
+11. Callback 페이지가 sessionStorage에서 JWT를 읽고 STS `AssumeRoleWithWebIdentity`를 호출해 임시 AWS 자격 증명을 가져옵니다.
+12. Callback 페이지가 SigV4를 통해 `CompleteResourceTokenAuth`를 직접 호출하며 Lambda proxy는 관여하지 않습니다.
+13. 완료되었습니다. 토큰이 vault에 저장되고 이 사용자에게 바인딩됩니다.
 
 ---
 
-## Flow 2: VS Code MCP (Happy Path After Authorization)
+## 흐름 2: VS Code MCP(권한 부여 후 정상 경로)
 
-After the user has authorized via the SPA, VS Code MCP calls work without any elicitation.
+사용자가 SPA를 통해 권한을 부여한 후에는 elicitation 없이 VS Code MCP 호출이 작동합니다.
 
 ```mermaid
 sequenceDiagram
@@ -215,9 +215,9 @@ sequenceDiagram
 
 ---
 
-## Flow 3: VS Code Inbound OAuth (First Connection)
+## 흐름 3: VS Code Inbound OAuth(최초 연결)
 
-When VS Code first connects to the MCP server, it goes through the standard OAuth 2.1 flow for inbound authentication. This is separate from the 3LO outbound auth.
+VS Code가 MCP 서버에 처음 연결할 때 인바운드 인증을 위한 표준 OAuth 2.1 흐름을 거칩니다. 이 흐름은 3LO outbound auth와 별개입니다.
 
 ```mermaid
 sequenceDiagram
@@ -246,68 +246,68 @@ sequenceDiagram
     Note over VS: VS Code now has a JWT for all subsequent /mcp calls
 ```
 
-### Proxy Lambda's role in inbound auth
+### inbound auth에서 Proxy Lambda의 역할
 
-The proxy Lambda acts as an OAuth intermediary between VS Code and EntraID:
+proxy Lambda는 VS Code와 EntraID 사이에서 OAuth intermediary 역할을 합니다.
 
-- `/authorize` — rewrites `redirect_uri` to the proxy's `/callback`, encodes the original redirect_uri in the state parameter, injects the `gateway.access` scope
-- `/callback` — decodes the compound state, forwards the authorization code to VS Code's original redirect_uri
-- `/token` — strips the `resource` parameter (EntraID v2.0 doesn't support it), adds `Origin` header (required for SPA/public client token redemption), rewrites `redirect_uri`
-- `/register` — returns the pre-registered App A client_id (no dynamic registration needed)
-
----
-
-## Key Design Decisions
-
-### Why `tools/call` instead of `tools/list` for checking auth status
-
-`tools/list` does NOT trigger outbound auth — it returns the list of available tools without needing the weather API token. Only `tools/call` (actually invoking a tool) forces the Gateway to fetch the weather token, which triggers elicitation if the token is missing.
-
-### Why `CustomOauth2` vendor type for the credential provider
-
-The EntraID tenant is a CIAM (External ID) tenant. CIAM tenants use `ciamlogin.com` for their token endpoints, not `login.microsoftonline.com`. The `MicrosoftOauth2` vendor type auto-generates the discovery URL as `login.microsoftonline.com`, which causes token exchange failures. `CustomOauth2` lets us specify the correct CIAM discovery URL explicitly.
-
-### Why the browser calls `CompleteResourceTokenAuth` directly (no Lambda proxy)
-
-The callback page calls `CompleteResourceTokenAuth` directly from the browser using SigV4 signing with temporary AWS credentials from STS `AssumeRoleWithWebIdentity`. This eliminates the Lambda proxy from the auth completion flow entirely.
-
-The browser role has `secretsmanager:GetSecretValue` gated by `aws:CalledVia: bedrock-agentcore.amazonaws.com` — the browser cannot call GetSecretValue directly, but when AgentCore calls it internally during `CompleteResourceTokenAuth` via Forward Access Sessions (FAS), the condition passes. This pattern comes from the AWS-managed `BedrockAgentCoreFullAccess` policy.
-
-The browser loads the AWS SDK v3 (`@aws-sdk/client-sts` and `@aws-sdk/client-bedrock-agentcore`) from jsDelivr ESM CDN. The flow is:
-1. Read JWT from sessionStorage (saved before consent redirect)
-2. STS `AssumeRoleWithWebIdentity(JWT)` → temp credentials
-3. `CompleteResourceTokenAuth(sessionUri, userToken)` with SigV4
-
-This means the JWT never leaves the browser — no DynamoDB, no Lambda proxy, no server-side storage.
-
-### Why no `allowedClients` on the Gateway authorizer
-
-EntraID v2.0 tokens use `azp` for the client ID, not `client_id`. AgentCore validates `allowedClients` against the `client_id` claim, which doesn't exist in EntraID v2.0 tokens. We rely on `allowedAudience` (validated against `aud`) instead.
-
-### Why the proxy Lambda bundles its own boto3
-
-The Lambda runtime's built-in boto3 may be too old and lack `complete_resource_token_auth`. The CDK bundling step installs the latest boto3 into the deployment package.
+- `/authorize` - `redirect_uri`를 proxy의 `/callback`으로 재작성하고, 원래 redirect_uri를 state 파라미터에 인코딩하며, `gateway.access` scope를 주입합니다.
+- `/callback` - 복합 state를 디코딩하고 authorization code를 VS Code의 원래 redirect_uri로 전달합니다.
+- `/token` - `resource` 파라미터를 제거하고(EntraID v2.0에서 지원하지 않음), `Origin` header를 추가하며(SPA/public client token redemption에 필요), `redirect_uri`를 재작성합니다.
+- `/register` - 사전 등록된 App A client_id를 반환합니다(dynamic registration 불필요).
 
 ---
 
-## Token Lifecycle
+## 주요 설계 결정
 
-| Token | Issued by | Stored where | Lifetime | Used for |
+### auth 상태 확인에 `tools/list` 대신 `tools/call`을 사용하는 이유
+
+`tools/list`는 outbound auth를 시작하지 않습니다. weather API token 없이 사용 가능한 도구 목록을 반환합니다. 실제로 도구를 호출하는 `tools/call`만 Gateway가 weather token을 가져오도록 하며, 토큰이 없으면 elicitation을 시작합니다.
+
+### credential provider에 `CustomOauth2` vendor type을 사용하는 이유
+
+EntraID tenant는 CIAM(External ID) tenant입니다. CIAM tenant는 token endpoint에 `login.microsoftonline.com`이 아니라 `ciamlogin.com`을 사용합니다. `MicrosoftOauth2` vendor type은 discovery URL을 `login.microsoftonline.com`으로 자동 생성하므로 token exchange가 실패합니다. `CustomOauth2`를 사용하면 올바른 CIAM discovery URL을 명시적으로 지정할 수 있습니다.
+
+### 브라우저가 `CompleteResourceTokenAuth`를 직접 호출하는 이유(Lambda proxy 없음)
+
+callback 페이지는 STS `AssumeRoleWithWebIdentity`의 임시 AWS 자격 증명으로 SigV4 서명을 사용해 브라우저에서 `CompleteResourceTokenAuth`를 직접 호출합니다. 따라서 auth 완료 흐름에서 Lambda proxy가 완전히 제외됩니다.
+
+브라우저 역할의 `secretsmanager:GetSecretValue`에는 `aws:CalledVia: bedrock-agentcore.amazonaws.com` 조건이 적용됩니다. 브라우저는 GetSecretValue를 직접 호출할 수 없지만, AgentCore가 `CompleteResourceTokenAuth` 처리 중 Forward Access Sessions(FAS)를 통해 내부적으로 호출하면 조건을 충족합니다. 이 패턴은 AWS 관리형 `BedrockAgentCoreFullAccess` 정책에서 가져왔습니다.
+
+브라우저는 jsDelivr ESM CDN에서 AWS SDK v3(`@aws-sdk/client-sts`, `@aws-sdk/client-bedrock-agentcore`)를 로드합니다. 흐름은 다음과 같습니다.
+1. sessionStorage에서 JWT 읽기(동의 redirect 전에 저장)
+2. STS `AssumeRoleWithWebIdentity(JWT)` → 임시 자격 증명
+3. SigV4로 `CompleteResourceTokenAuth(sessionUri, userToken)` 호출
+
+따라서 JWT는 브라우저를 벗어나지 않으며 DynamoDB, Lambda proxy, 서버 측 저장소가 필요하지 않습니다.
+
+### Gateway authorizer에 `allowedClients`가 없는 이유
+
+EntraID v2.0 토큰은 client ID에 `client_id`가 아니라 `azp`를 사용합니다. AgentCore는 EntraID v2.0 토큰에 없는 `client_id` claim을 기준으로 `allowedClients`를 검증합니다. 대신 `aud`를 기준으로 검증되는 `allowedAudience`를 사용합니다.
+
+### proxy Lambda가 자체 boto3를 번들로 제공하는 이유
+
+Lambda Runtime의 내장 boto3는 너무 오래되어 `complete_resource_token_auth`가 없을 수 있습니다. CDK 번들링 단계에서 최신 boto3를 배포 패키지에 설치합니다.
+
+---
+
+## 토큰 수명 주기
+
+| 토큰 | 발급자 | 저장 위치 | 수명 | 용도 |
 |-------|-----------|-------------|----------|----------|
-| EntraID JWT (gateway.access) | EntraID App A | Browser sessionStorage (MSAL.js) | ~1 hour | Inbound auth to Gateway, STS AssumeRoleWithWebIdentity, CompleteResourceTokenAuth |
-| Temp AWS credentials | STS | Browser memory (JS variable) | 1 hour | SigV4 signing for CompleteResourceTokenAuth |
-| Weather API token | EntraID App B | AgentCore Token Vault | Refresh token ~30 days | Gateway → Weather API calls |
-| Refresh token | EntraID App B | AgentCore Token Vault | ~30 days | Auto-refresh of weather token |
+| EntraID JWT(gateway.access) | EntraID App A | 브라우저 sessionStorage(MSAL.js) | 약 1시간 | Gateway inbound auth, STS AssumeRoleWithWebIdentity, CompleteResourceTokenAuth |
+| 임시 AWS 자격 증명 | STS | 브라우저 메모리(JS 변수) | 1시간 | CompleteResourceTokenAuth의 SigV4 서명 |
+| Weather API token | EntraID App B | AgentCore Token Vault | Refresh token 약 30일 | Gateway → Weather API 호출 |
+| Refresh token | EntraID App B | AgentCore Token Vault | 약 30일 | weather token 자동 갱신 |
 
 ---
 
-## Error Scenarios
+## 오류 시나리오
 
-| Scenario | What happens | Resolution |
+| 시나리오 | 발생하는 동작 | 해결 방법 |
 |----------|-------------|------------|
-| User hasn't authorized yet | Gateway returns -32042 elicitation | Visit auth onboarding SPA, click Authorize |
-| Weather token expired | Gateway auto-refreshes using refresh token in vault | Transparent to user |
-| Refresh token expired | Gateway returns -32042 elicitation again | Re-authorize via SPA |
-| Wrong discovery URL on credential provider | `authorizationCode must not be null` error during consent | Recreate credential provider with `CustomOauth2` and CIAM discovery URL |
-| EntraID App B redirect URI mismatch | Consent flow fails at EntraID | Update redirect URI in Entra admin center to match credential provider callback URL |
-| CompleteResourceTokenAuth access denied | FAS/CalledVia condition not met | Verify IAM role has `secretsmanager:GetSecretValue` with `aws:CalledVia` condition for `bedrock-agentcore.amazonaws.com` |
+| 사용자가 아직 권한을 부여하지 않음 | Gateway가 -32042 elicitation 반환 | auth onboarding SPA를 방문하여 Authorize 클릭 |
+| Weather token 만료 | Gateway가 vault의 refresh token으로 자동 갱신 | 사용자에게 영향을 주지 않음 |
+| Refresh token 만료 | Gateway가 -32042 elicitation을 다시 반환 | SPA를 통해 다시 권한 부여 |
+| credential provider의 잘못된 discovery URL | 동의 중 `authorizationCode must not be null` 오류 | `CustomOauth2` 및 CIAM discovery URL로 credential provider 재생성 |
+| EntraID App B redirect URI 불일치 | EntraID에서 동의 흐름 실패 | Entra admin center의 redirect URI를 credential provider callback URL과 일치하도록 업데이트 |
+| CompleteResourceTokenAuth 액세스 거부 | FAS/CalledVia 조건 불충족 | IAM 역할에 `bedrock-agentcore.amazonaws.com`의 `aws:CalledVia` 조건이 적용된 `secretsmanager:GetSecretValue`가 있는지 확인 |

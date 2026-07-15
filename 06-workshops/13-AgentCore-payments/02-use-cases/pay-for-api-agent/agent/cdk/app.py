@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CDK app entry point for the Pay for API buyer agent runtime."""
+"""Pay for API buyer agent runtime용 CDK app 진입점입니다."""
 
 import os
 

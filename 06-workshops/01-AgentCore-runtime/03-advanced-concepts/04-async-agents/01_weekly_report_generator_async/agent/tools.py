@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Tools for the Weekly Update Generator Agent.
-Contains all tool functions for data reading, analysis, visualization, and reporting.
+Weekly Update Generator Agent용 도구입니다.
+데이터 읽기, 분석, 시각화 및 보고에 사용하는 모든 도구 함수를 포함합니다.
 """
 
 import csv
@@ -12,21 +12,21 @@ from strands import tool
 import matplotlib.pyplot as plt
 import matplotlib
 
-matplotlib.use("Agg")  # Non-interactive backend
+matplotlib.use("Agg")  # 비대화형 백엔드
 import numpy as np
 from sklearn.linear_model import LinearRegression
 import boto3
 
-# S3 configuration for report uploads
-S3_BUCKET = "a-sample-dataset-6"  # Will be updated by update_demo_dates.py
+# 보고서 업로드용 S3 구성
+S3_BUCKET = "a-sample-dataset-6"  # update_demo_dates.py에서 업데이트됨
 S3_PREFIX = "weekly_reports"
-DEMO_DATA_PREFIX = "demo_data"  # S3 prefix for demo data
+DEMO_DATA_PREFIX = "demo_data"  # 데모 데이터용 S3 접두사
 
 
 def download_demo_data_from_s3():
     """
-    Download all demo data from S3 to local /tmp/demo_data directory.
-    This is called once at agent startup.
+    모든 데모 데이터를 S3에서 로컬 /tmp/demo_data 디렉터리로 다운로드합니다.
+    Agent 시작 시 한 번 호출됩니다.
     """
     import os
     import boto3
@@ -37,7 +37,7 @@ def download_demo_data_from_s3():
     print(f"📥 Downloading demo data from s3://{S3_BUCKET}/{DEMO_DATA_PREFIX}/")
 
     try:
-        # List all objects under demo_data prefix
+        # demo_data 접두사 아래의 모든 객체 나열
         paginator = s3_client.get_paginator("list_objects_v2")
         pages = paginator.paginate(Bucket=S3_BUCKET, Prefix=DEMO_DATA_PREFIX + "/")
 
@@ -49,24 +49,24 @@ def download_demo_data_from_s3():
             for obj in page["Contents"]:
                 s3_key = obj["Key"]
 
-                # Skip directory markers
+                # 디렉터리 마커 건너뛰기
                 if s3_key.endswith("/"):
                     continue
 
-                # Calculate local path
-                relative_path = s3_key[len(DEMO_DATA_PREFIX) + 1 :]  # Remove 'demo_data/' prefix
+                # 로컬 경로 계산
+                relative_path = s3_key[len(DEMO_DATA_PREFIX) + 1 :]  # 'demo_data/' 접두사 제거
                 local_path = os.path.join(local_base, relative_path)
 
-                # Create directory if needed
+                # 필요한 경우 디렉터리 생성
                 os.makedirs(os.path.dirname(local_path), exist_ok=True)
 
-                # Download file
+                # 파일 다운로드
                 s3_client.download_file(S3_BUCKET, s3_key, local_path)
                 file_count += 1
 
         print(f"✅ Downloaded {file_count} files to {local_base}")
 
-        # Update all file paths to use /tmp/demo_data
+        # 모든 파일 경로에서 /tmp/demo_data를 사용하도록 업데이트
         return local_base
 
     except Exception as e:
@@ -77,7 +77,7 @@ def download_demo_data_from_s3():
         raise
 
 
-# Download demo data at module import time
+# 모듈을 가져올 때 데모 데이터 다운로드
 try:
     download_demo_data_from_s3()
 except Exception as e:
@@ -88,12 +88,12 @@ except Exception as e:
 def read_project_status() -> str:
     """Read and summarize project status from CSV file."""
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         project_dir = "/tmp/demo_data/project_status"  # nosec B108
         files = [f for f in os.listdir(project_dir) if f.startswith("projects_week_") and f.endswith(".csv")]
         if not files:
             return "Error: No project status files found"
-        latest_file = sorted(files)[-1]  # Get the latest week
+        latest_file = sorted(files)[-1]  # 최신 주차 가져오기
 
         projects = []
         with open(os.path.join(project_dir, latest_file), "r") as f:
@@ -124,11 +124,11 @@ def read_team_updates() -> str:
         for filename in sorted(files):
             with open(os.path.join(updates_dir, filename), "r") as f:
                 content = f.read()
-                # Extract key sections
+                # 주요 섹션 추출
                 name = filename.replace(".md", "").replace("_week_", " ").rsplit(" ", 1)[0].replace("_", " ").title()
                 summary += f"## {name}\n"
 
-                # Extract completed items
+                # 완료 항목 추출
                 if "Completed" in content or "Accomplishments" in content:
                     lines = content.split("\n")
                     in_completed = False
@@ -140,7 +140,7 @@ def read_team_updates() -> str:
                         elif in_completed and line.strip().startswith("-"):
                             summary += f"  ✓ {line.strip()[1:].strip()}\n"
 
-                # Extract blockers
+                # 차단 요소 추출
                 if "Blocker" in content:
                     lines = content.split("\n")
                     in_blockers = False
@@ -163,12 +163,12 @@ def read_team_updates() -> str:
 def read_metrics() -> str:
     """Read KPI metrics from CSV file."""
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         metrics_dir = "/tmp/demo_data/metrics"  # nosec B108
         files = [f for f in os.listdir(metrics_dir) if f.startswith("kpis_week_") and f.endswith(".csv")]
         if not files:
             return "Error: No metrics files found"
-        latest_file = sorted(files)[-1]  # Get the latest week
+        latest_file = sorted(files)[-1]  # 최신 주차 가져오기
 
         metrics = []
         with open(os.path.join(metrics_dir, latest_file), "r") as f:
@@ -192,12 +192,12 @@ def read_metrics() -> str:
 def read_bug_tracker() -> str:
     """Read bug/issue tracker data from JSON file."""
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         issues_dir = "/tmp/demo_data/issues"  # nosec B108
         files = [f for f in os.listdir(issues_dir) if f.startswith("bug_tracker_week_") and f.endswith(".json")]
         if not files:
             return "Error: No bug tracker files found"
-        latest_file = sorted(files)[-1]  # Get the latest week
+        latest_file = sorted(files)[-1]  # 최신 주차 가져오기
 
         with open(os.path.join(issues_dir, latest_file), "r") as f:
             data = json.load(f)
@@ -237,12 +237,12 @@ def read_meeting_notes() -> str:
         for filename in sorted(files):
             with open(os.path.join(notes_dir, filename), "r") as f:
                 content = f.read()
-                # Extract title
+                # 제목 추출
                 lines = content.split("\n")
                 title = lines[0].replace("#", "").strip() if lines else filename
                 summary += f"## {title}\n"
 
-                # Extract key decisions or action items
+                # 주요 결정 사항 또는 작업 항목 추출
                 if "Decision" in content or "Action Item" in content:
                     for line in lines:
                         if "Decision" in line or "Action" in line or line.strip().startswith("- ["):
@@ -259,7 +259,7 @@ def read_meeting_notes() -> str:
 def generate_bug_severity_chart() -> str:
     """Generate a pie chart showing bug distribution by severity."""
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         issues_dir = "/tmp/demo_data/issues"  # nosec B108
         files = [f for f in os.listdir(issues_dir) if f.startswith("bug_tracker_week_") and f.endswith(".json")]
         if not files:
@@ -278,7 +278,7 @@ def generate_bug_severity_chart() -> str:
             summary["low"],
         ]
         colors = ["#ff4444", "#ff8800", "#ffbb33", "#00C851"]
-        explode = (0.1, 0, 0, 0)  # Explode critical slice
+        explode = (0.1, 0, 0, 0)  # Critical 조각 분리
 
         plt.figure(figsize=(8, 6))
         plt.pie(
@@ -307,7 +307,7 @@ def generate_bug_severity_chart() -> str:
 def generate_metrics_trend_chart() -> str:
     """Generate a faceted bar chart showing current vs target for key metrics."""
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         metrics_dir = "/tmp/demo_data/metrics"  # nosec B108
         files = [f for f in os.listdir(metrics_dir) if f.startswith("kpis_week_") and f.endswith(".csv")]
         if not files:
@@ -320,7 +320,7 @@ def generate_metrics_trend_chart() -> str:
             for row in reader:
                 metrics.append(row)
 
-        # Select specific metrics to display
+        # 표시할 특정 지표 선택
         metric_names_to_show = [
             "Daily Active Users",
             "API Response Time (avg)",
@@ -330,7 +330,7 @@ def generate_metrics_trend_chart() -> str:
 
         selected_metrics = [m for m in metrics if m["metric_name"] in metric_names_to_show]
 
-        # Extract numeric values
+        # 숫자 값 추출
         def extract_number(value_str):
             clean = (
                 value_str.replace("$", "")
@@ -345,7 +345,7 @@ def generate_metrics_trend_chart() -> str:
             except:  # noqa: E722
                 return 0
 
-        # Create 2x2 subplot grid
+        # 2x2 하위 플롯 그리드 생성
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
         axes = axes.flatten()
 
@@ -355,7 +355,7 @@ def generate_metrics_trend_chart() -> str:
             current = extract_number(metric["current_value"])
             target = extract_number(metric["target"])
 
-            # Determine color based on status
+            # 상태에 따라 색상 결정
             if metric["status"] == "Exceeding":
                 color = "#00C851"
             elif metric["status"] == "On Track":
@@ -365,18 +365,18 @@ def generate_metrics_trend_chart() -> str:
             else:
                 color = "#ff4444"
 
-            # Create bars
+            # 막대 생성
             x = ["Current", "Target"]
             values = [current, target]
             bars = ax.bar(x, values, color=[color, "#cccccc"], width=0.6)
-            # Set alpha individually for each bar
+            # 각 막대의 투명도를 개별 설정
             bars[0].set_alpha(1.0)
             bars[1].set_alpha(0.6)
 
-            # Add value labels on bars
+            # 막대에 값 레이블 추가
             for bar, val in zip(bars, values):
                 height = bar.get_height()
-                # Format the label based on metric type
+                # 지표 유형에 따라 레이블 형식 지정
                 if "ms" in metric["current_value"].lower():
                     label = f"{val:.0f}ms"
                 elif "," in metric["current_value"]:
@@ -394,7 +394,7 @@ def generate_metrics_trend_chart() -> str:
                     fontweight="bold",
                 )
 
-            # Add percentage change indicator
+            # 백분율 변화 표시기 추가
             change = metric["change_percent"]
             change_color = "#00C851" if "+" in change else "#ff4444"
             ax.text(
@@ -415,13 +415,13 @@ def generate_metrics_trend_chart() -> str:
                 ),
             )
 
-            # Formatting
+            # 형식 지정
             ax.set_title(metric["metric_name"], fontsize=12, fontweight="bold", pad=10)
             ax.set_ylabel("Value", fontsize=10)
             ax.grid(axis="y", alpha=0.3, linestyle="--")
-            ax.set_ylim(0, max(values) * 1.2)  # Add 20% headroom
+            ax.set_ylim(0, max(values) * 1.2)  # 20% 여유 공간 추가
 
-            # Add status badge
+            # 상태 배지 추가
             status_colors = {
                 "Exceeding": "#00C851",
                 "On Track": "#33b5e5",
@@ -464,7 +464,7 @@ def generate_metrics_trend_chart() -> str:
 
 
 def extract_structured_data():
-    """Extract and structure all data from source files."""
+    """소스 파일에서 모든 데이터를 추출하고 구조화합니다."""
     data = {
         "projects": [],
         "team_updates": [],
@@ -473,9 +473,9 @@ def extract_structured_data():
         "meetings": [],
     }
 
-    # Extract project data
+    # 프로젝트 데이터 추출
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         project_dir = "/tmp/demo_data/project_status"  # nosec B108
         files = [f for f in os.listdir(project_dir) if f.startswith("projects_week_") and f.endswith(".csv")]
         if files:
@@ -486,9 +486,9 @@ def extract_structured_data():
     except Exception as e:
         print(f"Warning: Could not read projects: {e}")
 
-    # Extract metrics data
+    # 지표 데이터 추출
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         metrics_dir = "/tmp/demo_data/metrics"  # nosec B108
         files = [f for f in os.listdir(metrics_dir) if f.startswith("kpis_week_") and f.endswith(".csv")]
         if files:
@@ -499,9 +499,9 @@ def extract_structured_data():
     except Exception as e:
         print(f"Warning: Could not read metrics: {e}")
 
-    # Extract bug data
+    # 버그 데이터 추출
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         issues_dir = "/tmp/demo_data/issues"  # nosec B108
         files = [f for f in os.listdir(issues_dir) if f.startswith("bug_tracker_week_") and f.endswith(".json")]
         if files:
@@ -511,7 +511,7 @@ def extract_structured_data():
     except Exception as e:
         print(f"Warning: Could not read bugs: {e}")
 
-    # Extract team updates
+    # 팀 업데이트 추출
     try:
         updates_dir = "/tmp/demo_data/team_updates"  # nosec B108
         for filename in os.listdir(updates_dir):
@@ -520,7 +520,7 @@ def extract_structured_data():
                     content = f.read()
                     name = filename.replace("_week_04.md", "").replace("_", " ").title()
 
-                    # Parse sections
+                    # 섹션 파싱
                     update = {
                         "name": name,
                         "completed": [],
@@ -553,7 +553,7 @@ def extract_structured_data():
     except Exception as e:
         print(f"Warning: Could not read team updates: {e}")
 
-    # Extract meeting notes
+    # 회의록 추출
     try:
         notes_dir = "/tmp/demo_data/meeting_notes"  # nosec B108
         for filename in os.listdir(notes_dir):
@@ -585,21 +585,21 @@ def analyze_data_quality() -> str:
         issues = []
         warnings = []
 
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         project_dir = "/tmp/demo_data/project_status"  # nosec B108
         files = [f for f in os.listdir(project_dir) if f.startswith("projects_week_") and f.endswith(".csv")]
         if not files:
             return "Error: No project status files found"
         latest_file = sorted(files)[-1]
 
-        # Check project data
+        # 프로젝트 데이터 확인
         with open(os.path.join(project_dir, latest_file), "r") as f:
             reader = csv.DictReader(f)
             projects = list(reader)
             if len(projects) < 3:
                 warnings.append("Low number of projects tracked")
 
-        # Check team updates
+        # 팀 업데이트 확인
         updates_dir = "/tmp/demo_data/team_updates"  # nosec B108
         update_count = len([f for f in os.listdir(updates_dir) if f.endswith(".md")])
         if update_count < 3:
@@ -615,25 +615,25 @@ def analyze_data_quality() -> str:
 def cross_reference_data() -> str:
     """Cross-reference bugs mentioned in team updates with bug tracker."""
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         issues_dir = "/tmp/demo_data/issues"  # nosec B108
         files = [f for f in os.listdir(issues_dir) if f.startswith("bug_tracker_week_") and f.endswith(".json")]
         if not files:
             return "Error: No bug tracker files found"
         latest_file = sorted(files)[-1]
 
-        # Load bug tracker
+        # 버그 추적기 불러오기
         with open(os.path.join(issues_dir, latest_file), "r") as f:
             bug_data = json.load(f)
 
-        # Extract bug IDs
+        # 버그 ID 추출
         all_bugs = []
         for issue in bug_data.get("critical_issues", []):
             all_bugs.append(issue["id"])
         for issue in bug_data.get("high_priority", []):
             all_bugs.append(issue["id"])
 
-        # Check team updates for bug mentions
+        # 팀 업데이트에서 버그 언급 확인
         updates_dir = "/tmp/demo_data/team_updates"  # nosec B108
         mentions = 0
         for filename in os.listdir(updates_dir):
@@ -696,7 +696,7 @@ def analyze_sentiment() -> str:
 def calculate_risk_scores() -> str:
     """Calculate risk scores for projects based on multiple factors."""
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         project_dir = "/tmp/demo_data/project_status"  # nosec B108
         files = [f for f in os.listdir(project_dir) if f.startswith("projects_week_") and f.endswith(".csv")]
         if not files:
@@ -711,19 +711,19 @@ def calculate_risk_scores() -> str:
         for project in projects:
             risk_score = 0
 
-            # Status risk
+            # 상태 위험
             if project["status"] == "Behind":
                 risk_score += 3
             elif project["status"] == "At Risk":
                 risk_score += 2
 
-            # Progress vs budget risk
+            # 진행률 대비 예산 위험
             progress = int(project["progress"])
             budget_used = int(project["budget_used"])
             if budget_used > progress + 10:
                 risk_score += 2
 
-            # Blocker risk
+            # 차단 요소 위험
             if project["blockers"] != "None":
                 risk_score += 1
 
@@ -740,7 +740,7 @@ def calculate_risk_scores() -> str:
 def generate_project_timeline_chart() -> str:
     """Generate a timeline chart showing project milestones."""
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         project_dir = "/tmp/demo_data/project_status"  # nosec B108
         files = [f for f in os.listdir(project_dir) if f.startswith("projects_week_") and f.endswith(".csv")]
         if not files:
@@ -751,13 +751,13 @@ def generate_project_timeline_chart() -> str:
             reader = csv.DictReader(f)
             projects = list(reader)
 
-        # Create a horizontal bar chart showing progress
+        # 진행률을 보여 주는 가로 막대 차트 생성
         fig, ax = plt.subplots(figsize=(10, 6))
 
         project_names = [p["project_name"][:30] for p in projects]
         progress_values = [int(p["progress"]) for p in projects]
 
-        # Color based on status
+        # 상태에 따른 색상
         colors = []
         for p in projects:
             if p["status"] == "On Track":
@@ -769,7 +769,7 @@ def generate_project_timeline_chart() -> str:
 
         bars = ax.barh(project_names, progress_values, color=colors)
 
-        # Add progress labels
+        # 진행률 레이블 추가
         for i, (bar, progress) in enumerate(zip(bars, progress_values)):
             ax.text(progress + 2, i, f"{progress}%", va="center")
 
@@ -777,7 +777,7 @@ def generate_project_timeline_chart() -> str:
         ax.set_title("Project Progress Overview", fontsize=14, fontweight="bold")
         ax.set_xlim(0, 110)
 
-        # Add legend
+        # 범례 추가
         from matplotlib.patches import Patch
 
         legend_elements = [
@@ -802,19 +802,19 @@ def generate_project_timeline_chart() -> str:
 def build_metrics_forecast_model() -> str:
     """Build regression models to forecast metric trends for next 4 weeks."""
     try:
-        # Find the latest week file dynamically
+        # 최신 주차 파일을 동적으로 검색
         metrics_dir = "/tmp/demo_data/metrics"  # nosec B108
         files = [f for f in os.listdir(metrics_dir) if f.startswith("kpis_week_") and f.endswith(".csv")]
         if not files:
             return "Error: No metrics files found"
         latest_file = sorted(files)[-1]
 
-        # Load current metrics
+        # 현재 지표 불러오기
         with open(os.path.join(metrics_dir, latest_file), "r") as f:
             reader = csv.DictReader(f)
             metrics = list(reader)
 
-        # Load historical data from CSV
+        # CSV에서 과거 데이터 불러오기
         historical_data = {}
         with open("/tmp/demo_data/metrics/kpis_historical.csv", "r") as f:  # nosec B108
             reader = csv.DictReader(f)
@@ -829,17 +829,17 @@ def build_metrics_forecast_model() -> str:
                 historical_data[metric_name]["weeks"].append(week)
                 historical_data[metric_name]["values"].append(value)
 
-        # Determine the current week (last week in historical data)
+        # 현재 주차 결정(과거 데이터의 마지막 주차)
         max_week = max(max(data["weeks"]) for data in historical_data.values())
 
-        # Add current values and metadata
+        # 현재 값과 메타데이터 추가
         for metric in metrics:
             metric_name = metric["metric_name"]
             if metric_name in historical_data:
                 current_value_str = metric["current_value"]
                 change_percent_str = metric["change_percent"]
 
-                # Extract numeric value
+            # 숫자 값 추출
                 current_value = float(
                     current_value_str.replace("$", "")
                     .replace(",", "")
@@ -853,22 +853,22 @@ def build_metrics_forecast_model() -> str:
                 historical_data[metric_name]["current"] = current_value
                 historical_data[metric_name]["change_percent"] = change_percent
 
-        # Train regression models for each metric
+        # 각 지표의 회귀 모델 학습
         forecasts = {}
 
         for metric_name, data in historical_data.items():
             X = np.array(data["weeks"]).reshape(-1, 1)
             y = np.array(data["values"])
 
-            # Train linear regression model
+            # 선형 회귀 모델 학습
             model = LinearRegression()
             model.fit(X, y)
 
-            # Predict next 4 weeks after the current week
+            # 현재 주차 이후 4주 예측
             future_weeks = np.array([max_week + 1, max_week + 2, max_week + 3, max_week + 4]).reshape(-1, 1)
             predictions = model.predict(future_weeks)
 
-            # Calculate R² score
+            # R² 점수 계산
             r2_score = model.score(X, y)
 
             forecasts[metric_name] = {
@@ -878,16 +878,16 @@ def build_metrics_forecast_model() -> str:
                 "future_weeks": future_weeks.flatten().tolist(),
             }
 
-        # Calculate average model accuracy
+        # 평균 모델 정확도 계산
         avg_r2 = np.mean([f["r2_score"] for f in forecasts.values()])
 
         print(f"✓ Forecast models trained: Average R² = {avg_r2:.3f}")
 
-        # Save forecast data for chart generation (only keep recent 12 weeks for visualization)
+        # 차트 생성을 위한 예측 데이터 저장(시각화에는 최근 12주만 유지)
         os.makedirs("/tmp/weekly_report_output", exist_ok=True)  # nosec B108
         forecast_file = "/tmp/weekly_report_output/metrics_forecast.json"  # nosec B108
 
-        # Keep only the most recent 12 weeks for cleaner visualization
+            # 더 깔끔한 시각화를 위해 최근 12주만 유지
         recent_historical = {}
         for metric_name, data in historical_data.items():
             recent_weeks = data["weeks"][-12:]
@@ -917,7 +917,7 @@ def build_metrics_forecast_model() -> str:
 def generate_metrics_forecast_chart() -> str:
     """Generate visualization showing historical data and forecasted trends."""
     try:
-        # Load forecast data
+        # 예측 데이터 불러오기
         with open("/tmp/weekly_report_output/metrics_forecast.json", "r") as f:  # nosec B108
             data = json.load(f)
 
@@ -925,7 +925,7 @@ def generate_metrics_forecast_chart() -> str:
         forecasts = data["forecasts"]
         current_week = data.get("current_week", 156)
 
-        # Select top 4 metrics to visualize
+        # 시각화할 상위 지표 4개 선택
         metric_names = list(historical.keys())[:4]
 
         fig, axes = plt.subplots(2, 2, figsize=(14, 8))
@@ -937,11 +937,11 @@ def generate_metrics_forecast_chart() -> str:
             hist_data = historical[metric_name]
             forecast_data = forecasts[metric_name]
 
-            # Historical data (last 12 weeks)
+            # 과거 데이터(최근 12주)
             weeks = hist_data["weeks"]
             values = hist_data["values"]
 
-            # Plot historical data (all but last week)
+            # 과거 데이터 표시(마지막 주차 제외)
             ax.plot(
                 weeks[:-1],
                 values[:-1],
@@ -953,7 +953,7 @@ def generate_metrics_forecast_chart() -> str:
                 alpha=0.7,
             )
 
-            # Plot current week (last week in historical) with different color
+            # 현재 주차(과거 데이터의 마지막 주차)를 다른 색상으로 표시
             ax.plot(
                 [weeks[-1]],
                 [values[-1]],
@@ -964,11 +964,11 @@ def generate_metrics_forecast_chart() -> str:
                 zorder=5,
             )
 
-            # Plot forecast (next 4 weeks)
+            # 예측 표시(향후 4주)
             future_weeks = forecast_data["future_weeks"]
             predictions = forecast_data["predictions"]
 
-            # Connect current week to forecast
+            # 현재 주차와 예측 연결
             ax.plot(
                 [weeks[-1]] + future_weeks,
                 [values[-1]] + predictions,
@@ -980,7 +980,7 @@ def generate_metrics_forecast_chart() -> str:
                 alpha=0.8,
             )
 
-            # Add trend line across all data
+            # 전체 데이터에 추세선 추가
             all_weeks = weeks + future_weeks
             all_values = values + predictions
             z = np.polyfit(all_weeks, all_values, 1)
@@ -995,7 +995,7 @@ def generate_metrics_forecast_chart() -> str:
                 label="Trend Line",
             )
 
-            # Formatting
+            # 형식 지정
             ax.set_xlabel("Week Number", fontsize=10)
             ax.set_ylabel("Value", fontsize=10)
             ax.set_title(
@@ -1006,7 +1006,7 @@ def generate_metrics_forecast_chart() -> str:
             ax.legend(loc="best", fontsize=8)
             ax.grid(True, alpha=0.3, linestyle="--")
 
-            # Add shaded region for forecast period
+            # 예측 기간에 음영 영역 추가
             ax.axvspan(
                 current_week + 0.5,
                 future_weeks[-1] + 0.5,
@@ -1015,13 +1015,13 @@ def generate_metrics_forecast_chart() -> str:
                 label="_nolegend_",
             )
 
-            # Add vertical line between current and forecast
+            # 현재 값과 예측 사이에 세로선 추가
             ax.axvline(x=current_week + 0.5, color="red", linestyle="-", alpha=0.3, linewidth=2)
 
-            # Set x-axis limits
+            # x축 범위 설정
             ax.set_xlim(weeks[0] - 0.5, future_weeks[-1] + 0.5)
 
-            # Add text annotations
+            # 텍스트 주석 추가
             y_pos = ax.get_ylim()[1] * 0.95
             mid_hist = (weeks[0] + weeks[-1]) / 2
             mid_forecast = (future_weeks[0] + future_weeks[-1]) / 2
@@ -1079,7 +1079,7 @@ def generate_team_velocity_chart() -> str:
                     content = f.read()
                     name = filename.replace("_week_04.md", "").replace("_", " ").title()
 
-                    # Count completed items
+        # 완료 항목 수 계산
                     completed_count = 0
                     lines = content.split("\n")
                     in_completed = False
@@ -1093,7 +1093,7 @@ def generate_team_velocity_chart() -> str:
 
                     team_stats.append((name, completed_count))
 
-        # Sort by completion count
+        # 완료 수로 정렬
         team_stats.sort(key=lambda x: x[1], reverse=True)
 
         names = [t[0] for t in team_stats]
@@ -1106,7 +1106,7 @@ def generate_team_velocity_chart() -> str:
         ax.set_title("Team Velocity - Completed Items This Week", fontsize=14, fontweight="bold")
         ax.set_ylim(0, max(counts) + 2)
 
-        # Add value labels on bars
+        # 막대에 값 레이블 추가
         for bar in bars:
             height = bar.get_height()
             ax.text(
@@ -1160,7 +1160,7 @@ def save_report(report_content: str) -> str:
 def upload_report_to_s3() -> str:
     """Upload the weekly report and all charts to S3 bucket."""
     try:
-        # Use configured S3 bucket and prefix
+        # 구성된 S3 버킷과 접두사 사용
         bucket = S3_BUCKET
         s3_prefix = S3_PREFIX
 
@@ -1169,10 +1169,10 @@ def upload_report_to_s3() -> str:
 
         report_dir = "/tmp/weekly_report_output"  # nosec B108
 
-        # Initialize S3 client
+        # S3 클라이언트 초기화
         s3_client = boto3.client("s3")
 
-        # Get current week info for folder naming
+        # 폴더 이름에 사용할 현재 주차 정보 가져오기
         today = datetime.now()
         week_num = today.isocalendar()[1]
         year = today.year
@@ -1181,7 +1181,7 @@ def upload_report_to_s3() -> str:
 
         uploaded_files = []
 
-        # Files to upload
+        # 업로드할 파일
         files_to_upload = [
             "weekly_report.md",
             "bug_severity_chart.png",
@@ -1193,7 +1193,7 @@ def upload_report_to_s3() -> str:
 
         print(f"📤 Uploading to s3://{bucket}/{s3_prefix}/{week_folder}/")
 
-        # Debug: Check current working directory and list files
+            # 디버그: 현재 작업 디렉터리 확인 및 파일 나열
         import os
 
         print(f"🔍 Current working directory: {os.getcwd()}")
@@ -1202,7 +1202,7 @@ def upload_report_to_s3() -> str:
             print(f"✓ Directory exists, contents: {os.listdir(report_dir)}")
         else:
             print("❌ Directory does not exist!")
-            # Try to create it
+                # 디렉터리 생성 시도
             os.makedirs(report_dir, exist_ok=True)
             print(f"✓ Created directory: {report_dir}")
 
@@ -1210,13 +1210,13 @@ def upload_report_to_s3() -> str:
             filepath = os.path.join(report_dir, filename)
 
             if os.path.exists(filepath):
-                # Determine content type
+                # 콘텐츠 유형 결정
                 content_type = "text/markdown" if filename.endswith(".md") else "image/png"
 
-                # S3 key
+                # S3 키
                 s3_key = f"{s3_prefix}/{week_folder}/{filename}"
 
-                # Upload file
+                # 파일 업로드
                 s3_client.upload_file(filepath, bucket, s3_key, ExtraArgs={"ContentType": content_type})
 
                 uploaded_files.append(s3_key)
@@ -1224,7 +1224,7 @@ def upload_report_to_s3() -> str:
             else:
                 print(f"   ⚠️  Skipped {filename} (not found)")
 
-        # Generate S3 URLs
+                # S3 URL 생성
         report_url = f"s3://{bucket}/{s3_prefix}/{week_folder}/weekly_report.md"
         https_url = f"https://{bucket}.s3.amazonaws.com/{s3_prefix}/{week_folder}/weekly_report.md"
 

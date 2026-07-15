@@ -1,111 +1,111 @@
-# End-to-End Customer Support Agent with AgentCore using Google ADK
+# Google ADK와 AgentCore를 활용한 엔드 투 엔드 고객 지원 에이전트
 
-In this tutorial we will move a customer support agent from prototype to production using Amazon Bedrock AgentCore services.
+이 튜토리얼에서는 Amazon Bedrock AgentCore 서비스를 사용해 고객 지원 에이전트를 프로토타입에서 프로덕션으로 전환합니다.
 
-## What You'll Build
+## 구축할 내용
 
-A complete customer support system that starts as a simple prototype and evolves into a scalable and secure sample application.
+간단한 프로토타입으로 시작해 확장 가능하고 안전한 샘플 애플리케이션으로 발전하는 완전한 고객 지원 시스템을 구축합니다.
 
-Your final system will handle real customer conversations with memory, shared tools, and a web interface.
+최종 시스템은 메모리, 공유 도구, 웹 인터페이스를 활용해 실제 고객 대화를 처리합니다.
 
 > [!IMPORTANT]
-> The examples provided here is for educational purposes. It demonstrates how the different services from AgentCore are used on the process of migrating an agentic use case from prototype to production. As such, it is not intended for direct use in production environments.
+> 여기에 제공된 예제는 교육용입니다. 에이전트 사용 사례를 프로토타입에서 프로덕션으로 전환하는 과정에서 다양한 AgentCore 서비스가 어떻게 활용되는지 보여 주며, 프로덕션 환경에서 직접 사용하는 것을 목적으로 하지 않습니다.
 
-**Journey Overview:**
+**전체 학습 과정:**
 
-- Start with a basic agent prototype (20 mins)
-- Add conversation memory across sessions (20 mins)
-- Share tools securely across multiple agents (30 mins)
-- Deploy to production with observability (30 mins)
-- Set up continuous quality evaluation (10 mins)
-- Build a customer-facing web app (20 mins)
+- 기본 에이전트 프로토타입으로 시작(20분)
+- 여러 세션에 걸친 대화 메모리 추가(20분)
+- 여러 에이전트에서 도구를 안전하게 공유(30분)
+- 관찰 기능을 갖춰 프로덕션에 배포(30분)
+- 지속적인 품질 평가 설정(10분)
+- 고객용 웹 앱 구축(20분)
 
-## Architecture Overview
+## 아키텍처 개요
 
-By the end of the 6 labs of this tutorial you will have created the following architecture
+이 튜토리얼의 6개 실습을 모두 마치면 다음 아키텍처를 구축하게 됩니다.
 
 <div style="text-align:left">
     <img src="images/architecture_lab6_streamlit.png" width="100%"/>
 </div>
 
-## Prerequisites
+## 사전 요구 사항
 
-- AWS account with Bedrock access
+- Amazon Bedrock에 액세스할 수 있는 AWS 계정
 - Python 3.10+
-- AWS CLI configured
-- Claude 3.7 Sonnet enabled in Bedrock
+- 구성된 AWS CLI
+- Amazon Bedrock에서 활성화된 Claude 3.7 Sonnet
 
-## Labs
+## 실습
 
-### Lab 1: Create Agent Prototype
+### 실습 1: 에이전트 프로토타입 만들기
 
-Build a prototype of a customer support agent with three core tools:
+다음 세 가지 핵심 도구를 갖춘 고객 지원 에이전트 프로토타입을 구축합니다.
 
-- Return policy lookup
-- Product information search
-- Web search for troubleshooting
+- 반품 정책 조회
+- 제품 정보 검색
+- 문제 해결을 위한 웹 검색
 
-**What you'll learn:** Basic agent creation with Strands Agents and tool integration
+**학습 내용:** Strands Agents를 활용한 기본 에이전트 생성 및 도구 통합
 
-### Lab 2: Add Memory
+### 실습 2: Memory 추가하기
 
-Transform your "goldfish agent" into one that remembers customers across conversations.
+"금붕어 에이전트"를 여러 대화에 걸쳐 고객을 기억하는 에이전트로 전환합니다.
 
-- Persistent conversation history
-- Customer preference extraction
-- Cross-session context awareness
+- 지속적인 대화 기록
+- 고객 선호도 추출
+- 여러 세션에 걸친 컨텍스트 인식
 
-**What you'll learn:** AgentCore Memory for both short-term and long-term persistence
+**학습 내용:** 단기 및 장기 지속성을 위한 AgentCore Memory
 
-### Lab 3: Scale with Gateway & Identity
+### 실습 3: Gateway와 Identity로 확장하기
 
-Move from local tools to shared, enterprise-ready services.
+로컬 도구를 공유 가능한 엔터프라이즈 수준의 서비스로 전환합니다.
 
-- Centralized tool management
-- JWT-based authentication
-- Integration with existing AWS Lambda functions
-- (Optional) Fine-grained access control with Cedar policies (e.g., deny web search for "iPhone 8" keywords)
+- 중앙화된 도구 관리
+- JWT 기반 인증
+- 기존 AWS Lambda 함수와 통합
+- (선택 사항) Cedar 정책을 활용한 세분화된 액세스 제어(예: "iPhone 8" 키워드에 대한 웹 검색 거부)
 
-**What you'll learn:** AgentCore Gateway and AgentCore Identity for secure tool sharing
+**학습 내용:** 안전한 도구 공유를 위한 AgentCore Gateway와 AgentCore Identity
 
-### Lab 4: Deploy to Production
+### 실습 4: 프로덕션에 배포하기
 
-Deploy your agent to handle real traffic with full observability.
+완전한 관찰 기능을 갖추고 실제 트래픽을 처리할 수 있도록 에이전트를 배포합니다.
 
-- Fully managed deployment
-- Session Continuity and Session Isolation
-- CloudWatch Observability integration
+- 완전관리형 배포
+- 세션 연속성과 세션 격리
+- CloudWatch Observability 통합
 
-**What you'll learn:** AgentCore Runtime with production-grade observability
+**학습 내용:** 프로덕션 수준의 관찰 기능을 갖춘 AgentCore Runtime
 
-### Lab 5: Build Customer Interface
+### 실습 5: 고객 인터페이스 구축하기
 
-Create a web app customers can actually use.
+고객이 실제로 사용할 수 있는 웹 앱을 만듭니다.
 
-- Streamlit-based chat interface
-- Real-time response streaming
-- Session management and authentication
+- Streamlit 기반 채팅 인터페이스
+- 실시간 응답 스트리밍
+- 세션 관리 및 인증
 
-**What you'll learn:** Frontend integration with secure agent endpoints
+**학습 내용:** 안전한 에이전트 엔드포인트와 프런트엔드 통합
 
-## Getting Started
+## 시작하기
 
-1. Clone this repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Configure AWS credentials
-4. Start with [Lab 1](lab-01-create-an-agent.ipynb)
+1. 이 리포지토리를 복제합니다.
+2. 종속성을 설치합니다: `pip install -r requirements.txt`
+3. AWS 자격 증명을 구성합니다.
+4. [실습 1](lab-01-create-an-agent.ipynb)부터 시작합니다.
 
-Each lab builds on the previous one, but you can jump ahead if you understand the concepts.
+각 실습은 이전 실습의 내용을 기반으로 구성되지만, 개념을 이해하고 있다면 원하는 실습부터 진행해도 됩니다.
 
-## Architecture Evolution
+## 아키텍처 발전 과정
 
-Watch your architecture grow from a simple local agent to a production system:
+간단한 로컬 에이전트가 프로덕션 시스템으로 발전하는 과정을 살펴보세요.
 
-**Lab 1:** Local agent with embedded tools
-**Lab 2:** Agent + AgentCore Memory for persistence  
-**Lab 3:** Agent + AgentCore Memory + AgentCore Gateway and AgentCore Identity for shared tools  
-**Lab 4:** Deployment to AgentCore Runtime and observability with AgentCore Observability
-**Lab 5:** Production quality monitoring with AgentCore Evaluations
-**Lab 6:** Customer-facing application with authentication
+**실습 1:** 도구가 내장된 로컬 에이전트
+**실습 2:** 지속성을 위한 에이전트 + AgentCore Memory
+**실습 3:** 공유 도구를 위한 에이전트 + AgentCore Memory + AgentCore Gateway 및 AgentCore Identity
+**실습 4:** AgentCore Runtime에 배포하고 AgentCore Observability로 모니터링
+**실습 5:** AgentCore Evaluations를 활용한 프로덕션 품질 모니터링
+**실습 6:** 인증을 갖춘 고객용 애플리케이션
 
-Ready to build? [Start with Lab 1 →](lab-01-create-an-agent.ipynb)
+구축을 시작할 준비가 되셨나요? [실습 1부터 시작하기 →](lab-01-create-an-agent.ipynb)

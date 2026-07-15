@@ -21,62 +21,62 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
     super(scope, id, props);
 
     // =============================================================================
-    // SECURITY POSTURE – what this stack provides and what it does NOT
+    // 보안 태세 - 이 스택이 제공하는 항목과 제공하지 않는 항목
     // =============================================================================
-    // PROVIDED:
-    //   • Cognito User Pool (admin-only sign-up, MFA-ready, strong password policy)
-    //     with a Pre-Token Generation Lambda that injects audience/role claims.
-    //   • OAuth 2.0 Authorization Code Grant + custom scopes (mcp.read / mcp.write).
-    //   • JWT audience validation in the proxy Lambda before any AgentCore call.
-    //   • AgentCore Gateway Cognito authorizer (token verified a second time by AWS).
-    //   • Cedar policy engine enforcing fine-grained per-user tool access (ENFORCE).
-    //   • Bedrock Guardrails (PII masking/blocking) applied at the interceptor layer.
-    //   • Lambda-in-VPC proxy (private subnet, NAT egress only).
-    //   • VPC Interface Endpoint for bedrock-agentcore (InvokeGateway traffic stays
-    //     on the AWS private network; never crosses the public internet).
-    //   • Internet-facing ALB with:
-    //       – TLS 1.2+ termination on a custom domain (ACM certificate).
-    //       – dropInvalidHeaderFields (HTTP request-smuggling mitigation).
-    //       – Host-header condition on every forwarding rule; raw *.elb DNS 404s.
-    //       – HTTP → HTTPS permanent redirect on port 80.
-    //   • WAF WebACL (Regional, attached to ALB):
-    //       – IP rate limit (1 000 req / 5 min per IP)
-    //       – AWS IP Reputation list (botnets, TOR exits, scanners)
+    // 제공 항목:
+    //   • Cognito User Pool(관리자 전용 가입, MFA 지원 준비, 강력한 암호 정책)과
+    //     audience/role claim을 삽입하는 Pre-Token Generation Lambda
+    //   • OAuth 2.0 Authorization Code Grant + 사용자 지정 scope(mcp.read / mcp.write)
+    //   • AgentCore 호출 전에 프록시 Lambda에서 수행하는 JWT audience 검증
+    //   • AgentCore Gateway Cognito authorizer(AWS에서 토큰을 한 번 더 검증)
+    //   • 사용자별 세분화된 도구 접근을 적용하는 Cedar policy engine(ENFORCE)
+    //   • 인터셉터 계층에 적용되는 Bedrock Guardrails(PII 마스킹/차단)
+    //   • Lambda-in-VPC 프록시(private subnet, NAT egress 전용)
+    //   • bedrock-agentcore용 VPC Interface Endpoint(InvokeGateway 트래픽이
+    //     AWS 사설 네트워크에 머무르며 퍼블릭 인터넷을 통과하지 않음)
+    //   • 다음 항목을 갖춘 인터넷 연결 ALB:
+    //       – 사용자 지정 도메인의 TLS 1.2+ 종료(ACM 인증서)
+    //       – dropInvalidHeaderFields(HTTP request smuggling 완화)
+    //       – 모든 전달 규칙의 Host 헤더 조건, 원시 *.elb DNS는 404 반환
+    //       – 포트 80에서 HTTP → HTTPS 영구 리디렉션
+    //   • WAF WebACL(Regional, ALB에 연결):
+    //       – IP 속도 제한(IP당 5분에 요청 1,000개)
+    //       – AWS IP Reputation 목록(botnet, TOR exit, scanner)
     //       – Core Rule Set / OWASP Top 10
     //       – Known Bad Inputs
-    //       – Bot Control – COMMON level (COUNT mode; switch to BLOCK post-validation)
-    //   • Reserved Lambda concurrency caps on every function (DoS blast-radius limit).
-    //   • Gateway resource policy restricting InvokeGateway to the VPC.
-    //   • Shield Standard (automatically active on public ALBs, L3/L4 DDoS only).
-    //   • ALB access logging to S3 (encrypted, 90-day lifecycle, public access blocked).
-    //   • Redirect URI allowlist in handle_callback (prevents open-redirect attacks).
+    //       – Bot Control – COMMON 수준(COUNT 모드, 검증 후 BLOCK으로 전환)
+    //   • 모든 함수의 Lambda 예약 동시성 상한(DoS 영향 범위 제한)
+    //   • InvokeGateway를 VPC로 제한하는 Gateway 리소스 정책
+    //   • Shield Standard(퍼블릭 ALB에서 자동 활성화, L3/L4 DDoS 전용)
+    //   • S3에 ALB 접근 로그 저장(암호화, 90일 수명 주기, 퍼블릭 접근 차단)
+    //   • handle_callback의 Redirect URI allowlist(open redirect 공격 방지)
     //
-    // NOT PROVIDED – consider adding before going to production:
-    //   • Shield Advanced (L7 DDoS + SRT + cost protection – subscription required).
-    //   • Bot Control TARGETED inspection level (additional WAF cost).
-    //   • CloudTrail / Security Hub integration for centralised audit.
-    //   • ALB access-log Athena workgroup / GuardDuty findings.
+    // 제공하지 않는 항목 - 프로덕션 전환 전에 추가 고려:
+    //   • Shield Advanced(L7 DDoS + SRT + 비용 보호, 구독 필요)
+    //   • Bot Control TARGETED 검사 수준(추가 WAF 비용)
+    //   • 중앙 집중식 감사를 위한 CloudTrail / Security Hub 통합
+    //   • ALB 접근 로그 Athena workgroup / GuardDuty finding
     // =============================================================================
 
     // =============================================================================
-    // CONFIGURATION FROM CONTEXT
+    // CONTEXT에서 가져오는 구성
     // =============================================================================
 
-    // Domain and infrastructure configuration from context
+    // context에서 가져오는 도메인 및 인프라 구성
     const domainName = this.node.tryGetContext("domainName") || "";
     const hostedZoneName = this.node.tryGetContext("hostedZoneName") || "";
     const hostedZoneId = this.node.tryGetContext("hostedZoneId") || "";
     const certificateArn = this.node.tryGetContext("certificateArn") || "";
 
-    // MCP metadata key for path-based routing (reverse DNS notation)
-    // Used in _meta field to filter tools by target
+    // 경로 기반 라우팅을 위한 MCP 메타데이터 키(역방향 DNS 표기법)
+    // target별 도구 필터링을 위해 _meta 필드에서 사용
     const mcpMetadataKey = this.node.tryGetContext("mcpMetadataKey") || "com.example/target";
 
     // =============================================================================
-    // RESOURCE SERVER IDENTIFIER
-    // The resource server identifier doubles as the OAuth audience claim
-    // (RFC 8707 resource indicator / RFC 9728 protected-resource metadata).
-    // All access tokens issued for the MCP endpoint carry this as their `aud`.
+    // RESOURCE SERVER 식별자
+    // resource server 식별자는 OAuth audience claim으로도 사용됨
+    // (RFC 8707 resource indicator / RFC 9728 protected-resource metadata)
+    // MCP 엔드포인트에 발급된 모든 access token은 이를 `aud`로 포함
     // =============================================================================
     const resourceServerIdentifier = "agentcore-gateway";
 
@@ -84,7 +84,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
     // PRE-TOKEN GENERATION LAMBDA
     // =============================================================================
 
-    // Create Lambda execution role for pre-token generation
+    // pre-token generation용 Lambda 실행 역할 생성
     const preTokenLambdaRole = new iam.Role(this, "PreTokenLambdaRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
       managedPolicies: [
@@ -116,14 +116,14 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         role: preTokenLambdaRole,
         timeout: cdk.Duration.seconds(60),
         memorySize: 128,
-        // Bound concurrency so a token-generation burst cannot starve other
-        // workloads; tune this value to your peak sign-in rate.
+        // 토큰 생성이 급증해도 다른 워크로드의 리소스를 고갈시키지 않도록 동시성을 제한
+        // 최대 로그인 비율에 맞게 이 값을 조정
         reservedConcurrentExecutions: 50,
         description: "Lambda to add custom claims to Cognito tokens based on user email",
         environment: {
-          // Injected into every access token as the `aud` claim so that the
-          // proxy Lambda's audience validator can verify the token is scoped
-          // to this resource server (RFC 8707 / MCP Authorization spec).
+          // 프록시 Lambda의 audience validator가 토큰의 적용 범위가 이 resource server인지
+          // 확인할 수 있도록 모든 access token에 `aud` claim으로 삽입
+          // (RFC 8707 / MCP Authorization 사양)
           RESOURCE_SERVER_ID: resourceServerIdentifier,
         },
       }
@@ -133,7 +133,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
     // COGNITO USER POOL
     // =============================================================================
 
-    // Create Cognito User Pool
+    // Cognito User Pool 생성
     const userPool = new cognito.UserPool(this, "AgentCoreEnterprisePool", {
       userPoolName: `agentcore-enterprise-pool`,
       selfSignUpEnabled: false,
@@ -159,7 +159,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Grant Cognito permission to invoke the pre-token generation Lambda
+    // Cognito에 pre-token generation Lambda 호출 권한 부여
     preTokenGenerationLambda.addPermission("CognitoInvokePermission", {
       principal: new iam.ServicePrincipal("cognito-idp.amazonaws.com"),
       sourceArn: userPool.userPoolArn,
@@ -169,7 +169,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
     userPool.addTrigger(cognito.UserPoolOperation.PRE_TOKEN_GENERATION_CONFIG, preTokenGenerationLambda, cognito.LambdaVersion.V3_0);
 
 
-    // Create Cognito Domain
+    // Cognito Domain 생성
     const cognitoDomainPrefix = `agentcore-vscode-domain-${this.account}`;
     const cognitoDomain = userPool.addDomain("CognitoDomain", {
       cognitoDomain: {
@@ -185,7 +185,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
       scopeName: "mcp.write",
       scopeDescription: "Write MCP",
     });
-    // Create Resource Server
+    // Resource Server 생성
     const resourceServer = userPool.addResourceServer(
       "AgentCoreResourceServer",
       {
@@ -210,7 +210,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
       blockedInputMessaging: "Your request contains content that violates our policies and cannot be processed.",
       blockedOutputsMessaging: "The response contains content that violates our policies and cannot be displayed.",
       sensitiveInformationPolicyConfig:{
-        // setting up some example PII entity types to anonymize in responses. This can be customized based on specific requirements.
+        // 응답에서 익명화할 PII entity type 예시 설정. 구체적인 요구 사항에 따라 사용자 지정 가능
         piiEntitiesConfig:[
           {
             type: 'ADDRESS',
@@ -242,13 +242,13 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
     );
 
     // =============================================================================
-    // VPC SETUP
+    // VPC 설정
     // =============================================================================
 
-    // Create a new VPC with public subnets and internet gateway
+    // public subnet 및 internet gateway가 있는 새 VPC 생성
     const vpc = new ec2.Vpc(this, "McpVpc", {
         maxAzs: 2,
-        natGateways: 1, // NAT Gateway for Lambda in private subnet to access internet
+        natGateways: 1, // private subnet의 Lambda가 인터넷에 접근하기 위한 NAT Gateway
         subnetConfiguration: [
           {
             name: "Public",
@@ -264,16 +264,15 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
       });
 
       // =============================================================================
-      // VPC INTERFACE ENDPOINT – bedrock-agentcore
-      // Keeps all InvokeGateway traffic from the proxy Lambda on the AWS private
-      // network; packets never traverse the public internet.
+      // VPC INTERFACE ENDPOINT - bedrock-agentcore
+      // 프록시 Lambda의 모든 InvokeGateway 트래픽을 AWS 사설 네트워크에 유지하며
+      // 패킷이 퍼블릭 인터넷을 통과하지 않게 함
       //
-      // Security group: allows HTTPS (443) inbound only from the VPC CIDR so that
-      // only resources inside this VPC can use the endpoint.  All other traffic is
-      // implicitly denied.
+      // Security group: VPC 내부 리소스만 엔드포인트를 사용할 수 있도록 VPC CIDR의
+      // HTTPS(443) 인바운드만 허용. 그 외 모든 트래픽은 암묵적으로 거부됨
       //
-      // NOTE: Interface endpoints incur an hourly charge per AZ plus a per-GB
-      // data-processing fee.  See https://aws.amazon.com/privatelink/pricing/
+      // 참고: Interface endpoint에는 AZ별 시간당 요금과 GB당 데이터 처리 요금이 부과됨
+      // https://aws.amazon.com/privatelink/pricing/ 참조
       // =============================================================================
       const agentcoreEndpointSg = new ec2.SecurityGroup(
         this,
@@ -291,9 +290,9 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         "HTTPS from VPC to AgentCore endpoint"
       );
 
-      // Interface endpoint for the AgentCore data-plane (InvokeGateway).
-      // Placed in the private subnets alongside the proxy Lambda so no NAT hop
-      // is needed for AgentCore API calls.
+      // AgentCore data plane(InvokeGateway)용 Interface endpoint
+      // 프록시 Lambda와 함께 private subnet에 배치하므로 AgentCore API 호출에
+      // NAT 경유가 필요하지 않음
       vpc.addInterfaceEndpoint("AgentCoreEndpoint", {
         service: new ec2.InterfaceVpcEndpointService(
           `com.amazonaws.${this.region}.bedrock-agentcore.gateway`,
@@ -306,27 +305,26 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
 
     // =============================================================================
     // WAF WEB ACL
-    // Layers of protection applied (all free-tier managed rule groups unless noted):
-    //   1. IP-level rate limit – 1 000 req / 5 min per source IP
-    //   2. AWSManagedRulesCommonRuleSet (CRS) – OWASP Top 10 signatures
-    //   3. AWSManagedRulesKnownBadInputsRuleSet – known attack patterns
-    //   4. AWSManagedRulesAmazonIpReputationList – AWS threat-intel IP block list
-    //   5. AWSManagedRulesBotControlRuleSet (common bots, COUNT mode) – set to
-    //      COUNT so legitimate MCP clients are not accidentally blocked during
-    //      testing; switch to BLOCK in production after validating traffic.
+    // 적용되는 보호 계층(별도 언급이 없으면 모두 프리 티어 관리형 규칙 그룹):
+    //   1. IP 수준 속도 제한 - 소스 IP당 5분에 요청 1,000개
+    //   2. AWSManagedRulesCommonRuleSet(CRS) - OWASP Top 10 시그니처
+    //   3. AWSManagedRulesKnownBadInputsRuleSet - 알려진 공격 패턴
+    //   4. AWSManagedRulesAmazonIpReputationList - AWS 위협 인텔리전스 IP 차단 목록
+    //   5. AWSManagedRulesBotControlRuleSet(일반 bot, COUNT 모드) - 테스트 중 정상 MCP
+    //      클라이언트가 실수로 차단되지 않도록 COUNT로 설정하며, 트래픽 검증 후
+    //      프로덕션에서 BLOCK으로 전환
     //
-    // NOTE: rules 2–5 are scoped-down to exclude the OAuth flow endpoints
-    // (/token, /authorize, /callback, /register) whose bodies legitimately
-    // contain patterns (redirect_uri, code_verifier, grant_type, etc.) that
-    // signature-based rules would otherwise flag as false positives.
+    // 참고: 규칙 2~5는 본문에 정상적으로 패턴(redirect_uri, code_verifier,
+    // grant_type 등)이 포함되어 시그니처 기반 규칙이 오탐할 수 있는 OAuth 흐름
+    // 엔드포인트(/token, /authorize, /callback, /register)를 제외하도록 범위를 축소
     //
-    // DDoS protection: Shield Standard is enabled automatically on any public
-    // ALB at no extra cost; it mitigates volumetric L3/L4 attacks.  For L7
-    // DDoS protection and SRT access, subscribe to Shield Advanced separately.
+    // DDoS 보호: 모든 public ALB에서 Shield Standard가 추가 비용 없이 자동으로
+    // 활성화되어 대규모 L3/L4 공격을 완화. L7 DDoS 보호 및 SRT 접근에는
+    // Shield Advanced를 별도로 구독해야 함
     // =============================================================================
 
-    // Helper: re-usable OAuth-path scope-down statement (shared by CRS, KBI,
-    // IP-reputation and Bot-Control rules so we don't repeat the block 4 times).
+    // 헬퍼: 재사용 가능한 OAuth 경로 범위 축소 statement
+    // (동일 블록을 네 번 반복하지 않도록 CRS, KBI, IP reputation, Bot Control 규칙에서 공유)
     const oauthScopeDown: wafv2.CfnWebACL.StatementProperty = {
       notStatement: {
         statement: {
@@ -382,8 +380,8 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
           sampledRequestsEnabled: true,
         },
         rules: [
-          // ── 1. IP-level rate limit ────────────────────────────────────────────
-          // 1 000 requests per 5-minute window per source IP.
+          // ── 1. IP 수준 속도 제한 ─────────────────────────────────────────────
+          // 소스 IP당 5분 동안 요청 1,000개
           {
             name: "RateLimit",
             priority: 1,
@@ -401,9 +399,9 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
             },
           },
 
-          // ── 2. AWS IP Reputation list ─────────────────────────────────────────
-          // Blocks IPs on AWS-maintained threat-intel lists (botnets, TOR exit
-          // nodes, scanners).  Applied before expensive rule evaluation.
+          // ── 2. AWS IP Reputation 목록 ─────────────────────────────────────────
+          // AWS에서 관리하는 위협 인텔리전스 목록의 IP(botnet, TOR exit node,
+          // scanner)를 차단. 비용이 높은 규칙 평가보다 먼저 적용
           {
             name: "AWSManagedRulesIPReputation",
             priority: 2,
@@ -422,7 +420,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
             },
           },
 
-          // ── 3. Core Rule Set (OWASP Top 10) ──────────────────────────────────
+          // ── 3. Core Rule Set(OWASP Top 10) ───────────────────────────────────
           {
             name: "AWSManagedRulesCRS",
             priority: 3,
@@ -460,10 +458,10 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
             },
           },
 
-          // ── 5. Bot Control (common bots – COUNT mode) ─────────────────────────
-          // Runs in COUNT so automated MCP clients are not accidentally blocked
-          // during testing/piloting.  Review CloudWatch metrics and switch
-          // overrideAction to { none: {} } (BLOCK) once traffic is validated.
+          // ── 5. Bot Control(일반 bot - COUNT 모드) ─────────────────────────────
+          // 테스트/파일럿 중 자동화된 MCP 클라이언트가 실수로 차단되지 않도록 COUNT로 실행
+          // 트래픽이 검증되면 CloudWatch 지표를 검토하고 overrideAction을
+          // { none: {} }(BLOCK)로 전환
           {
             name: "AWSManagedRulesBotControl",
             priority: 5,
@@ -488,46 +486,46 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
       });
 
     // =============================================================================
-    // LAMBDA FUNCTIONS
+    // LAMBDA 함수
     // =============================================================================
 
     // ---------------------------------------------------------------------------
-    // SECURITY: Dedicated least-privilege IAM role per Lambda function group.
+    // 보안: Lambda 함수 그룹별 전용 최소 권한 IAM role
     //
-    // Role              │ Used by                        │ Permissions
+    // Role              │ 사용 주체                       │ 권한
     // ──────────────────┼────────────────────────────────┼────────────────────────
     // proxyLambdaRole   │ McpProxyLambda (VPC-resident)  │ VPC execution +
-    //                   │                                │ bedrock-agentcore:InvokeGateway (scoped to gateway ARN after creation)
+    //                   │                                │ bedrock-agentcore:InvokeGateway(생성 후 gateway ARN으로 범위 제한)
     //                   │                                │ bedrock-agentcore:CompleteResourceTokenAuth / GetResourceOauth2Token
     // interceptorRole   │ McpInterceptorLambda           │ Basic execution +
     //                   │                                │ bedrock:ApplyGuardrail (scoped to this guardrail)
-    // toolLambdaRole    │ WeatherLambda, InventoryLambda,│ Basic execution only –
-    //                   │ UserDetailsLambda              │ tool Lambdas receive events from AgentCore
-    //                   │                                │ and need no AWS API permissions
+    // toolLambdaRole    │ WeatherLambda, InventoryLambda,│ 기본 실행 권한만 사용 -
+    //                   │ UserDetailsLambda              │ tool Lambda는 AgentCore에서 이벤트를 수신하며
+    //                   │                                │ AWS API 권한이 필요하지 않음
     // ---------------------------------------------------------------------------
 
-    // ── Proxy Lambda role ────────────────────────────────────────────────────────
-    // Needs VPC access (private subnet) + AgentCore gateway invocation.
-    // NOTE: secretsmanager resource is scoped to "*" here as a placeholder –
-    //       replace with the exact secret ARN once you create your Secrets Manager
-    //       secret for the OAuth client credentials.
+    // ── 프록시 Lambda role ───────────────────────────────────────────────────────
+    // VPC 접근(private subnet) + AgentCore gateway 호출이 필요함
+    // 참고: 여기서는 secretsmanager 리소스 범위에 자리 표시자로 "*"를 사용
+    //       OAuth 클라이언트 자격 증명용 Secrets Manager secret을 생성한 뒤
+    //       정확한 secret ARN으로 교체
     const proxyLambdaRole = new iam.Role(this, "McpProxyLambdaRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
       description: "Least-privilege role for the MCP proxy Lambda (VPC-resident)",
       managedPolicies: [
-        // Basic CloudWatch Logs permissions
+        // 기본 CloudWatch Logs 권한
         iam.ManagedPolicy.fromAwsManagedPolicyName(
           "service-role/AWSLambdaBasicExecutionRole"
         ),
-        // ENI create/describe/delete for VPC placement
+        // VPC 배치를 위한 ENI 생성/조회/삭제
         iam.ManagedPolicy.fromAwsManagedPolicyName(
           "service-role/AWSLambdaVPCAccessExecutionRole"
         ),
       ],
     });
 
-    // AgentCore identity token exchange – scoped to gateway ARN added after
-    // gateway creation (see proxyLambdaRole.addToPolicy below the gateway block).
+    // AgentCore identity token exchange - gateway 생성 후 추가되는 gateway ARN으로 범위 제한
+    // (gateway 블록 아래의 proxyLambdaRole.addToPolicy 참조)
     proxyLambdaRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "AgentCoreIdentityTokenExchange",
@@ -536,17 +534,17 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
           "bedrock-agentcore:CompleteResourceTokenAuth",
           "bedrock-agentcore:GetResourceOauth2Token",
         ],
-        // These actions do not support resource-level conditions in the current
-        // AgentCore IAM reference; restrict once supported.
+        // 현재 AgentCore IAM 참조에서 이 작업들은 리소스 수준 조건을 지원하지 않음
+        // 지원되면 범위를 제한
         resources: ["*"],
       })
     );
 
-    // bedrock-agentcore:InvokeGateway is added below the gateway construct so we
-    // can scope it to the specific gateway ARN.
+    // 특정 gateway ARN으로 범위를 제한할 수 있도록 bedrock-agentcore:InvokeGateway는
+    // 아래의 gateway construct 이후에 추가
 
-    // ── Interceptor Lambda role ──────────────────────────────────────────────────
-    // Only needs to call bedrock:ApplyGuardrail on this specific guardrail.
+    // ── 인터셉터 Lambda role ─────────────────────────────────────────────────────
+    // 이 특정 guardrail에서 bedrock:ApplyGuardrail만 호출하면 됨
     const interceptorLambdaRole = new iam.Role(this, "McpInterceptorLambdaRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
       description: "Least-privilege role for the MCP interceptor Lambda",
@@ -562,15 +560,15 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         sid: "ApplyGuardrailThisGuardrailOnly",
         effect: iam.Effect.ALLOW,
         actions: ["bedrock:ApplyGuardrail"],
-        // Scoped to the exact guardrail created in this stack.
+        // 이 스택에서 생성된 정확한 guardrail로 범위 제한
         resources: [guardrails.attrGuardrailArn],
       })
     );
 
-    // ── Tool Lambda role ─────────────────────────────────────────────────────────
-    // Shared by WeatherLambda, InventoryLambda, and UserDetailsLambda.
-    // These Lambdas are invoked by AgentCore and only need CloudWatch Logs access.
-    // They do NOT require any Bedrock, Secrets Manager, or AgentCore permissions.
+    // ── 도구 Lambda role ─────────────────────────────────────────────────────────
+    // WeatherLambda, InventoryLambda, UserDetailsLambda에서 공유
+    // 이 Lambda들은 AgentCore에서 호출하며 CloudWatch Logs 접근만 필요함
+    // Bedrock, Secrets Manager, AgentCore 권한은 필요하지 않음
     const toolLambdaRole = new iam.Role(this, "McpToolLambdaRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
       description:
@@ -582,9 +580,9 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
       ],
     });
 
-    // MCP Proxy Lambda (with increased timeout for ALB)
-    // Reserved concurrency: cap concurrency so a traffic burst cannot exhaust the
-    // account limit and starve other workloads.  Tune per your traffic profile.
+    // MCP 프록시 Lambda(ALB를 위해 timeout 증가)
+    // 예약 동시성: 트래픽 급증이 계정 한도를 고갈시켜 다른 워크로드에 영향을 주지 않도록
+    // 동시성을 제한. 트래픽 프로필에 맞게 조정
     const proxyLambda = new lambda.Function(this, "McpProxyLambda", {
       runtime: lambda.Runtime.PYTHON_3_12,
       handler: "lambda_function.lambda_handler",
@@ -601,24 +599,23 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         },
       }),
       role: proxyLambdaRole,
-      timeout: cdk.Duration.seconds(300), // 5 minutes for ALB
+      timeout: cdk.Duration.seconds(300), // ALB용 5분
       memorySize: 256,
       vpc: vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       reservedConcurrentExecutions: 100,
       environment: {
-        GATEWAY_URL: "", // Will be updated after gateway creation
+        GATEWAY_URL: "", // gateway 생성 후 업데이트
         COGNITO_DOMAIN: `https://${cognitoDomain.domainName}.auth.${this.region}.amazoncognito.com`,
-        CLIENT_ID: "", // Will be updated after VS Code client creation
+        CLIENT_ID: "", // VS Code 클라이언트 생성 후 업데이트
         // CLIENT_SECRET: "",
-        CALLBACK_LAMBDA_URL: "", // Will be updated after ALB creation
-        // The resource server identifier is used for audience validation.
-        // Tokens whose `aud` claim does not contain this value are rejected
-        // before being forwarded to the AgentCore Gateway.
+        CALLBACK_LAMBDA_URL: "", // ALB 생성 후 업데이트
+        // resource server 식별자는 audience 검증에 사용됨
+        // `aud` claim에 이 값이 없는 토큰은 AgentCore Gateway로 전달되기 전에 거부됨
         RESOURCE_SERVER_ID: resourceServerIdentifier,
         COGNITO_USER_POOL_ID: userPool.userPoolId,
         COGNITO_REGION: this.region,
-        // MCP metadata key for path-based routing
+        // 경로 기반 라우팅을 위한 MCP 메타데이터 키
         MCP_METADATA_KEY: mcpMetadataKey,
       },
     });
@@ -640,7 +637,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         },
       }),
       role: toolLambdaRole,
-      timeout: cdk.Duration.seconds(300), // 5 minutes for ALB
+      timeout: cdk.Duration.seconds(300), // ALB용 5분
       memorySize: 256,
       reservedConcurrentExecutions: 50,
     });
@@ -662,7 +659,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         },
       }),
       role: toolLambdaRole,
-      timeout: cdk.Duration.seconds(300), // 5 minutes for ALB
+      timeout: cdk.Duration.seconds(300), // ALB용 5분
       memorySize: 256,
       reservedConcurrentExecutions: 50,
     });
@@ -684,7 +681,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         },
       }),
       role: toolLambdaRole,
-      timeout: cdk.Duration.seconds(300), // 5 minutes for ALB
+      timeout: cdk.Duration.seconds(300), // ALB용 5분
       memorySize: 256,
       reservedConcurrentExecutions: 50,
     });
@@ -707,7 +704,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         },
       }),
       role: interceptorLambdaRole,
-      timeout: cdk.Duration.seconds(300), // 5 minutes for ALB
+      timeout: cdk.Duration.seconds(300), // ALB용 5분
       memorySize: 256,
       reservedConcurrentExecutions: 50,
       environment: {
@@ -723,8 +720,8 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
 
     let endpointUrl: string;
 
-    // Security group: accept HTTPS (443) and HTTP (80) only.
-    // All other inbound traffic is implicitly denied.
+    // Security group: HTTPS(443)와 HTTP(80)만 허용
+    // 그 외 모든 인바운드 트래픽은 암묵적으로 거부됨
     const albSecurityGroup = new ec2.SecurityGroup(this, "AlbSecurityGroup", {
       vpc: vpc,
         description: "ALB security group - HTTPS/HTTP ingress only",
@@ -752,11 +749,11 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
       );
 
       // =============================================================================
-      // ALB ACCESS LOG BUCKET
-      // S3 bucket for ALB access logs with encryption, lifecycle, and public
-      // access blocked.  The CDK logAccessLogs() helper automatically grants
-      // the correct regional ELB service account write access via bucket policy.
-      // Requires a concrete region in the stack env (set in bin/enterprise-mcp-infra.ts).
+      // ALB 접근 로그 버킷
+      // 암호화와 수명 주기를 설정하고 퍼블릭 접근을 차단한 ALB 접근 로그용 S3 버킷
+      // CDK logAccessLogs() 헬퍼는 버킷 정책을 통해 올바른 리전 ELB 서비스 계정에
+      // 쓰기 권한을 자동으로 부여함
+      // stack env에 구체적인 리전이 필요함(bin/enterprise-mcp-infra.ts에서 설정)
       // =============================================================================
       const albLogBucket = new s3.Bucket(this, "AlbAccessLogBucket", {
         bucketName: `mcp-alb-access-logs-${this.account}-${this.region}`,
@@ -771,13 +768,12 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
           },
         ],
         removalPolicy: cdk.RemovalPolicy.DESTROY,
-        autoDeleteObjects: true, // NOTE: set to false in production to prevent accidental log loss
+        autoDeleteObjects: true, // 참고: 프로덕션에서는 우발적인 로그 손실을 방지하도록 false로 설정
       });
 
-      // Create Application Load Balancer.
-      // dropInvalidHeaderFields: rejects requests whose headers contain
-      // characters outside the RFC 7230 allowed set, blocking several
-      // request-smuggling / header-injection attack vectors.
+      // Application Load Balancer 생성
+      // dropInvalidHeaderFields: RFC 7230 허용 집합에 없는 문자가 헤더에 포함된 요청을
+      // 거부하여 여러 request smuggling / header injection 공격 경로를 차단
       const alb = new elbv2.ApplicationLoadBalancer(this, "McpOAuthProxyALB", {
         vpc: vpc,
         internetFacing: true,
@@ -786,24 +782,24 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         dropInvalidHeaderFields: true,
       });
 
-      // Enable ALB access logging. logAccessLogs() sets the correct bucket
-      // policy for the regional ELB account automatically.
+      // ALB 접근 로깅 활성화. logAccessLogs()가 리전 ELB 계정에 올바른 버킷 정책을
+      // 자동으로 설정
       alb.logAccessLogs(albLogBucket, "alb");
 
-      // Associate the WAF WebACL with the ALB
+      // WAF WebACL을 ALB와 연결
       new wafv2.CfnWebACLAssociation(this, "AlbWebAclAssociation", {
         resourceArn: alb.loadBalancerArn,
         webAclArn: webAcl.attrArn,
       });
 
-      // Import the certificate
+      // 인증서 가져오기
       const certificate = certificatemanager.Certificate.fromCertificateArn(
         this,
         "AlbCertificate",
         certificateArn
       );
 
-      // Create HTTPS Listener
+      // HTTPS Listener 생성
       const mainListener = alb.addListener("HttpsListener", {
         port: 443,
         protocol: elbv2.ApplicationProtocol.HTTPS,
@@ -814,7 +810,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         }),
       });
 
-      // Add HTTP listener that redirects to HTTPS
+      // HTTPS로 리디렉션하는 HTTP listener 추가
       alb.addListener("HttpListener", {
         port: 80,
         protocol: elbv2.ApplicationProtocol.HTTP,
@@ -825,7 +821,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         }),
       });
 
-      // Import the hosted zone
+      // hosted zone 가져오기
       const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
         this,
         "HostedZone",
@@ -835,7 +831,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         }
       );
 
-      // Create DNS record pointing to the ALB
+      // ALB를 가리키는 DNS record 생성
       new route53.ARecord(this, "AlbAliasRecord", {
         zone: hostedZone,
         recordName: domainName,
@@ -844,7 +840,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         ),
       });
 
-      // Create Lambda Target Group
+      // Lambda Target Group 생성
       const proxyTargetGroup = new elbv2.ApplicationTargetGroup(
         this,
         "ProxyTargetGroup",
@@ -860,22 +856,21 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         }
       );
 
-      // Grant ALB permission to invoke Lambda
+      // ALB에 Lambda 호출 권한 부여
       proxyLambda.grantInvoke(
         new iam.ServicePrincipal("elasticloadbalancing.amazonaws.com")
       );
 
-      // Host-header condition: every forwarding rule requires the Host header to
-      // match the custom domain.  Requests arriving via the raw ALB DNS name
-      // (*.elb.amazonaws.com) fall through to the listener's default 404 action
-      // and are never forwarded to the Lambda.
-      // This prevents virtual-hosting exploitation and removes the raw DNS name
-      // as a valid entry point that bypasses your WAF / custom-domain TLS policy.
+      // Host 헤더 조건: 모든 전달 규칙은 Host 헤더가 사용자 지정 도메인과 일치해야 함
+      // 원시 ALB DNS 이름(*.elb.amazonaws.com)으로 들어온 요청은 listener의 기본
+      // 404 작업으로 넘어가며 Lambda로 전달되지 않음
+      // 이를 통해 virtual hosting 악용을 방지하고 WAF / 사용자 지정 도메인 TLS 정책을
+      // 우회하는 유효한 진입점에서 원시 DNS 이름을 제외
       const hostHeaderCondition = elbv2.ListenerCondition.hostHeaders([
         `${domainName}.${hostedZoneName}`,
       ]);
 
-      // Proxy Lambda routes - specific paths
+      // 프록시 Lambda 경로 - 특정 경로
       mainListener.addTargetGroups("ProxyWellKnownAuthRule", {
         priority: 40,
         conditions: [
@@ -934,9 +929,9 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         targetGroups: [proxyTargetGroup],
       });
 
-      // MCP routes - wildcard pattern for dynamic target filtering
-      // Matches: /mcp, /gitlab/mcp, /weather/mcp, /inventory/mcp, /*/mcp
-      // No need to update ALB when adding new tool groups!
+      // MCP 경로 - 동적 target 필터링을 위한 wildcard 패턴
+      // 일치 경로: /mcp, /gitlab/mcp, /weather/mcp, /inventory/mcp, /*/mcp
+      // 새 도구 그룹을 추가할 때 ALB를 업데이트할 필요 없음
       mainListener.addTargetGroups("ProxyMcpWildcardRule", {
         priority: 95,
         conditions: [
@@ -946,7 +941,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         targetGroups: [proxyTargetGroup],
       });
 
-      // Default catch-all rule for Proxy Lambda (still host-header gated)
+      // 프록시 Lambda의 기본 catch-all 규칙(계속 Host 헤더로 제한)
       mainListener.addTargetGroups("ProxyDefaultRule", {
         priority: 100,
         conditions: [
@@ -956,10 +951,10 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         targetGroups: [proxyTargetGroup],
       });
 
-      // Use custom domain as endpoint
+      // 사용자 지정 도메인을 엔드포인트로 사용
       endpointUrl = `https://${domainName}.${hostedZoneName}`;
 
-      // Outputs for ALB
+      // ALB 출력
       new cdk.CfnOutput(this, "AlbEndpoint", {
         value: endpointUrl,
         description: "ALB Endpoint (HTTPS with Custom Domain)",
@@ -976,7 +971,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
       });
 
     // =============================================================================
-    // VS CODE COGNITO CLIENT (with callback URLs)
+    // VS CODE COGNITO 클라이언트(callback URL 포함)
     // =============================================================================
 
     const callbackUrls = [
@@ -1016,11 +1011,11 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
       ],
     });
 
-    // Update Lambda environment variables with VS Code client ID and endpoint
+    // VS Code client ID 및 엔드포인트로 Lambda 환경 변수 업데이트
     proxyLambda.addEnvironment("CLIENT_ID", vscodeClient.userPoolClientId);
     proxyLambda.addEnvironment("CALLBACK_LAMBDA_URL", endpointUrl);
-    // Pass the Cognito-registered callback URLs so the proxy Lambda can
-    // validate redirect_uri in handle_callback (open-redirect prevention).
+    // 프록시 Lambda가 handle_callback에서 redirect_uri를 검증할 수 있도록
+    // Cognito에 등록된 callback URL 전달(open redirect 방지)
     proxyLambda.addEnvironment("ALLOWED_REDIRECT_URIS", JSON.stringify(callbackUrls));
 
     const gatewayRole = new iam.Role(this, "GatewayRole", {
@@ -1156,23 +1151,23 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
 
     proxyLambda.addEnvironment("GATEWAY_URL", gateway.gatewayUrl ?? "");
 
-    // Now that the gateway ARN is known, scope InvokeGateway to this gateway only.
-    // This must come AFTER the gateway construct so CDK can resolve the ARN token.
+    // 이제 gateway ARN을 알 수 있으므로 InvokeGateway 범위를 이 gateway로만 제한
+    // CDK가 ARN token을 확인할 수 있도록 gateway construct 이후에 배치해야 함
     proxyLambdaRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "InvokeThisGatewayOnly",
         effect: iam.Effect.ALLOW,
         actions: ["bedrock-agentcore:InvokeGateway"],
-        // Scoped to the specific gateway ARN – not wildcard "*".
+        // wildcard "*"가 아닌 특정 gateway ARN으로 범위 제한
         resources: [gateway.gatewayArn],
       })
     );
 
     // =============================================================================
-    // GATEWAY RESOURCE-BASED POLICY (VPC restriction)
+    // GATEWAY 리소스 기반 정책(VPC 제한)
     // =============================================================================
 
-    // Create a custom resource to attach VPC-based policy to the gateway
+    // VPC 기반 정책을 gateway에 연결할 사용자 지정 리소스 생성
     const policyCustomResourceRole = new iam.Role(
         this,
         "GatewayPolicyCustomResourceRole",
@@ -1186,7 +1181,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         }
       );
 
-      // Add permissions to manage gateway resource policy
+      // gateway 리소스 정책 관리 권한 추가
       policyCustomResourceRole.addToPolicy(
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
@@ -1199,7 +1194,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         })
       );
 
-      // Create Lambda layer with boto3 1.42.69
+      // boto3 1.42.69로 Lambda layer 생성
       const boto3Layer = new lambda.LayerVersion(this, "Boto3Layer", {
         code: lambda.Code.fromAsset(path.join(__dirname, "../lambda"), {
           bundling: {
@@ -1217,7 +1212,7 @@ export class EnterpriseMcpInfraStack extends cdk.Stack {
         description: "boto3 1.42.69 for AgentCore Gateway policy management",
       });
 
-      // Custom resource Lambda to manage gateway resource policy
+      // gateway 리소스 정책을 관리하는 사용자 지정 리소스 Lambda
       const gatewayPolicyCustomResource = new lambda.Function(
         this,
         "GatewayPolicyCustomResource",
@@ -1286,7 +1281,7 @@ def handler(event, context):
         }
       );
 
-      // Create custom resource
+      // 사용자 지정 리소스 생성
       const gatewayPolicy = new cdk.CustomResource(
         this,
         "GatewayVpcPolicy",
@@ -1300,10 +1295,10 @@ def handler(event, context):
         }
       );
 
-      // Ensure policy is applied after gateway is created
+      // gateway 생성 후 정책이 적용되도록 보장
       gatewayPolicy.node.addDependency(gateway);
 
-    // Create policy engine
+    // policy engine 생성
     const agentCorePolicyEngine = new AgentCorePolicyEngine(this, "AgentCorePolicyEngine", {
       policyEngineName: `enterprise_mcp_policy_engine`,
       description: "Policy engine for AgentCore Enterprise MCP Gateway",
@@ -1311,41 +1306,41 @@ def handler(event, context):
       gatewayRole: gatewayRole,
     });
 
-    // Add policies to the engine FIRST
+    // engine에 policy를 먼저 추가
     const policyEngineStatementInventoryTool = `permit (principal is AgentCore::OAuthUser, action in [AgentCore::Action::"inventory-tool", AgentCore::Action::"weather-tool"],resource == AgentCore::Gateway::"${gateway.gatewayArn}") when {principal.hasTag("user_tag") && principal.getTag("user_tag") == "admin_user"};`;
     const policyEngineStatementWeatherTool = `permit (principal is AgentCore::OAuthUser,action in [AgentCore::Action::"weather-tool"],resource == AgentCore::Gateway::"${gateway.gatewayArn}") when {principal.hasTag("user_tag") && principal.getTag("user_tag") == "regular_user"};`;
     const policyEngineStatementUserDetailsTool = `permit (principal is AgentCore::OAuthUser,action in [AgentCore::Action::"user-details-tool"],resource == AgentCore::Gateway::"${gateway.gatewayArn}") when {principal.hasTag("user_tag")};`;
 
-    // Add admin user policy (inventory and weather tools)
+    // 관리자 사용자 policy 추가(inventory 및 weather 도구)
     const adminUserPolicy = agentCorePolicyEngine.addPolicy(
       "admin_user_policy",
       "Policy for admin users to access inventory and weather tools",
       policyEngineStatementInventoryTool
     );
 
-    // Add regular user policy (weather tool only)
+    // 일반 사용자 policy 추가(weather 도구만)
     const regularUserPolicy = agentCorePolicyEngine.addPolicy(
       "regular_user_policy",
       "Policy for regular users to access weather tool only",
       policyEngineStatementWeatherTool
     );
 
-    // Add user details tool policy (only users with user_tag can access)
+    // user details 도구 policy 추가(user_tag가 있는 사용자만 접근 가능)
     const userDetailsToolPolicy = agentCorePolicyEngine.addPolicy(
       "user_details_policy",
       "Policy for users to access user details tool only if they have user_tag defined",
       policyEngineStatementUserDetailsTool
     );
 
-    // Associate with gateway AFTER all policies are added
+    // 모든 policy가 추가된 후 gateway와 연결
     agentCorePolicyEngine.associateWithGateway(gateway.gatewayId, 'ENFORCE');
-    agentCorePolicyEngine.node.addDependency(interceptorLambda); // Ensure interceptor Lambda is created before policy engine association
+    agentCorePolicyEngine.node.addDependency(interceptorLambda); // policy engine 연결 전에 interceptor Lambda가 생성되도록 보장
 
-    // Ensure the gateway VPC resource policy is applied after all Cedar policies
+    // 모든 Cedar policy 이후에 gateway VPC 리소스 정책이 적용되도록 보장
     gatewayPolicy.node.addDependency(agentCorePolicyEngine);
 
     // =============================================================================
-    // OUTPUTS
+    // 출력
     // =============================================================================
 
     new cdk.CfnOutput(this, "UserPoolId", {

@@ -1,4 +1,4 @@
-"""Shared test fixtures and configuration."""
+"""공용 테스트 fixture 및 설정."""
 
 import base64
 import json
@@ -19,7 +19,7 @@ TEST_USER_SUB = "user-123"
 
 
 def make_oidc_jwt(sub: str = TEST_USER_SUB, email: str = TEST_USER_EMAIL) -> str:
-    """Create a mock ALB OIDC JWT for testing."""
+    """테스트용 모의 ALB OIDC JWT를 생성한다."""
     header = base64.urlsafe_b64encode(b'{"alg":"ES256"}').decode().rstrip("=")
     payload = base64.urlsafe_b64encode(json.dumps({"sub": sub}).encode()).decode().rstrip("=")
     return f"{header}.{payload}.fake-signature"
@@ -29,7 +29,7 @@ _orig_api_call = botocore.client.BaseClient._make_api_call
 
 
 def mock_bedrock_api_call(self, operation_name, kwarg):
-    """Mock bedrock and bedrock-agentcore API calls only."""
+    """bedrock 및 bedrock-agentcore API 호출만 모킹한다."""
     if operation_name == "GetWorkloadAccessTokenForUserId":
         return {
             "workloadAccessToken": "test-workload-access-token",
@@ -88,7 +88,7 @@ def mock_bedrock_api_call(self, operation_name, kwarg):
 
 @pytest.fixture
 def s3_bucket():
-    """Create mocked S3 bucket with mock_aws context active for entire test."""
+    """전체 테스트에서 mock_aws 컨텍스트가 활성화된 모의 S3 버킷을 생성한다."""
     with mock_aws():
         s3 = boto3.client("s3", region_name=TEST_AWS_REGION)
         bucket = s3.create_bucket(Bucket=TEST_BUCKET_NAME)
@@ -97,7 +97,7 @@ def s3_bucket():
 
 @pytest.fixture(autouse=True)
 def env_vars(monkeypatch):
-    """Patch environment variables for all tests."""
+    """모든 테스트의 환경 변수를 패치한다."""
     monkeypatch.setenv("LOG_LEVEL", "DEBUG")
     monkeypatch.setenv("ENVIRONMENT", "test")
     monkeypatch.setenv("AWS_REGION", TEST_AWS_REGION)
@@ -112,7 +112,7 @@ def env_vars(monkeypatch):
 
 @pytest.fixture
 def agent_client():
-    """Create test client for agent runtime."""
+    """에이전트 런타임용 테스트 클라이언트를 생성한다."""
     from backend.runtime.app.main import app
 
     return TestClient(app)
@@ -120,7 +120,7 @@ def agent_client():
 
 @pytest.fixture
 def oauth_client():
-    """Create test client for OAuth sidecar."""
+    """OAuth 사이드카용 테스트 클라이언트를 생성한다."""
     from backend.session_binding.app.main import app
 
     return TestClient(app)

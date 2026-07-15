@@ -1,6 +1,6 @@
 """
-Travel Agent: Strands-based agent with web search capability.
-Exposed as a standard AgentCore Runtime endpoint for direct invocation.
+Travel Agent: 웹 검색 기능을 갖춘 Strands 기반 에이전트입니다.
+직접 호출할 수 있는 표준 AgentCore Runtime 엔드포인트로 노출됩니다.
 """
 
 from strands import Agent, tool
@@ -19,7 +19,7 @@ app = BedrockAgentCoreApp()
 MODEL_ID = os.getenv("MODEL_ID", "global.anthropic.claude-haiku-4-5-20251001-v1:0")
 
 
-# --- Tool Definition ---
+# --- 도구 정의 ---
 @tool
 def web_search(query: str) -> str:
     """Search the web for travel information."""
@@ -28,7 +28,7 @@ def web_search(query: str) -> str:
     return "\n".join([f"- {r['title']}: {r['body']}" for r in results])
 
 
-# --- Agent Definition ---
+# --- 에이전트 정의 ---
 model = BedrockModel(model_id=MODEL_ID)
 agent = Agent(
     name="Travel Agent",
@@ -40,7 +40,7 @@ agent = Agent(
 
 @app.entrypoint
 def invoke(payload, context):
-    """Main entrypoint for direct invocation."""
+    """직접 호출을 위한 기본 진입점입니다."""
     prompt = payload.get("prompt", "")
 
     session_id = getattr(context, "session_id", "no-session")

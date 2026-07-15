@@ -1,16 +1,16 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""VPC construct."""
+"""VPC 구성을 정의합니다."""
 
 from aws_cdk import aws_ec2 as ec2
 from constructs import Construct
 
 
 class Vpc(Construct):
-    """VPC - default or custom."""
+    """기본 또는 사용자 지정 VPC."""
 
     def __init__(self, scope: Construct, id: str, use_default: bool = True):
-        """Initialize VPC."""
+        """VPC를 초기화한다."""
         super().__init__(scope, id)
 
         self.vpc = ec2.Vpc(

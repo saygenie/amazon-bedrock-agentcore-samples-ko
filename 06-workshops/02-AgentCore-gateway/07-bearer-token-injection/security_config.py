@@ -1,8 +1,8 @@
 """
-Security configuration and validation utilities for the bearer token injection demo.
+bearer token 주입 데모를 위한 보안 구성 및 검증 유틸리티입니다.
 
-This module provides security-focused configuration and validation functions
-to ensure secure handling of bearer tokens and API requests.
+이 모듈은 bearer token과 API 요청을 안전하게 처리하도록 보안 중심의
+구성 및 검증 함수를 제공합니다.
 """
 
 import re
@@ -12,18 +12,18 @@ from urllib.parse import urlparse
 
 
 class SecurityConfig:
-    """Security configuration constants and validation methods."""
+    """보안 구성 상수와 검증 메서드입니다."""
 
-    # Maximum request body size (1MB)
+    # 최대 요청 본문 크기(1MB)
     MAX_REQUEST_BODY_SIZE = 1024 * 1024
 
-    # Maximum token length
+    # 최대 토큰 길이
     MAX_TOKEN_LENGTH = 2048
 
-    # Allowed tool name pattern (alphanumeric, hyphens, underscores)
+    # 허용되는 도구 이름 패턴(영숫자, 하이픈, 밑줄)
     TOOL_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
 
-    # Required security headers
+    # 필수 보안 헤더
     SECURITY_HEADERS = {
         "X-Content-Type-Options": "nosniff",
         "X-Frame-Options": "DENY",
@@ -34,7 +34,7 @@ class SecurityConfig:
         "Expires": "0",
     }
 
-    # API rate limits
+    # API 속도 제한
     DEFAULT_RATE_LIMIT = 100
     DEFAULT_BURST_LIMIT = 200
     DEFAULT_DAILY_QUOTA = 1000
@@ -42,26 +42,26 @@ class SecurityConfig:
     @staticmethod
     def validate_bearer_token(token: str) -> bool:
         """
-        Validate bearer token format and length.
+        bearer token 형식과 길이를 검증합니다.
 
-        Args:
-            token: Bearer token to validate
+        인자:
+            token: 검증할 bearer token
 
-        Returns:
-            True if token is valid, False otherwise
+        반환:
+            토큰이 유효하면 True, 아니면 False
         """
         if not token or not isinstance(token, str):
             return False
 
-        # Remove 'Bearer ' prefix if present
+        # 'Bearer ' 접두사가 있으면 제거
         if token.startswith("Bearer "):
             token = token[7:]
 
-        # Check length
+        # 길이 확인
         if len(token) > SecurityConfig.MAX_TOKEN_LENGTH:
             return False
 
-        # Basic format validation (base64-like characters)
+        # 기본 형식 검증(base64와 유사한 문자)
         if not re.match(r"^[A-Za-z0-9+/=_-]+$", token):
             return False
 
@@ -70,18 +70,18 @@ class SecurityConfig:
     @staticmethod
     def validate_tool_name(tool_name: str) -> bool:
         """
-        Validate tool name format.
+        도구 이름 형식을 검증합니다.
 
-        Args:
-            tool_name: Tool name to validate
+        인자:
+            tool_name: 검증할 도구 이름
 
-        Returns:
-            True if tool name is valid, False otherwise
+        반환:
+            도구 이름이 유효하면 True, 아니면 False
         """
         if not tool_name or not isinstance(tool_name, str):
             return False
 
-        if len(tool_name) > 100:  # Reasonable length limit
+        if len(tool_name) > 100:  # 적정 길이 제한
             return False
 
         return bool(SecurityConfig.TOOL_NAME_PATTERN.match(tool_name))
@@ -89,14 +89,14 @@ class SecurityConfig:
     @staticmethod
     def validate_url(url: str, require_https: bool = True) -> bool:
         """
-        Validate URL format and security requirements.
+        URL 형식과 보안 요구 사항을 검증합니다.
 
-        Args:
-            url: URL to validate
-            require_https: Whether to require HTTPS protocol
+        인자:
+            url: 검증할 URL
+            require_https: HTTPS 프로토콜 필수 여부
 
-        Returns:
-            True if URL is valid, False otherwise
+        반환:
+            URL이 유효하면 True, 아니면 False
         """
         if not url or not isinstance(url, str):
             return False
@@ -117,13 +117,13 @@ class SecurityConfig:
     @staticmethod
     def sanitize_log_data(data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Sanitize data for logging by removing sensitive information.
+        민감한 정보를 제거하여 로깅용 데이터를 정제합니다.
 
-        Args:
-            data: Data dictionary to sanitize
+        인자:
+            data: 정제할 데이터 dictionary
 
-        Returns:
-            Sanitized data dictionary
+        반환:
+            정제된 데이터 dictionary
         """
         sensitive_keys = {
             "token",
@@ -152,10 +152,10 @@ class SecurityConfig:
     @staticmethod
     def get_environment_config() -> Dict[str, str]:
         """
-        Get security-related environment configuration.
+        보안 관련 환경 구성을 가져옵니다.
 
-        Returns:
-            Dictionary of environment configuration
+        반환:
+            환경 구성 dictionary
         """
         return {
             "DEMO_USERNAME": os.environ.get("DEMO_USERNAME", "testuser"),
@@ -169,23 +169,23 @@ class SecurityConfig:
 
 def validate_request_payload(payload: Dict[str, Any]) -> tuple[bool, Optional[str]]:
     """
-    Validate incoming request payload for security issues.
+    수신 요청 payload에 보안 문제가 있는지 검증합니다.
 
-    Args:
-        payload: Request payload to validate
+    인자:
+        payload: 검증할 요청 payload
 
-    Returns:
-        Tuple of (is_valid, error_message)
+    반환:
+        (is_valid, error_message) tuple
     """
     if not isinstance(payload, dict):
         return False, "Payload must be a dictionary"
 
-    # Validate tool_name
+    # tool_name 검증
     tool_name = payload.get("tool_name")
     if not SecurityConfig.validate_tool_name(tool_name):
         return False, "Invalid tool_name format"
 
-    # Validate string fields don't contain suspicious content
+    # 문자열 필드에 의심스러운 내용이 없는지 검증
     string_fields = ["name", "notes", "project", "task_gid", "workspace"]
     for field in string_fields:
         value = payload.get(field)
@@ -193,10 +193,10 @@ def validate_request_payload(payload: Dict[str, Any]) -> tuple[bool, Optional[st
             if not isinstance(value, str):
                 return False, f"Field {field} must be a string"
 
-            if len(value) > 1000:  # Reasonable length limit
+            if len(value) > 1000:  # 적정 길이 제한
                 return False, f"Field {field} is too long"
 
-            # Basic XSS prevention
+            # 기본 XSS 방지
             if any(char in value for char in ["<", ">", '"', "'"]):
                 return False, f"Field {field} contains invalid characters"
 
@@ -205,10 +205,10 @@ def validate_request_payload(payload: Dict[str, Any]) -> tuple[bool, Optional[st
 
 def create_secure_response_headers() -> Dict[str, str]:
     """
-    Create secure HTTP response headers.
+    안전한 HTTP 응답 헤더를 생성합니다.
 
-    Returns:
-        Dictionary of security headers
+    반환:
+        보안 헤더 dictionary
     """
     headers = {
         "Content-Type": "application/json",
@@ -216,11 +216,11 @@ def create_secure_response_headers() -> Dict[str, str]:
         "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     }
 
-    # Add security headers
+    # 보안 헤더 추가
     headers.update(SecurityConfig.SECURITY_HEADERS)
 
-    # Note: In production, restrict CORS origins
-    # For demo purposes, we allow all origins
+    # 참고: 프로덕션에서는 CORS origin을 제한
+    # 데모 목적상 모든 origin을 허용
     headers["Access-Control-Allow-Origin"] = "*"
 
     return headers

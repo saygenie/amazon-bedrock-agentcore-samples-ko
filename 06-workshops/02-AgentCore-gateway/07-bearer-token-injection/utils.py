@@ -1,13 +1,13 @@
 """
-Utility functions for Asana Integration Demo AgentCore setup and management.
+Asana Integration Demo의 AgentCore 설정 및 관리를 위한 유틸리티 함수입니다.
 
-This module provides helper functions for:
-- AWS SSM parameter management
-- Cognito user pool setup and authentication
-- IAM role and policy creation for AgentCore
-- DynamoDB operations
-- AWS Secrets Manager operations
-- Resource cleanup functions
+이 모듈은 다음 작업을 위한 헬퍼 함수를 제공합니다.
+- AWS SSM 파라미터 관리
+- Cognito user pool 설정 및 인증
+- AgentCore용 IAM role 및 정책 생성
+- DynamoDB 작업
+- AWS Secrets Manager 작업
+- 리소스 정리 함수
 """
 
 import json
@@ -19,10 +19,10 @@ import time
 
 STS_CLIENT = boto3.client("sts")
 
-# Get AWS account details
+# AWS 계정 세부 정보 가져오기
 REGION = boto3.session.Session().region_name
 
-# Configuration constants - use environment variables in production
+# 구성 상수 - 프로덕션에서는 환경 변수 사용
 USERNAME = os.environ.get("DEMO_USERNAME", "testuser")
 SECRET_NAME = os.environ.get("DEMO_SECRET_NAME", "asana_integration_demo_agent")
 
@@ -31,24 +31,24 @@ POLICY_NAME = os.environ.get("POLICY_NAME", "AgentCoreGwyAsanaIntegrationPolicy"
 
 
 def load_api_spec(file_path: str) -> list:
-    """Load API specification from JSON file.
+    """JSON 파일에서 API specification을 로드합니다.
 
-    Args:
-        file_path: Path to the JSON file containing API specification
+    인자:
+        file_path: API specification이 포함된 JSON 파일 경로
 
-    Returns:
-        List containing the API specification data
+    반환:
+        API specification 데이터가 포함된 목록
 
-    Raises:
-        ValueError: If the JSON file doesn't contain a list or is invalid
-        FileNotFoundError: If the file doesn't exist
-        json.JSONDecodeError: If the file contains invalid JSON
+    예외:
+        ValueError: JSON 파일에 목록이 없거나 유효하지 않은 경우
+        FileNotFoundError: 파일이 없는 경우
+        json.JSONDecodeError: 파일에 유효하지 않은 JSON이 포함된 경우
     """
-    # Validate file path
+    # 파일 경로 검증
     if not file_path or not isinstance(file_path, str):
         raise ValueError("file_path must be a non-empty string")
 
-    # Check if file exists and is readable
+    # 파일이 있고 읽을 수 있는지 확인
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"API specification file not found: {file_path}")
 
@@ -64,7 +64,7 @@ def load_api_spec(file_path: str) -> list:
     if not isinstance(data, list):
         raise ValueError("Expected a list in the JSON file")
 
-    # Basic validation of API spec structure
+    # API spec 구조의 기본 검증
     if not data:
         raise ValueError("API specification list cannot be empty")
 
@@ -72,14 +72,14 @@ def load_api_spec(file_path: str) -> list:
 
 
 def get_ssm_parameter(name: str, with_decryption: bool = True) -> str:
-    """Get parameter value from AWS Systems Manager Parameter Store.
+    """AWS Systems Manager Parameter Store에서 파라미터 값을 가져옵니다.
 
-    Args:
-        name: Parameter name to retrieve
-        with_decryption: Whether to decrypt secure string parameters
+    인자:
+        name: 가져올 파라미터 이름
+        with_decryption: secure string 파라미터 복호화 여부
 
-    Returns:
-        Parameter value as string
+    반환:
+        문자열 형태의 파라미터 값
     """
     ssm = boto3.client("ssm")
     response = ssm.get_parameter(Name=name, WithDecryption=with_decryption)
@@ -87,13 +87,13 @@ def get_ssm_parameter(name: str, with_decryption: bool = True) -> str:
 
 
 def put_ssm_parameter(name: str, value: str, parameter_type: str = "String", with_encryption: bool = False) -> None:
-    """Store parameter value in AWS Systems Manager Parameter Store.
+    """AWS Systems Manager Parameter Store에 파라미터 값을 저장합니다.
 
-    Args:
-        name: Parameter name to store
-        value: Parameter value to store
-        parameter_type: Type of parameter (String, StringList, SecureString)
-        with_encryption: Whether to encrypt the parameter as SecureString
+    인자:
+        name: 저장할 파라미터 이름
+        value: 저장할 파라미터 값
+        parameter_type: 파라미터 유형(String, StringList, SecureString)
+        with_encryption: 파라미터를 SecureString으로 암호화할지 여부
     """
     ssm = boto3.client("ssm")
 
@@ -111,10 +111,10 @@ def put_ssm_parameter(name: str, value: str, parameter_type: str = "String", wit
 
 
 def get_cognito_client_secret() -> str:
-    """Get Cognito user pool client secret.
+    """Cognito user pool client secret을 가져옵니다.
 
-    Returns:
-        Client secret string from Cognito user pool client
+    반환:
+        Cognito user pool client의 client secret 문자열
     """
     client = boto3.client("cognito-idp")
     response = client.describe_user_pool_client(
@@ -125,22 +125,22 @@ def get_cognito_client_secret() -> str:
 
 
 def fetch_access_token(client_id, client_secret, token_url):
-    """Fetch OAuth access token using client credentials flow.
+    """client credentials flow를 사용하여 OAuth access token을 가져옵니다.
 
-    Args:
+    인자:
         client_id: OAuth client ID
         client_secret: OAuth client secret
         token_url: OAuth token endpoint URL
 
-    Returns:
-        Access token string
+    반환:
+        Access token 문자열
 
-    Raises:
-        ValueError: If required parameters are missing or invalid
-        requests.RequestException: If the HTTP request fails
-        KeyError: If the response doesn't contain an access token
+    예외:
+        ValueError: 필수 파라미터가 누락되거나 유효하지 않은 경우
+        requests.RequestException: HTTP 요청이 실패한 경우
+        KeyError: 응답에 access token이 없는 경우
     """
-    # Input validation
+    # 입력 검증
     if not all([client_id, client_secret, token_url]):
         raise ValueError("client_id, client_secret, and token_url are required")
 
@@ -155,9 +155,9 @@ def fetch_access_token(client_id, client_secret, token_url):
             data=data,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             timeout=30,
-            verify=True,  # Ensure SSL verification is enabled
+            verify=True,  # SSL 검증 활성화 보장
         )
-        response.raise_for_status()  # Raise an exception for bad status codes
+        response.raise_for_status()  # 잘못된 상태 코드에 대해 예외 발생
 
         response_data = response.json()
 
@@ -177,11 +177,11 @@ def fetch_access_token(client_id, client_secret, token_url):
 
 
 def delete_gateway(gateway_client, gateway_name):
-    """Delete AgentCore gateway and all its targets.
+    """AgentCore gateway와 모든 target을 삭제합니다.
 
-    Args:
-        gateway_client: Boto3 client for bedrock-agentcore-control
-        gateway_id: ID of the gateway to delete
+    인자:
+        gateway_client: bedrock-agentcore-control용 Boto3 클라이언트
+        gateway_id: 삭제할 gateway ID
     """
     gateway_id = get_ssm_parameter("/app/asana/demo/agentcoregwy/gateway_id")
 
@@ -191,7 +191,7 @@ def delete_gateway(gateway_client, gateway_name):
         target_id = item["targetId"]
         print("Deleting target ", target_id)
         gateway_client.delete_gateway_target(gatewayIdentifier=gateway_id, targetId=target_id)
-    # wait for 30 secs
+    # 30초 동안 대기
     time.sleep(30)
 
     list_response = gateway_client.list_gateway_targets(gatewayIdentifier=gateway_id, maxResults=100)

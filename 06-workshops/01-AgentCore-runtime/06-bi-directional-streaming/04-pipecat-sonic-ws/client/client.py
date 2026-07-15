@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Lightweight signing server for the Pipecat Vite client.
+Pipecat Vite 클라이언트용 경량 서명 서버입니다.
 
-When connecting to an AgentCore-deployed runtime, the browser client
-cannot perform SigV4 signing.  This script:
+AgentCore에 배포된 Runtime에 연결할 때 브라우저 클라이언트는
+SigV4 서명을 수행할 수 없습니다. 이 스크립트는 다음을 수행합니다.
 
-1. Generates a SigV4 presigned wss:// URL for the given runtime ARN.
-2. Exposes a POST /start endpoint that returns {"ws_url": "<presigned>"}.
-3. The Vite dev server proxies /start here so the browser app can fetch it.
+1. 지정된 Runtime ARN에 대해 SigV4 사전 서명 wss:// URL을 생성합니다.
+2. {"ws_url": "<presigned>"}를 반환하는 POST /start 엔드포인트를 제공합니다.
+3. 브라우저 앱이 URL을 가져올 수 있도록 Vite 개발 서버가 /start를 여기로 프록시합니다.
 
-For local development (no AgentCore), you don't need this — the pipecat
-websocket server itself serves /start with ws://localhost:8081/ws.
+로컬 개발 환경(AgentCore 미사용)에서는 필요하지 않습니다. Pipecat
+WebSocket 서버가 ws://localhost:8081/ws를 사용하는 /start를 직접 제공합니다.
 """
 
 import argparse

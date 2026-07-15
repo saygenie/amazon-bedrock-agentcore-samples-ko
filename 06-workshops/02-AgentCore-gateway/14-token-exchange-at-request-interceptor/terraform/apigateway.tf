@@ -1,5 +1,5 @@
 # =============================================================================
-# API Gateway (REST API with Cognito authorizer)
+# API Gateway(Cognito authorizer를 사용하는 REST API)
 # =============================================================================
 
 resource "aws_api_gateway_rest_api" "this" {
@@ -66,7 +66,7 @@ resource "aws_api_gateway_rest_api" "this" {
   depends_on = [aws_cognito_user_pool_domain.this]
 }
 
-# --- Deployment ---
+# --- 배포 ---
 resource "aws_api_gateway_deployment" "this" {
   rest_api_id = aws_api_gateway_rest_api.this.id
 
@@ -79,7 +79,7 @@ resource "aws_api_gateway_deployment" "this" {
   }
 }
 
-# --- Stage ---
+# --- 스테이지 ---
 resource "aws_api_gateway_stage" "prod" {
   deployment_id = aws_api_gateway_deployment.this.id
   rest_api_id   = aws_api_gateway_rest_api.this.id
@@ -88,7 +88,7 @@ resource "aws_api_gateway_stage" "prod" {
 }
 
 # =============================================================================
-# Shared schema fragments (used by the AgentCore target OpenAPI spec)
+# 공유 스키마 조각(AgentCore 대상 OpenAPI 사양에서 사용)
 # =============================================================================
 locals {
   api_gateway_url = "https://${aws_api_gateway_rest_api.this.id}.execute-api.${local.region}.amazonaws.com/${aws_api_gateway_stage.prod.stage_name}"

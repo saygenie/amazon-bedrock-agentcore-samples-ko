@@ -1,18 +1,18 @@
 <!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Create a Public DNS Record
+# Public DNS Record 생성
 
-> **Note:** The guidance in this document is intended for **workshop and learning purposes only**. For production deployments, please adhere to your organization's security policies and DNS management practices.
+> **참고:** 이 문서의 가이드는 **워크숍 및 학습 전용**입니다. 프로덕션 배포에서는 조직의 보안 정책 및 DNS 관리 방식을 준수하세요.
 
-Create a DNS record in your **public hosted zone** pointing your domain to the load balancer deployed by the CDK stack.
+CDK 스택이 배포한 load balancer를 도메인이 가리키도록 **public hosted zone**에 DNS record를 생성합니다.
 
-## Prerequisites
+## 사전 요구 사항
 
-- A Route 53 public hosted zone for your domain (can be in a different account)
-- The load balancer DNS name from the CDK stack outputs (`AlbDnsName` or `NlbDnsName`)
+- 도메인의 Route 53 public hosted zone(다른 계정에 있어도 됨)
+- CDK 스택 출력의 load balancer DNS 이름(`AlbDnsName` 또는 `NlbDnsName`)
 
-## Create the record
+## Record 생성
 
 ```bash
 aws route53 change-resource-record-sets \
@@ -31,15 +31,15 @@ aws route53 change-resource-record-sets \
   }'
 ```
 
-> The load balancer DNS name is in the CDK stack outputs (e.g., `AlbDnsName` or `NlbDnsName`).
+> load balancer DNS 이름은 CDK 스택 출력에 있습니다(예: `AlbDnsName` 또는 `NlbDnsName`).
 
-## Verify
+## 확인
 
 ```bash
 dig @8.8.8.8 your-domain.com A +short
-# Should return private IPs (the load balancer is internal)
+# Private IP가 반환되어야 함(load balancer가 internal이기 때문)
 ```
 
-## License
+## 라이선스
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](../LICENSE.txt) file for details.
+이 프로젝트는 Apache License 2.0에 따라 라이선스가 부여됩니다. 자세한 내용은 [LICENSE](../LICENSE.txt) 파일을 참조하세요.

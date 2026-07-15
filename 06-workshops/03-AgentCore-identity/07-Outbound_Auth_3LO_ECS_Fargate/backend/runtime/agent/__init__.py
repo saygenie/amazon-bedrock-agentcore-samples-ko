@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Agent package."""
+"""Agent 패키지."""
 
 from backend.runtime.agent.agent import agent_factory
 

@@ -1,10 +1,10 @@
-"""AgentCore Memory cross-region replication consumer.
+"""AgentCore Memory 리전 간 복제 소비자입니다.
 
-Consumes memory record stream events from Kinesis and replicates
-them to a remote region's AgentCore Memory instance.
+Kinesis에서 Memory 레코드 스트림 이벤트를 소비하고
+원격 리전의 AgentCore Memory 인스턴스로 복제합니다.
 
-Loop prevention: replicated records use a 'replicated/' namespace prefix.
-The consumer skips events where any namespace starts with 'replicated/'.
+루프 방지: 복제된 레코드는 'replicated/' 네임스페이스 접두사를 사용합니다.
+소비자는 'replicated/'로 시작하는 네임스페이스가 하나라도 있는 이벤트를 건너뜁니다.
 """
 
 import base64
@@ -36,7 +36,7 @@ RETRYABLE_ERRORS = {"ThrottledException", "ServiceException"}
 
 
 def lambda_handler(event, context):
-    """Process a batch of Kinesis records containing memory stream events."""
+    """Memory 스트림 이벤트가 포함된 Kinesis 레코드 배치를 처리합니다."""
     for record in event["Records"]:
         try:
             payload = json.loads(base64.b64decode(record["kinesis"]["data"]).decode("utf-8"))

@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Gateway infrastructure stack — MCP Echo Lambda + IAM role for the gateway."""
+"""Gateway 인프라 스택으로, MCP Echo Lambda와 Gateway용 IAM 역할을 구성합니다."""
 
 from aws_cdk import CfnOutput, Duration, Stack
 from aws_cdk import aws_iam as iam
@@ -9,11 +9,11 @@ from constructs import Construct
 
 
 class GatewayInfraStack(Stack):
-    """Deploy the infrastructure needed for the AgentCore Gateway demo.
+    """AgentCore Gateway 데모에 필요한 인프라를 배포합니다.
 
-    Creates:
-    - A minimal MCP Echo Lambda (gateway target)
-    - An IAM role for the gateway (trusts bedrock-agentcore.amazonaws.com)
+    생성하는 리소스:
+    - 최소 구성의 MCP Echo Lambda(Gateway 대상)
+    - Gateway용 IAM 역할(bedrock-agentcore.amazonaws.com 신뢰)
     """
 
     def __init__(self, scope: Construct, id: str, **kwargs):
@@ -30,10 +30,9 @@ class GatewayInfraStack(Stack):
             memory_size=128,
         )
 
-        # --- Gateway IAM Role ---
-        # The condition block is omitted so the role can be used before the
-        # gateway ID is known. For production use, add SourceAccount and
-        # SourceArn conditions after gateway creation.
+        # --- Gateway IAM 역할 ---
+        # Gateway ID를 알기 전에도 역할을 사용할 수 있도록 조건 블록을 생략함
+        # 프로덕션 환경에서는 Gateway 생성 후 SourceAccount 및 SourceArn 조건 추가
         self.gateway_role = iam.Role(
             self,
             "GatewayRole",
@@ -42,7 +41,7 @@ class GatewayInfraStack(Stack):
 
         self.mcp_echo_fn.grant_invoke(self.gateway_role)
 
-        # --- Outputs ---
+        # --- 출력 ---
         CfnOutput(
             self,
             "McpEchoLambdaArn",

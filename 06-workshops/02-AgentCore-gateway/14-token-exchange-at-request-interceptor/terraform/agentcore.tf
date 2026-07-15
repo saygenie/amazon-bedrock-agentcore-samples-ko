@@ -1,6 +1,6 @@
 # =============================================================================
-# API Key Credential Provider (required by OpenAPI targets; actual auth is
-# handled by the interceptor which injects the Cognito JWT)
+# API Key Credential Provider(OpenAPI 대상에 필요하며, 실제 인증은 Cognito JWT를
+# 주입하는 인터셉터에서 처리)
 # =============================================================================
 resource "aws_bedrockagentcore_api_key_credential_provider" "this" {
   name    = "api-key-provider-${local.suffix}"
@@ -8,7 +8,7 @@ resource "aws_bedrockagentcore_api_key_credential_provider" "this" {
 }
 
 # =============================================================================
-# IAM Role for AgentCore Gateway
+# AgentCore Gateway용 IAM 역할
 # =============================================================================
 resource "aws_iam_role" "gateway" {
   name = "AgentCoreGatewayRole-${local.suffix}"
@@ -90,7 +90,7 @@ resource "aws_bedrockagentcore_gateway" "this" {
 }
 
 # =============================================================================
-# AgentCore Gateway Target (OpenAPI — clean spec, no API Gateway extensions)
+# AgentCore Gateway 대상(OpenAPI - API Gateway 확장이 없는 순수 사양)
 # =============================================================================
 resource "aws_bedrockagentcore_gateway_target" "this" {
   name               = "posts-api-target-${local.suffix}"
@@ -115,8 +115,8 @@ resource "aws_bedrockagentcore_gateway_target" "this" {
   }
 }
 
-# Clean OpenAPI spec for the AgentCore target — no x-amazon-apigateway-*
-# extensions, just standard OpenAPI that AgentCore converts into MCP tools.
+# AgentCore 대상용 순수 OpenAPI 사양 - x-amazon-apigateway-* 확장 없이
+# AgentCore가 MCP 도구로 변환하는 표준 OpenAPI만 포함합니다.
 locals {
   target_openapi_spec = {
     openapi = "3.0.1"

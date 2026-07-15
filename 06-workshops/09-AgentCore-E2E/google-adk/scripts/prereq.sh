@@ -1,27 +1,27 @@
 #!/bin/sh
 
-# Enable strict error handling
+# 엄격한 오류 처리를 활성화합니다.
 set -euo pipefail
 
-# ----- Config -----
+# ----- 구성 -----
 BUCKET_NAME=${1:-customersupport112}
 INFRA_STACK_NAME=${2:-CustomerSupportStackInfra}
 COGNITO_STACK_NAME=${3:-CustomerSupportStackCognito}
 INFRA_TEMPLATE_FILE="prerequisite/infrastructure.yaml"
 COGNITO_TEMPLATE_FILE="prerequisite/cognito.yaml"
 
-# First try to get region from environment variable
+# 먼저 환경 변수에서 region을 가져옵니다.
 if [ -z "${AWS_REGION-}" ]; then
-    # If AWS_REGION is not set, try to get it from AWS CLI config
+    # AWS_REGION이 설정되지 않았으면 AWS CLI config에서 가져옵니다.
     REGION=$(aws configure get region 2>/dev/null || echo "us-west-2")
-    # Export it as an environment variable
+    # 환경 변수로 export합니다.
     export AWS_REGION="${REGION}"
 fi
 echo "Region is set to: ${AWS_REGION}"
 export REGION="${AWS_REGION}"
     
 
-# Get AWS Account ID with proper error handling
+# 적절한 오류 처리와 함께 AWS account ID를 가져옵니다.
 echo "🔍 Getting AWS Account ID..."
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>&1)
 if [ $? -ne 0 ] || [ -z "$ACCOUNT_ID" ] || [ "$ACCOUNT_ID" = "None" ]; then
@@ -44,7 +44,7 @@ WEB_APP_CLIENT_NAME="CustomerSupportWebClient"
 
 echo "Region: $REGION"
 echo "Account ID: $ACCOUNT_ID"
-# ----- 1. Create S3 bucket -----
+# ----- 1. S3 bucket 생성 -----
 echo "🪣 Using S3 bucket: $FULL_BUCKET_NAME"
 if [ "$REGION" = "us-east-1" ]; then
   aws s3api create-bucket \
@@ -58,7 +58,7 @@ else
     2>/dev/null || echo "ℹ️ Bucket may already exist or be owned by you."
 fi
 
-# ----- Verify S3 bucket ownership -----
+# ----- S3 bucket 소유권 확인 -----
 echo "🔍 Verifying S3 bucket ownership..."
 aws s3api head-bucket --bucket "$FULL_BUCKET_NAME" --expected-bucket-owner "$ACCOUNT_ID"
 if [ $? -ne 0 ]; then
@@ -67,7 +67,7 @@ if [ $? -ne 0 ]; then
 fi
 echo "✅ S3 bucket ownership verified"
 
-# ----- 2. Zip Lambda code -----
+# ----- 2. Lambda 코드 압축 -----
 sudo apt install zip
 echo "📦 Zipping contents of $LAMBDA_SRC into $ZIP_FILE..."
 cd "$LAMBDA_SRC"
@@ -75,7 +75,7 @@ zip -r "../../../$ZIP_FILE" . > /dev/null
 
 cd - > /dev/null
 
-# ----- 3. Upload to S3 -----
+# ----- 3. S3에 업로드 -----
 echo "☁️ Uploading $ZIP_FILE to s3://$FULL_BUCKET_NAME/$S3_KEY..."
 aws s3api put-object --bucket "$FULL_BUCKET_NAME" --key "$S3_KEY" --body "$ZIP_FILE" --expected-bucket-owner "$ACCOUNT_ID"
 
@@ -83,7 +83,7 @@ echo "☁️ Uploading $LAYER_ZIP_FILE to s3://$FULL_BUCKET_NAME/$S3_LAYER_KEY..
 cd "$LAMBDA_SRC"
 aws s3api put-object --bucket "$FULL_BUCKET_NAME" --key "$S3_LAYER_KEY" --body "$LAYER_ZIP_FILE" --expected-bucket-owner "$ACCOUNT_ID"
 cd - > /dev/null
-# ----- 4. Deploy CloudFormation -----
+# ----- 4. CloudFormation 배포 -----
 deploy_stack() {
   set +e
 
@@ -121,7 +121,7 @@ deploy_stack() {
   fi
 }
 
-# ----- Run both stacks -----
+# ----- 두 stack 실행 -----
 echo "🔧 Starting deployment of infrastructure stack with LambdaS3Bucket = $FULL_BUCKET_NAME..."
 deploy_stack "$INFRA_STACK_NAME" "$INFRA_TEMPLATE_FILE" --parameter-overrides LambdaS3Bucket="$FULL_BUCKET_NAME" LambdaS3Key="$S3_KEY" LayerS3Key="$S3_LAYER_KEY"
 infra_exit_code=$?

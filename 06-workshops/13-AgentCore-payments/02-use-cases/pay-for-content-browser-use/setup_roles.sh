@@ -2,22 +2,20 @@
 # =============================================================
 # setup_roles.sh
 #
-# Creates the four IAM roles required by the Pay for Content
-# (Browser Use) use case. Run once per AWS account before
-# opening the notebook.
+# Pay for Content (Browser Use) use case에 필요한 네 개의 IAM role을
+# 생성합니다. Notebook을 열기 전에 AWS account마다 한 번 실행하세요.
 #
-# Roles created:
-#   AgentCorePaymentsControlPlaneRole       — provisioning (manager, connector, credential provider)
-#   AgentCorePaymentsManagementRole         — session lifecycle (create/get/update sessions, instruments)
-#   AgentCorePaymentsProcessPaymentRole     — agent runtime; doubles as the AgentCore Runtime
-#                                             execution role (ProcessPayment, browser tool, ECR pull,
-#                                             CloudWatch logs/metrics, X-Ray, model invocation).
-#                                             Explicit Deny on session/instrument management so the
-#                                             role-segregation boundary is enforced even though the
-#                                             agent runs in a managed container.
-#   AgentCorePaymentsResourceRetrievalRole  — service-side token retrieval (assumed by AgentCore service)
+# 생성되는 role:
+#   AgentCorePaymentsControlPlaneRole       - provisioning(manager, connector, credential provider)
+#   AgentCorePaymentsManagementRole         - session lifecycle(session 및 instrument 생성/조회/업데이트)
+#   AgentCorePaymentsProcessPaymentRole     - agent runtime이며 AgentCore Runtime execution role을 겸함
+#                                             (ProcessPayment, browser tool, ECR pull,
+#                                             CloudWatch log/metric, X-Ray, model invocation).
+#                                             관리형 컨테이너에서 agent가 실행되더라도 role 분리 경계를
+#                                             적용하도록 session/instrument 관리에 Explicit Deny를 설정함.
+#   AgentCorePaymentsResourceRetrievalRole  - 서비스 측 token 조회(AgentCore service가 assume)
 #
-# After running, copy the printed ARNs into your .env file.
+# 실행 후 출력된 ARN을 .env 파일에 복사하세요.
 # =============================================================
 
 set -euo pipefail
@@ -26,9 +24,9 @@ ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 CALLER_ARN=$(aws sts get-caller-identity --query Arn --output text)
 REGION=${AWS_REGION:-us-west-2}
 
-# Build the principal for user-assumed trust policies.
-# If the caller is an assumed role (SSO, federated, instance profile), include both
-# the account root and the specific role ARN so the script works outside direct-user sessions.
+# 사용자가 assume하는 trust policy용 principal을 구성합니다.
+# 호출자가 assumed role(SSO, federated, instance profile)이면 account root와
+# 해당 role ARN을 모두 포함해 direct-user session이 아니어도 script가 동작하게 합니다.
 CALLER_ROLE_ARN=""
 if [[ "$CALLER_ARN" == *":assumed-role/"* ]]; then
     ROLE_NAME=$(echo "$CALLER_ARN" | sed 's/.*:assumed-role\///' | cut -d'/' -f1)
@@ -75,11 +73,10 @@ create_or_update_role() {
 }
 
 # ── 1. ControlPlaneRole ───────────────────────────────────────────────────────
-# Administrator role per the AgentCore payments IAM doc:
+# AgentCore payments IAM 문서에 따른 administrator role:
 # https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/payments-iam-roles.html
-# Manages payment managers, connectors, and credential providers — never
-# executes payments. Each statement is scoped to the specific resource
-# pattern called out in the doc.
+# Payment manager, connector, credential provider를 관리하며 결제를 실행하지는 않습니다.
+# 각 statement는 문서에 명시된 특정 resource pattern으로 범위가 제한됩니다.
 
 CONTROL_PLANE_TRUST=$(cat <<EOF
 {
@@ -188,9 +185,9 @@ create_or_update_role \
     "$CONTROL_PLANE_POLICY"
 
 # ── 2. ManagementRole ─────────────────────────────────────────────────────────
-# Used by notebook Steps 3d, 4, verify:
+# Notebook의 3d, 4, verify 단계에서 사용합니다.
 # CreatePaymentInstrument, CreatePaymentSession, GetPaymentSession.
-# Explicitly denies ProcessPayment.
+# ProcessPayment를 명시적으로 거부합니다.
 
 MANAGEMENT_TRUST=$(cat <<EOF
 {
@@ -262,10 +259,10 @@ create_or_update_role \
     "$MANAGEMENT_POLICY"
 
 # ── 3. ProcessPaymentRole ─────────────────────────────────────────────────────
-# Used by the Strands agent at runtime (Steps 3e and 6):
-# ProcessPayment, GetPaymentInstrument (required by AgentCorePaymentsPlugin SDK),
-# and GetPaymentInstrumentBalance.
-# Cannot create sessions or access credentials.
+# runtime에서 Strands agent가 사용합니다(3e 및 6단계).
+# ProcessPayment, GetPaymentInstrument(AgentCorePaymentsPlugin SDK에서 필요),
+# GetPaymentInstrumentBalance 권한을 제공합니다.
+# session을 생성하거나 credential에 액세스할 수 없습니다.
 
 PROCESS_PAYMENT_TRUST=$(cat <<EOF
 {
@@ -422,8 +419,8 @@ create_or_update_role \
     "$PROCESS_PAYMENT_POLICY"
 
 # ── 4. ResourceRetrievalRole ──────────────────────────────────────────────────
-# Assumed by the AgentCore service (not the notebook) to retrieve payment tokens.
-# Trust policy allows bedrock-agentcore.amazonaws.com to assume this role.
+# 결제 token을 조회하기 위해 Notebook이 아닌 AgentCore service가 assume합니다.
+# trust policy는 bedrock-agentcore.amazonaws.com이 이 role을 assume하도록 허용합니다.
 
 RESOURCE_RETRIEVAL_TRUST=$(cat <<EOF
 {
@@ -492,7 +489,7 @@ create_or_update_role \
     "AgentCorePaymentsResourceRetrievalPolicy" \
     "$RESOURCE_RETRIEVAL_POLICY"
 
-# ── Print ARNs ────────────────────────────────────────────────────────────────
+# ── ARN 출력 ──────────────────────────────────────────────────────────────────
 echo ""
 echo "✅ All roles ready. Copy these ARNs into your .env:"
 echo ""

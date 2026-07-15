@@ -1,15 +1,15 @@
 # pylint: disable=duplicate-code
 """
-HRFactChecker — Code-Based Evaluator (SESSION level)
+HRFactChecker - Code-Based Evaluator(SESSION 수준)
 
-Uses the SDK 1.6 @custom_code_based_evaluator() decorator.
-Deterministically validates HR assistant responses against known ground-truth data.
-Unlike LLM-as-judge, this evaluator uses exact pattern matching.
+SDK 1.6의 @custom_code_based_evaluator() 데코레이터를 사용합니다.
+알려진 ground truth 데이터를 기준으로 HR Assistant 응답을 결정론적으로 검증합니다.
+LLM-as-judge와 달리 이 Evaluator는 정확한 패턴 일치를 사용합니다.
 
-Returns:
-    value       — fraction of applicable checks that passed (0.0–1.0)
-    label       — "PASS" (all), "PARTIAL" (>=50%), "FAIL" (<50%), "SKIP" (no checks triggered)
-    explanation — which checks passed/failed
+반환값:
+    value       - 통과한 적용 가능 검사의 비율(0.0-1.0)
+    label       - "PASS"(모두), "PARTIAL"(>=50%), "FAIL"(<50%), "SKIP"(실행된 검사 없음)
+    explanation - 통과하거나 실패한 검사
 """
 
 import re
@@ -20,7 +20,7 @@ from bedrock_agentcore.evaluation import (  # pylint: disable=no-name-in-module
     custom_code_based_evaluator,
 )
 
-# Ground-truth registry (mirrors agent mock data)
+# Ground truth 레지스트리(에이전트 모의 데이터와 동일)
 PTO_BALANCES = {
     "EMP-001": {"remaining": 10, "total": 15, "used": 5},
     "EMP-002": {"remaining": 3, "total": 15, "used": 12},
@@ -86,7 +86,7 @@ _THINKING_RE = re.compile(r"<thinking>.*?</thinking>", re.DOTALL)
 
 
 def _collect_span_texts(span: dict) -> list:
-    """Extract all non-empty response texts from a single invoke_agent span."""
+    """단일 invoke_agent span에서 비어 있지 않은 모든 응답 텍스트를 추출합니다."""
     texts = []
     for se in span.get("span_events", []):
         body = se.get("body", {})
@@ -104,22 +104,22 @@ def _collect_span_texts(span: dict) -> list:
 
 
 def _parse_spans(spans: list) -> tuple:
-    """Extract concatenated response text and tool names from session spans."""
+    """세션 span에서 연결된 응답 텍스트와 도구 이름을 추출합니다."""
     response_parts = []
     tool_names = []
     for span in spans:
         name = (span.get("name") or "").lower()
         attrs = span.get("attributes", {})
         op = attrs.get("gen_ai.operation.name", "")
-        # Collect all invoke_agent response texts (multi-turn sessions)
+        # 모든 invoke_agent 응답 텍스트 수집(다중 턴 세션)
         if "invoke_agent" in name:
             response_parts.extend(_collect_span_texts(span))
-        # Tool calls
+        # 도구 호출
         if op == "execute_tool":
             tool_name = attrs.get("gen_ai.tool.name", "")
             if tool_name:
                 tool_names.append(tool_name)
-    # Concatenate all turns for session-level fact checking
+    # 세션 수준의 사실 검사를 위해 모든 턴 연결
     all_text = " ".join(response_parts)
     return all_text, tool_names
 
@@ -128,14 +128,14 @@ def _parse_spans(spans: list) -> tuple:
 def lambda_handler(  # pylint: disable=too-many-branches,too-many-locals,too-many-statements
     evaluator_input: EvaluatorInput, _context
 ) -> EvaluatorOutput:
-    """Validate HR fact accuracy across all turns of a session."""
+    """세션의 모든 턴에 걸쳐 HR 정보의 정확성을 검증합니다."""
     spans = evaluator_input.session_spans
     all_text, tool_names = _parse_spans(spans)
     all_text_lower = all_text.lower()
 
     checks_run, checks_passed, checks_failed = [], [], []
 
-    # 1. PTO balance accuracy
+    # 1. PTO 잔여 일수 정확성
     if "get_pto_balance" in tool_names:
         for emp_id, facts in PTO_BALANCES.items():
             if emp_id not in all_text:
@@ -155,7 +155,7 @@ def lambda_handler(  # pylint: disable=too-many-branches,too-many-locals,too-man
             else:
                 checks_failed.append(f"{check}: value not found near 'remaining'")
 
-    # 2. Pay stub accuracy
+    # 2. 급여 명세서 정확성
     for (emp_id, period), figures in PAY_STUBS.items():
         if emp_id not in all_text:
             continue
@@ -175,7 +175,7 @@ def lambda_handler(  # pylint: disable=too-many-branches,too-many-locals,too-man
             else:
                 checks_failed.append(f"{check}: ${expected_val} not found")
 
-    # 3. PTO request ID format
+    # 3. PTO 요청 ID 형식
     if "submit_pto_request" in tool_names:
         check = "PTO request ID format PTO-2026-NNN"
         checks_run.append(check)
@@ -185,7 +185,7 @@ def lambda_handler(  # pylint: disable=too-many-branches,too-many-locals,too-man
         else:
             checks_failed.append(f"{check}: no PTO-2026-NNN ID found")
 
-    # 4. Policy fact checks
+    # 4. 정책 사실 검사
     if "lookup_hr_policy" in tool_names or "get_benefits_summary" in tool_names:
         kw_topic_map = [
             ("pto", ["paid time off", "pto policy", "pto accrual"]),

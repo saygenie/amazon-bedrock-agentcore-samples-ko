@@ -1,22 +1,22 @@
 /**
- * Demo x402 content provider — AgentCore Payments "Pay for Content" use case.
+ * AgentCore Payments "Pay for Content" use case용 데모 x402 content provider입니다.
  *
- * Serves paywalled content using the x402 v2 protocol. The page loads at HTTP 200
- * with content locked behind a visible UI widget. The x402 payment requirement is
- * embedded in a <script id="x402-requirement"> element so the browser agent can
- * read it without parsing HTTP headers.
+ * x402 v2 protocol을 사용해 paywall 콘텐츠를 제공합니다. 페이지는 HTTP 200으로
+ * 로드되며 콘텐츠는 표시되는 UI widget 뒤에 잠겨 있습니다. 브라우저 agent가
+ * HTTP header를 파싱하지 않고 읽을 수 있도록 x402 결제 요구 사항을
+ * <script id="x402-requirement"> 요소에 삽입합니다.
  *
- * Usage:
+ * 사용법:
  *   npm install
  *   PAY_TO=0x<your-wallet-address> npm start
  *
- * Environment variables:
- *   PORT              Server port (default: 3000)
- *   PAY_TO            Merchant wallet address to receive USDC (required)
- *   PRICE_USDC_UNITS  Payment amount in USDC atomic units, 6 decimals
- *                     (default: 1000 = $0.001 USDC)
- *   NETWORK           CAIP-2 network identifier (default: eip155:84532 = Base Sepolia)
- *   USDC_ADDRESS      USDC contract address (default: Base Sepolia USDC)
+ * 환경 변수:
+ *   PORT              서버 port (기본값: 3000)
+ *   PAY_TO            USDC를 받을 merchant wallet address(필수)
+ *   PRICE_USDC_UNITS  USDC atomic unit 단위의 결제 금액, 소수점 6자리
+ *                     (기본값: 1000 = $0.001 USDC)
+ *   NETWORK           CAIP-2 network 식별자(기본값: eip155:84532 = Base Sepolia)
+ *   USDC_ADDRESS      USDC contract address(기본값: Base Sepolia USDC)
  */
 
 const express = require("express");
@@ -25,7 +25,7 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 const PAY_TO = process.env.PAY_TO;
 const PRICE_USDC_UNITS = process.env.PRICE_USDC_UNITS || "1000";
 const NETWORK = process.env.NETWORK || "eip155:84532";
-// USDC contract on Base Sepolia testnet
+// Base Sepolia testnet의 USDC contract
 const USDC_ADDRESS =
   process.env.USDC_ADDRESS || "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 
@@ -39,7 +39,7 @@ const priceUsdc = (parseInt(PRICE_USDC_UNITS, 10) / 1_000_000).toFixed(6);
 
 const app = express();
 
-// ── Paywall page — serves at HTTP 200, content locked until payment proof ──
+// ── Paywall 페이지 - HTTP 200으로 제공되며 payment proof 확인 전까지 콘텐츠 잠금 ──
 app.get("/article/paywall-demo", (req, res) => {
   const requirement = {
     x402Version: 2,
@@ -209,7 +209,7 @@ ${requirementJson}
 </html>`);
 });
 
-// ── Health check ────────────────────────────────────────────────────────────
+// ── 상태 확인 ───────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
   res.json({ status: "ok", network: NETWORK, payTo: PAY_TO });
 });

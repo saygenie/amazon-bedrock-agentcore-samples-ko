@@ -1,16 +1,16 @@
-"""Pay for API — AgentCore Runtime buyer agent.
+"""Pay for API - AgentCore Runtime buyer agent입니다.
 
-A minimal Strands Agent, wrapped in a FastAPI ``/invocations`` endpoint so it
-conforms to the AgentCore Runtime contract. The agent has exactly one tool —
-``http_request`` from ``strands-agents-tools`` — and relies on the
-``AgentCorePaymentsPlugin`` (from ``bedrock-agentcore``) to transparently
-handle HTTP 402 → ``ProcessPayment`` → retry.
+AgentCore Runtime contract를 준수하도록 FastAPI ``/invocations`` endpoint로
+감싼 최소 구성의 Strands Agent입니다. Agent에는 ``strands-agents-tools``의
+``http_request`` tool 하나만 있으며, ``bedrock-agentcore``의
+``AgentCorePaymentsPlugin``을 사용해 HTTP 402 -> ``ProcessPayment`` -> 재시도를
+투명하게 처리합니다.
 
-No private keys. No manual x402 assembly. The caller supplies the payment
-context (manager ARN, instrument ID, session ID, vendor-level user ID) on
-every invocation, mirroring the pattern in ``agentcore-payments/payment-agent``.
+Private key나 수동 x402 조립은 사용하지 않습니다. 호출자는
+``agentcore-payments/payment-agent`` 패턴과 마찬가지로 호출할 때마다 결제
+컨텍스트(manager ARN, instrument ID, session ID, vendor 수준 user ID)를 제공합니다.
 
-Runtime invocation contract:
+Runtime 호출 contract:
 
     POST /invocations
     {
@@ -23,18 +23,18 @@ Runtime invocation contract:
         "region":          "us-west-2"          # optional, defaults to AWS_REGION
     }
 
-Health endpoint:
+상태 확인 endpoint:
 
-    GET /ping  →  {"status": "ok"}
+    GET /ping  ->  {"status": "ok"}
 """
 
 from __future__ import annotations
 
-# ── ADOT auto-instrumentation (must run before any other imports) ──
-# These env vars tell AWS Distro for OpenTelemetry how to export traces
-# and logs to CloudWatch via the ADOT collector that AgentCore Runtime
-# injects into the container. Setting them at the top of the module is
-# required because some OTEL libraries read env at import time.
+# ── ADOT 자동 계측(다른 import보다 먼저 실행해야 함) ──
+# 이 환경 변수는 AgentCore Runtime이 컨테이너에 주입하는 ADOT collector를 통해
+# trace와 log를 CloudWatch로 내보내는 방법을 AWS Distro for OpenTelemetry에
+# 알려 줍니다. 일부 OTEL library가 import 시점에 환경 변수를 읽으므로 module
+# 맨 위에서 설정해야 합니다.
 import os
 
 os.environ.setdefault("AGENT_OBSERVABILITY_ENABLED", "true")
@@ -43,8 +43,8 @@ os.environ.setdefault("OTEL_PYTHON_CONFIGURATOR", "aws_configurator")
 os.environ.setdefault("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
 os.environ.setdefault("OTEL_TRACES_EXPORTER", "otlp")
 os.environ.setdefault("OTEL_LOGS_EXPORTER", "otlp")
-# Metrics disabled — traces + logs cover the observability surface we care
-# about (payment calls, tool use, HTTP requests). Enable if you need them.
+# 관심 있는 observability 영역(결제 호출, tool 사용, HTTP request)은 trace와 log로
+# 확인할 수 있으므로 metric을 비활성화합니다. 필요하면 활성화하세요.
 os.environ.setdefault("OTEL_METRICS_EXPORTER", "none")
 
 try:
@@ -63,7 +63,7 @@ except Exception as _otel_err:  # noqa: BLE001 — ADOT optional for local dev
 
     print(f"[WARN] ADOT auto-instrumentation skipped: {_otel_err}", file=sys.stderr)
 
-# ── Standard imports ──
+# ── 표준 import ──
 import logging
 
 import boto3
@@ -80,35 +80,35 @@ logging.basicConfig(
 logger = logging.getLogger("pay-for-api-agent")
 
 AWS_REGION = os.environ.get("AWS_REGION", "us-west-2")
-# Claude Sonnet 4.5 cross-region inference profile (US).
+# Claude Sonnet 4.5 cross-region inference profile(US)입니다.
 MODEL_ID = os.environ.get(
     "MODEL_ID",
     "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
 )
 
-# AgentCore Memory — if set, every invocation threads through an
-# AgentCoreMemorySessionManager keyed on (memory_id, actor_id=paymentUserId,
-# session_id=per-invocation). The CDK stack sets this in the container's
-# environment; if the variable is missing the agent runs without memory.
+# AgentCore Memory - 설정되어 있으면 모든 호출이
+# (memory_id, actor_id=paymentUserId, 호출별 session_id)를 키로 사용하는
+# AgentCoreMemorySessionManager를 거칩니다. CDK stack이 컨테이너 환경에 이 값을
+# 설정하며, 변수가 없으면 agent는 Memory 없이 실행됩니다.
 MEMORY_ID = os.environ.get("BEDROCK_AGENTCORE_MEMORY_ID", "")
 
-# AgentCorePaymentsPlugin gate. Defaults to enabled in the container — the
-# runtime is isolated and the notebook is driving the invocation. Flip to
-# "0" / "false" to fall back to a no-payments agent for debugging.
+# AgentCorePaymentsPlugin 활성화 설정입니다. 격리된 runtime을 Notebook이
+# 호출하므로 컨테이너에서는 기본적으로 활성화됩니다. 디버깅 시 결제 없는
+# agent로 전환하려면 "0" 또는 "false"로 설정하세요.
 ENABLE_PAYMENTS_PLUGIN = os.environ.get("ENABLE_PAYMENTS_PLUGIN", "1").lower() in (
     "1",
     "true",
     "yes",
 )
 
-# AgentCore Payments vended-log delivery gate. When enabled and a
-# `managerArn` is supplied on the first invocation, the agent configures
-# CloudWatch Logs vended delivery for that Manager. Idempotent — re-runs
-# are no-ops. Defaults to enabled.
+# AgentCore Payments vended log delivery 활성화 설정입니다. 활성화 상태에서
+# 첫 호출에 `managerArn`이 제공되면 agent가 해당 Manager의 CloudWatch Logs
+# vended delivery를 구성합니다. 멱등성이 있어 재실행해도 아무 작업을 하지 않으며
+# 기본적으로 활성화됩니다.
 ENABLE_VENDED_LOG_DELIVERY = os.environ.get("ENABLE_VENDED_LOG_DELIVERY", "1").lower() in ("1", "true", "yes")
 
-# Track Manager ARNs we have already configured vended delivery for, so
-# the agent doesn't re-call the control-plane on every invocation.
+# agent가 호출할 때마다 control plane을 다시 호출하지 않도록 vended delivery를
+# 이미 구성한 Manager ARN을 추적합니다.
 _VENDED_LOG_DELIVERY_CONFIGURED: set[str] = set()
 
 SYSTEM_PROMPT = (
@@ -143,37 +143,37 @@ SYSTEM_PROMPT = (
 
 
 def _ensure_vended_log_delivery(manager_arn: str, region: str) -> None:
-    """Idempotently wire CloudWatch Logs vended delivery for a PaymentManager.
+    """PaymentManager의 CloudWatch Logs vended delivery를 멱등 방식으로 연결합니다.
 
-    Three control-plane ops, each a no-op on re-run:
+    다음 control plane 작업은 재실행 시 아무 작업도 하지 않습니다.
 
-      1. ``CreateLogGroup`` — destination Log Group, if missing.
-      2. ``PutDeliverySource`` — Payments → logs pipe.
-      3. ``PutDeliveryDestination`` — target the Log Group.
-      4. ``CreateDelivery`` — bind source to destination.
+      1. ``CreateLogGroup`` - 없으면 대상 Log Group을 생성합니다.
+      2. ``PutDeliverySource`` - Payments -> log pipeline을 구성합니다.
+      3. ``PutDeliveryDestination`` - Log Group을 대상으로 지정합니다.
+      4. ``CreateDelivery`` - source를 destination에 연결합니다.
 
-    Authorization for the Manager to vend logs is granted by the IAM
-    permissions
+    Manager의 log 전송 권한은 호출 principal의 다음 IAM 권한으로 부여됩니다.
     ``bedrock-agentcore:PaymentsAllowVendedLogDeliveryForResource`` and
-    ``bedrock-agentcore:AllowVendedLogDeliveryForResource`` on the
-    calling principal (already attached to the agent runtime's
-    execution role in the CDK stack — CloudWatch checks both as a
-    product-level + service-level gate). There is no SDK call to "arm"
-    vended delivery; CloudWatch authorizes both implicitly when
-    ``put_delivery_source`` runs against a Payment Manager ARN.
-    See ``docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AWS-logs-infrastructure-V2-service-specific.html``.
+    ``bedrock-agentcore:AllowVendedLogDeliveryForResource``. 이 권한은 CDK
+    stack에서 agent runtime execution role에 이미 연결되며, CloudWatch는 두
+    권한을 product 및 service 수준 gate로 확인합니다. Vended delivery를
+    활성화하는 별도의 SDK 호출은 없습니다. Payment Manager ARN을 대상으로
+    ``put_delivery_source``를 실행할 때 CloudWatch가 두 권한을 암묵적으로
+    확인합니다. 자세한 내용은
+    ``docs.aws.amazon.com/AmazonCloudWatch/latest/logs/AWS-logs-infrastructure-V2-service-specific.html``을
+    참조하세요.
 
-    Any ``ConflictException`` / already-exists shape is swallowed so this
-    can run on every Manager the agent sees without side effects.
+    ``ConflictException`` 및 이미 존재함을 나타내는 응답은 무시하므로 agent가
+    확인하는 모든 Manager에서 부작용 없이 실행할 수 있습니다.
     """
     if not ENABLE_VENDED_LOG_DELIVERY or not manager_arn:
         return
     if manager_arn in _VENDED_LOG_DELIVERY_CONFIGURED:
         return
 
-    # Derive a stable, Manager-scoped log group name from the Manager ID so
-    # re-runs of the same Manager hit the same log group instead of creating
-    # duplicates. The Manager ID is the last path segment of the ARN.
+    # 동일한 Manager를 재실행할 때 중복 생성하지 않고 같은 log group을 사용하도록
+    # Manager ID에서 안정적인 Manager 범위 log group 이름을 만듭니다. Manager ID는
+    # ARN의 마지막 path segment입니다.
     manager_id = manager_arn.rsplit("/", 1)[-1]
     log_group_name = f"/bedrock-agentcore/payments/{manager_id}"
     source_name = f"pay-for-api-payments-src-{manager_id}"
@@ -181,13 +181,13 @@ def _ensure_vended_log_delivery(manager_arn: str, region: str) -> None:
 
     logs_client = boto3.client("logs", region_name=region)
 
-    # STS account lookup so we can construct the destination ARN below.
+    # 아래에서 destination ARN을 구성할 수 있도록 STS에서 account를 조회합니다.
     account_id = boto3.client("sts", region_name=region).get_caller_identity()["Account"]
     destination_arn = f"arn:aws:logs:{region}:{account_id}:delivery-destination:{destination_name}"
     log_group_arn = f"arn:aws:logs:{region}:{account_id}:log-group:{log_group_name}"
 
     def _swallow(code_set: set[str], fn, **kwargs):
-        """Call fn(**kwargs); swallow the given error codes."""
+        """fn(**kwargs)를 호출하고 지정된 error code는 무시합니다."""
         try:
             return fn(**kwargs)
         except botocore.exceptions.ClientError as exc:
@@ -196,19 +196,19 @@ def _ensure_vended_log_delivery(manager_arn: str, region: str) -> None:
                 return None
             raise
 
-    # 1. Ensure the log group exists before we point a delivery at it.
+    # 1. Delivery 대상으로 지정하기 전에 log group이 있는지 확인합니다.
     _swallow(
         {"ResourceAlreadyExistsException"},
         logs_client.create_log_group,
         logGroupName=log_group_name,
     )
 
-    # 2. Delivery source — Payments resource emits APPLICATION_LOGS.
-    # CloudWatch validates the caller's
+    # 2. Delivery source - Payments resource가 APPLICATION_LOGS를 내보냅니다.
+    # 이 시점에 CloudWatch는 resourceArn을 대상으로 호출자의
     # bedrock-agentcore:PaymentsAllowVendedLogDeliveryForResource and
     # bedrock-agentcore:AllowVendedLogDeliveryForResource permissions
-    # against the resourceArn at this point. Without either, this call
-    # returns AccessDeniedException.
+    # 권한을 검증합니다. 둘 중 하나라도 없으면 이 호출은
+    # AccessDeniedException을 반환합니다.
     _swallow(
         {"ConflictException", "ResourceAlreadyExistsException"},
         logs_client.put_delivery_source,
@@ -217,7 +217,7 @@ def _ensure_vended_log_delivery(manager_arn: str, region: str) -> None:
         logType="APPLICATION_LOGS",
     )
 
-    # 3. Delivery destination — Log Group we just ensured.
+    # 3. Delivery destination - 방금 확인한 Log Group입니다.
     _swallow(
         {"ConflictException", "ResourceAlreadyExistsException"},
         logs_client.put_delivery_destination,
@@ -227,8 +227,8 @@ def _ensure_vended_log_delivery(manager_arn: str, region: str) -> None:
         },
     )
 
-    # 4. Bind source to destination. CreateDelivery is idempotent on the
-    # (source, destination) pair — returns ConflictException on re-runs.
+    # 4. Source를 destination에 연결합니다. CreateDelivery는 (source, destination)
+    # 쌍에 대해 멱등성을 가지므로 재실행 시 ConflictException을 반환합니다.
     _swallow(
         {"ConflictException", "ResourceAlreadyExistsException"},
         logs_client.create_delivery,
@@ -245,11 +245,10 @@ def _ensure_vended_log_delivery(manager_arn: str, region: str) -> None:
 
 
 def _build_agent(payment_config: dict | None):
-    """Construct a Strands Agent with one http_request tool and — if payment
-    context is provided — the AgentCorePaymentsPlugin for automatic x402
-    handling.
+    """http_request tool 하나로 Strands Agent를 구성하고, 결제 컨텍스트가 제공되면
+    x402 자동 처리를 위한 AgentCorePaymentsPlugin을 연결합니다.
 
-    ``payment_config`` keys:
+    ``payment_config`` 키:
       - manager_arn, instrument_id, session_id, payment_user_id, region
     """
     from strands import Agent
@@ -263,12 +262,11 @@ def _build_agent(payment_config: dict | None):
     )
 
     # ── AgentCoreMemorySessionManager ──
-    # Memory is keyed on (memory_id, actor_id, session_id). We use the
-    # vendor-assigned paymentUserId as actor so all of a user's
-    # invocations roll up under one actor regardless of which notebook
-    # kernel or process is driving the runtime. If memory is unavailable
-    # (bad SDK version, missing resource, etc.) we log and continue
-    # without — the plugin still works.
+    # Memory는 (memory_id, actor_id, session_id)를 키로 사용합니다. 어떤 Notebook
+    # kernel 또는 process가 runtime을 구동하더라도 한 사용자의 모든 호출이 동일한
+    # actor로 집계되도록 vendor가 할당한 paymentUserId를 actor로 사용합니다.
+    # Memory를 사용할 수 없으면(SDK version 문제, resource 누락 등) log를 남기고
+    # Memory 없이 계속하며 plugin은 그대로 동작합니다.
     session_manager = None
     actor_id = (payment_config or {}).get("payment_user_id") or ""
     if MEMORY_ID and actor_id:
@@ -356,9 +354,9 @@ def _build_agent(payment_config: dict | None):
     if session_manager is not None:
         kwargs["session_manager"] = session_manager
 
-    # Wrap agent construction in a try/retry so a corrupt memory session
-    # doesn't break the invocation. On failure we drop memory and retry
-    # with a fresh agent — the plugin still pays.
+    # 손상된 Memory session 때문에 호출이 실패하지 않도록 agent 생성을
+    # try/retry로 감쌉니다. 실패하면 Memory를 제외하고 새 agent로 재시도하며
+    # plugin의 결제 기능은 그대로 유지됩니다.
     try:
         return Agent(**kwargs)
     except Exception as exc:  # noqa: BLE001
@@ -382,11 +380,10 @@ async def ping():
     return JSONResponse(content={"status": "ok"}, status_code=200)
 
 
-# Maximum prompt length the /invocations endpoint accepts. Bounds the
-# Bedrock token bill on each invoke and prevents a flood of multi-MB
-# prompts from filling the runtime memory. Tune up if your use case
-# legitimately needs longer prompts; this is a defensive cap, not a
-# product constraint.
+# /invocations endpoint가 허용하는 최대 prompt 길이입니다. 호출별 Bedrock token
+# 비용을 제한하고 수 MB 크기의 prompt가 한꺼번에 들어와 runtime memory를 채우는
+# 일을 방지합니다. Use case에서 더 긴 prompt가 필요하면 늘릴 수 있으며, 이는
+# 제품 제약이 아닌 방어적 상한입니다.
 MAX_PROMPT_LEN = 5000
 
 
@@ -408,11 +405,11 @@ async def invocations(request: fastapi.Request):
     if not seller_url:
         return JSONResponse(content={"error": "sellerUrl is required"}, status_code=400)
 
-    # ── Defensive input validation ──
-    # The prompt is forwarded to Bedrock and the seller URL is fetched
-    # by the http_request tool. Bounding both keeps the runtime
-    # behaving on hostile input even though AgentCore Runtime fronts
-    # this endpoint with its own auth + payload validation.
+    # ── 방어적 입력 검증 ──
+    # Prompt는 Bedrock으로 전달되고 seller URL은 http_request tool이 가져옵니다.
+    # AgentCore Runtime이 자체 auth 및 payload validation으로 이 endpoint를
+    # 보호하지만, 두 입력을 제한하면 악의적인 입력에도 runtime이 안정적으로
+    # 동작합니다.
     if len(prompt) > MAX_PROMPT_LEN:
         return JSONResponse(
             content={"error": f"prompt exceeds {MAX_PROMPT_LEN} characters"},
@@ -433,10 +430,9 @@ async def invocations(request: fastapi.Request):
         "network_preferences": (data.get("networkPreferences") or data.get("network_preferences")),
     }
 
-    # Wire up vended log delivery the first time we see a Manager — no-op
-    # thereafter for the same Manager in the same process. Any errors are
-    # logged but do not fail the invocation, since observability is a
-    # best-effort add-on.
+    # Manager를 처음 확인할 때 vended log delivery를 연결합니다. 이후 동일
+    # process에서 같은 Manager를 만나면 아무 작업도 하지 않습니다. Observability는
+    # 최선형 부가 기능이므로 오류는 log에 기록하되 호출을 실패시키지 않습니다.
     try:
         _ensure_vended_log_delivery(
             manager_arn=payment_config["manager_arn"],
@@ -445,9 +441,9 @@ async def invocations(request: fastapi.Request):
     except Exception as exc:  # noqa: BLE001
         logger.warning("Vended log delivery setup failed, continuing: %s", exc)
 
-    # We prepend the seller URL to the user prompt so the agent knows the
-    # exact URL to GET. Keeping it out of the system prompt lets the
-    # notebook point the same agent at different sellers without rebuild.
+    # Agent가 GET할 정확한 URL을 알 수 있도록 user prompt 앞에 seller URL을
+    # 추가합니다. System prompt에 넣지 않으므로 Notebook에서 다시 build하지 않고도
+    # 동일한 agent가 여러 seller를 가리키게 할 수 있습니다.
     enriched_prompt = f"Seller URL: {seller_url.rstrip('/')}/facts\n\n{prompt}"
 
     try:
@@ -464,10 +460,9 @@ async def invocations(request: fastapi.Request):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8080"))
-    # AgentCore Runtime routes traffic into the container on all
-    # interfaces, so bind to 0.0.0.0 inside the container by default.
-    # Override with HOST=127.0.0.1 when running the container directly on
-    # a developer machine.
+    # AgentCore Runtime은 모든 interface에서 컨테이너로 traffic을 route하므로
+    # 기본적으로 컨테이너 내부의 0.0.0.0에 bind합니다. 개발자 장비에서 컨테이너를
+    # 직접 실행할 때는 HOST=127.0.0.1로 재정의하세요.
     host = os.environ.get("HOST", "0.0.0.0")  # nosec B104 — required by AgentCore Runtime
     logger.info("Starting pay-for-api agent on %s:%s", host, port)
     uvicorn.run(app, host=host, port=port, log_level="info")

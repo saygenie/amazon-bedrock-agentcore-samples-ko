@@ -1,39 +1,39 @@
 # Persistent Notes Skill
 
-A skill that saves notes to a local `/mnt/workspace/notes.json` file.
+메모를 로컬 `/mnt/workspace/notes.json` 파일에 저장하는 skill입니다.
 
-## Usage
+## 사용법
 
 ```bash
 python3 persistent-notes/scripts/note_manager.py "Your note here"
 ```
 
-## What it does
+## 동작
 
-- Saves notes to `/mnt/workspace/notes.json` in the current directory
-- Appends new notes to existing ones
-- Each note has content and timestamp
-- Returns JSON confirmation
+- 현재 디렉터리의 `/mnt/workspace/notes.json`에 메모 저장
+- 기존 메모에 새 메모 추가
+- 각 메모에 content 및 timestamp 포함
+- JSON 확인 응답 반환
 
-## Example
+## 예제
 
 ```bash
 python3 persistent-notes/scripts/note_manager.py "Remember to deploy on Friday"
 ```
 
-## File Structure
+## 파일 구조
 
 ```
 persistent-notes/
-├── SKILL.md              # Skill documentation
-├── README.md             # This file
+├── SKILL.md              # Skill 문서
+├── README.md             # 이 파일
 └── scripts/
-    └── note_manager.py   # Note saving script
+    └── note_manager.py   # 메모 저장 스크립트
 ```
 
-## Notes Format
+## 메모 형식
 
-Notes are stored as JSON array in `notes.json`:
+메모는 `notes.json`에 JSON 배열로 저장됩니다.
 
 ```json
 [
@@ -44,4 +44,4 @@ Notes are stored as JSON array in `notes.json`:
 ]
 ```
 
-That's it! Simple note saving with persistence.
+이것으로 영구 저장을 지원하는 간단한 메모 저장 기능이 완성됩니다.

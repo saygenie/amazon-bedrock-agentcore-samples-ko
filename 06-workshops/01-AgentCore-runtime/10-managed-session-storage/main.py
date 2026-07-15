@@ -17,7 +17,7 @@ app = BedrockAgentCoreApp()
 @app.entrypoint
 async def invoke(payload):
     """
-    Invoke the agent with a payload
+    Payload로 agent를 호출합니다.
     """
     user_message = payload.get("prompt", "Hello! How can I help you today?")
 

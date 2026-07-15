@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""KMS identity construct."""
+"""KMS 자격 증명 construct."""
 
 from aws_cdk import Aws, Stack
 from aws_cdk import aws_iam as iam
@@ -9,7 +9,7 @@ from constructs import Construct
 
 
 class Identity(Construct):
-    """KMS Key for encryption."""
+    """암호화용 KMS Key."""
 
     def __init__(
         self,
@@ -17,7 +17,7 @@ class Identity(Construct):
         id: str,
         suffix: str,
     ):
-        """Initialize identity construct."""
+        """자격 증명 construct를 초기화한다."""
         super().__init__(scope, id)
 
         account_id = Aws.ACCOUNT_ID

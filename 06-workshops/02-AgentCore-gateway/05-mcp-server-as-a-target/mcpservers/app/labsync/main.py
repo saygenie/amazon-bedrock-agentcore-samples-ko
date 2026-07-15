@@ -3,7 +3,7 @@ from mcp.server.fastmcp import FastMCP
 mcp = FastMCP(
     host="0.0.0.0",
     stateless_http=True,  # nosec B104
-)  # nosec B104 - AgentCore Runtime container requires bind to all interfaces
+)  # nosec B104 - AgentCore Runtime 컨테이너는 모든 인터페이스에 바인딩해야 함
 
 
 @mcp.tool()

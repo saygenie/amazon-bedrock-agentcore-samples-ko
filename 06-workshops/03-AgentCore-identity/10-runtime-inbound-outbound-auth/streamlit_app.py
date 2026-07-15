@@ -1,9 +1,9 @@
 """
-Streamlit UI for AgentCore Identity Sample 10: Runtime Inbound + Outbound Auth.
+AgentCore Identity Sample 10(Runtime 인바운드 + 아웃바운드 인증)용 Streamlit UI입니다.
 
-Demonstrates invoking an AgentCore Runtime with and without a Cognito JWT bearer token.
+Cognito JWT bearer token을 사용하거나 사용하지 않고 AgentCore Runtime을 호출하는 방법을 보여줍니다.
 
-Usage:
+사용법:
     streamlit run streamlit_app.py
 """
 
@@ -15,7 +15,7 @@ import boto3
 import streamlit as st
 
 # ---------------------------------------------------------------------------
-# Page config
+# 페이지 구성
 # ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="Sample 10: Runtime Auth",
@@ -26,12 +26,12 @@ st.set_page_config(
 SAMPLE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ---------------------------------------------------------------------------
-# Helper functions (self-contained, mirrors invoke.py patterns)
+# 보조 함수(독립 구성, invoke.py 패턴과 동일)
 # ---------------------------------------------------------------------------
 
 
 def _load_cognito_config() -> dict | None:
-    """Load cognito_config.json from the sample directory."""
+    """샘플 디렉터리에서 cognito_config.json을 불러옵니다."""
     path = os.path.join(SAMPLE_DIR, "cognito_config.json")
     if not os.path.exists(path):
         return None
@@ -40,7 +40,7 @@ def _load_cognito_config() -> dict | None:
 
 
 def _find_project_dir() -> str:
-    """Find the agentcore project directory (subdirectory containing agentcore/)."""
+    """agentcore/를 포함하는 하위 디렉터리에서 agentcore 프로젝트를 찾습니다."""
     for entry in os.listdir(SAMPLE_DIR):
         candidate = os.path.join(SAMPLE_DIR, entry)
         if os.path.isdir(candidate) and os.path.isdir(os.path.join(candidate, "agentcore")):
@@ -49,7 +49,7 @@ def _find_project_dir() -> str:
 
 
 def _find_in_json(obj, key):
-    """Recursively search for a key in nested JSON."""
+    """중첩된 JSON에서 키를 재귀적으로 검색합니다."""
     if isinstance(obj, dict):
         if key in obj:
             return obj[key]
@@ -66,9 +66,9 @@ def _find_in_json(obj, key):
 
 
 def _resolve_agent_arn() -> str:
-    """Read the deployed agent ARN from deployed-state.json.
+    """deployed-state.json에서 배포된 에이전트 ARN을 읽습니다.
 
-    Searches for runtimeArn recursively to work across CLI versions.
+    CLI 버전에 관계없이 동작하도록 runtimeArn을 재귀적으로 검색합니다.
     """
     project_dir = _find_project_dir()
     state_file = os.path.join(project_dir, "agentcore", ".cli", "deployed-state.json")
@@ -83,7 +83,7 @@ def _resolve_agent_arn() -> str:
 
 
 def _get_bearer_token(config: dict) -> str:
-    """Authenticate with Cognito and return an access token."""
+    """Cognito로 인증하고 액세스 토큰을 반환합니다."""
     cognito = boto3.client("cognito-idp", region_name=config["region"])
     auth = cognito.initiate_auth(
         ClientId=config["client_id"],
@@ -97,7 +97,7 @@ def _get_bearer_token(config: dict) -> str:
 
 
 def _parse_event_stream(response: dict) -> str:
-    """Extract text from the boto3 EventStream response."""
+    """boto3 EventStream 응답에서 텍스트를 추출합니다."""
     parts: list[str] = []
     for event in response.get("response", []):
         raw = event if isinstance(event, bytes) else event.get("chunk", {}).get("bytes", b"")
@@ -126,9 +126,9 @@ def _parse_event_stream(response: dict) -> str:
 
 def _invoke_agent(agent_arn: str, region: str, prompt: str, bearer_token: str | None = None) -> dict:
     """
-    Invoke the agent runtime, optionally with a bearer token.
+    선택적으로 bearer token을 사용해 에이전트 런타임을 호출합니다.
 
-    Returns a dict with keys: success, text, elapsed, error, status_code.
+    success, text, elapsed, error, status_code 키가 있는 dict를 반환합니다.
     """
     client = boto3.client("bedrock-agentcore", region_name=region)
     handler = None
@@ -173,19 +173,19 @@ def _invoke_agent(agent_arn: str, region: str, prompt: str, bearer_token: str | 
 
 
 def _format_response(text: str) -> str:
-    """Replace literal \\n sequences with real line breaks for display."""
+    """표시를 위해 리터럴 \\n 시퀀스를 실제 줄바꿈으로 바꿉니다."""
     return text.replace("\\n", "\n")
 
 
 def _truncate_arn(arn: str, max_len: int = 45) -> str:
-    """Truncate an ARN for sidebar display."""
+    """사이드바 표시에 맞게 ARN을 줄입니다."""
     if len(arn) <= max_len:
         return arn
     return arn[: max_len - 3] + "..."
 
 
 # ---------------------------------------------------------------------------
-# Session state initialisation
+# 세션 상태 초기화
 # ---------------------------------------------------------------------------
 for key, default in {
     "logged_in": False,
@@ -202,12 +202,12 @@ for key, default in {
         st.session_state[key] = default
 
 # ---------------------------------------------------------------------------
-# Load config
+# 구성 불러오기
 # ---------------------------------------------------------------------------
 config = _load_cognito_config()
 
 # ---------------------------------------------------------------------------
-# Custom CSS
+# 사용자 지정 CSS
 # ---------------------------------------------------------------------------
 st.markdown(
     """
@@ -266,20 +266,20 @@ st.markdown(
 
 
 # =========================================================================
-# SCREEN 1: LOGIN (full page, centered)
+# 화면 1: 로그인(전체 페이지, 가운데 정렬)
 # =========================================================================
 if not st.session_state.logged_in:
-    # Hide sidebar on login page
+    # 로그인 페이지에서 사이드바 숨기기
     st.markdown(
         "<style>[data-testid='stSidebar'] { display: none; }</style>",
         unsafe_allow_html=True,
     )
 
-    # Vertical spacer
+    # 세로 여백
     st.markdown("")
     st.markdown("")
 
-    # Center column
+    # 가운데 열
     _, center, _ = st.columns([1, 2, 1])
 
     with center:
@@ -303,7 +303,7 @@ if not st.session_state.logged_in:
             st.error("**cognito_config.json not found.** Run `python setup_cognito.py` before using this app.")
             st.stop()
 
-        # Show any previous login error
+        # 이전 로그인 오류 표시
         if st.session_state.login_error:
             st.error(st.session_state.login_error)
 
@@ -329,7 +329,7 @@ if not st.session_state.logged_in:
                     with st.spinner("Authenticating with Cognito..."):
                         token = _get_bearer_token(login_config)
 
-                    # Resolve agent ARN right away
+                    # 에이전트 ARN을 즉시 확인
                     with st.spinner("Resolving agent ARN..."):
                         try:
                             agent_arn = _resolve_agent_arn()
@@ -337,9 +337,9 @@ if not st.session_state.logged_in:
                             agent_arn = None
                             st.session_state.arn_error = str(exc)
 
-                    # Commit to session state
+                    # 세션 상태에 저장
                     st.session_state.jwt_token = token
-                    st.session_state.bearer_input = token  # pre-fill the token field
+                    st.session_state.bearer_input = token  # 토큰 필드 미리 채우기
                     st.session_state.username = username
                     st.session_state.logged_in = True
                     st.session_state.agent_arn = agent_arn
@@ -355,10 +355,10 @@ if not st.session_state.logged_in:
 
 
 # =========================================================================
-# SCREEN 2: DASHBOARD (after login)
+# 화면 2: 대시보드(로그인 후)
 # =========================================================================
 
-# --- Sidebar ---
+# --- 사이드바 ---
 with st.sidebar:
     st.markdown(
         f"<div class='signed-in-badge'>Signed in as {st.session_state.username}</div>",
@@ -387,7 +387,7 @@ with st.sidebar:
 
     st.divider()
 
-    # Bearer token — auto-filled, user can clear to test 403
+    # bearer token은 자동으로 채워지며, 403 테스트를 위해 사용자가 지울 수 있음
     st.markdown("**Bearer Token**")
     st.caption("Auto-filled after login. Clear to test 403 rejection.")
     bearer_input = st.text_area(
@@ -401,7 +401,7 @@ with st.sidebar:
     else:
         st.markdown(":red-background[No token — requests will get 403]")
 
-# --- Main area ---
+# --- 기본 영역 ---
 st.markdown("#### Runtime Inbound + Outbound Auth")
 st.markdown("""
 ```
@@ -416,12 +416,12 @@ st.caption(
     "Clear the Bearer Token in the sidebar to see a 403 rejection. The agent retrieves the API key from AgentCore Identity — never hardcoded."
 )
 
-# Chat history
+# 채팅 기록
 for msg in st.session_state.chat_history:
     with st.chat_message(msg["role"]):
         st.markdown(_format_response(msg["content"]))
 
-# Preset buttons
+# 사전 설정 버튼
 presets = [
     "What's the weather in Seattle?",
     "Calculate 5 * 7 + 3",
@@ -435,12 +435,12 @@ for i, preset in enumerate(presets):
         if st.button(preset, key=f"preset_{i}", use_container_width=True):
             prompt_to_send = preset
 
-# Chat input
+# 채팅 입력
 user_input = st.chat_input("Ask the agent...")
 if user_input:
     prompt_to_send = user_input
 
-# Send prompt
+# 프롬프트 전송
 if prompt_to_send:
     if not st.session_state.agent_arn:
         st.error("Agent ARN not resolved. Deploy the agent first.")
@@ -484,7 +484,7 @@ if prompt_to_send:
                     }
                 )
 
-# Last request details (collapsed)
+# 마지막 요청 세부 정보(접힌 상태)
 if st.session_state.last_request:
     with st.expander("Last request details", expanded=False):
         req = st.session_state.last_request

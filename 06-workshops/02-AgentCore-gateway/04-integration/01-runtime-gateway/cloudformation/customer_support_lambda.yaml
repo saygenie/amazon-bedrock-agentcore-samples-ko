@@ -129,8 +129,8 @@ Resources:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
-          # Enhanced trust policy with security conditions to prevent confused deputy attacks
-          # This ensures only gateways from your account with the specified naming pattern can assume this role
+          # confused deputy 공격을 방지하는 보안 조건이 포함된 강화된 신뢰 정책
+          # 지정된 이름 패턴을 사용하는 계정 내 Gateway만 이 역할을 수임하도록 보장
           - Sid: GatewayAssumeRolePolicy
             Effect: Allow
             Principal:
@@ -139,11 +139,11 @@ Resources:
             Action:
               - sts:AssumeRole
             Condition:
-              # Ensure the request comes from the same AWS account
+              # 동일한 AWS 계정에서 요청이 전송되도록 보장
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
-              # Restrict to gateways matching the naming pattern
-              # This allows any gateway starting with "customer-support-gatewat-" in the current region
+              # 이름 패턴과 일치하는 Gateway로 제한
+              # 현재 리전에서 "customer-support-gatewat-"으로 시작하는 모든 Gateway 허용
               ArnLike:
                 aws:SourceArn: !Sub "arn:aws:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:gateway/*"
       Policies:
@@ -151,18 +151,18 @@ Resources:
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-              # Comprehensive policy for AgentCore Gateway operations
-              # Grants permissions for gateway management, Bedrock integration, credentials, and target invocation
+              # AgentCore Gateway 작업을 위한 포괄적인 정책
+              # Gateway 관리, Bedrock 통합, 자격 증명 및 대상 호출 권한 부여
               - Sid: VisualEditor0
                 Effect: Allow
                 Action:
-                  - bedrock-agentcore:*              # All AgentCore operations
-                  - bedrock:*                        # All Bedrock operations
-                  - agent-credential-provider:*      # Credential provider management
-                  - iam:PassRole                     # Required to pass roles to services
-                  - secretsmanager:GetSecretValue    # Access secrets for credentials
-                  - lambda:InvokeFunction            # Invoke Lambda targets
-                  - s3:*                             # S3 access for OpenAPI specs and other resources
+                  - bedrock-agentcore:*              # 모든 AgentCore 작업
+                  - bedrock:*                        # 모든 Bedrock 작업
+                  - agent-credential-provider:*      # Credential provider 관리
+                  - iam:PassRole                     # 서비스에 역할을 전달하는 데 필요
+                  - secretsmanager:GetSecretValue    # 자격 증명용 secret 접근
+                  - lambda:InvokeFunction            # Lambda 대상 호출
+                  - s3:*                             # OpenAPI spec 및 기타 리소스에 대한 S3 접근
                 Resource: "*"
       Tags:
         - Key: Name
@@ -170,7 +170,7 @@ Resources:
         - Key: Purpose
           Value: 'AgentCore Gateway Execution'
   
-  # DynamoDB Table for Warranty Information
+  # 보증 정보용 DynamoDB 테이블
   WarrantyTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -198,7 +198,7 @@ Resources:
         - Key: CostCenter
           Value: CustomerSupport
 
-  # DynamoDB Table for Customer Profiles
+  # 고객 프로필용 DynamoDB 테이블
   CustomerProfileTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -234,7 +234,7 @@ Resources:
         - Key: CostCenter
           Value: CustomerSupport
 
-  # Lambda function to populate synthetic data
+  # 합성 데이터를 채우는 Lambda 함수
   PopulateDataFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -511,7 +511,7 @@ Resources:
                   print(f"Error: {str(e)}")
                   cfnresponse.send(event, context, cfnresponse.FAILED, {})
 
-  # IAM Role for Lambda function
+  # Lambda 함수용 IAM 역할
   PopulateDataRole:
     Type: AWS::IAM::Role
     Properties:
@@ -544,7 +544,7 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: arn:aws:logs:*:*:*
-  # Custom resource to trigger Lambda function
+  # Lambda 함수를 트리거하는 사용자 지정 리소스
   PopulateData:
     Type: AWS::CloudFormation::CustomResource
     Properties:
@@ -555,7 +555,7 @@ Resources:
       - WarrantyTable
       - CustomerProfileTable
 
-  # Lambda target
+  # Lambda 대상
   CustomerSupportLambdaRole:
     Type: AWS::IAM::Role
     Properties:

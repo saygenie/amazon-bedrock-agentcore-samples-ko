@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Banking MCP Server
+은행 업무 MCP 서버
 
-Provides banking and account management tools via Model Context Protocol.
-All tools return static JSON responses for demonstration purposes.
+Model Context Protocol을 통해 은행 업무 및 계좌 관리 도구를 제공합니다.
+모든 도구는 데모를 위해 정적 JSON 응답을 반환합니다.
 """
 
 import asyncio
@@ -16,12 +16,12 @@ from mcp.types import Tool, TextContent
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create MCP server
+# MCP Server 생성
 server = Server("banking-tools")
 
 
 # ============================================================================
-# Tool Functions
+# 도구 함수
 # ============================================================================
 
 
@@ -194,7 +194,7 @@ def get_account_summary(customer_id: str) -> str:
 
 
 # ============================================================================
-# MCP Server Configuration
+# MCP Server 구성
 # ============================================================================
 
 TOOLS = [
@@ -296,7 +296,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 
 async def main():
-    """Run the MCP server"""
+    """MCP Server를 실행합니다."""
     logger.info("Starting Banking Tools MCP Server")
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())

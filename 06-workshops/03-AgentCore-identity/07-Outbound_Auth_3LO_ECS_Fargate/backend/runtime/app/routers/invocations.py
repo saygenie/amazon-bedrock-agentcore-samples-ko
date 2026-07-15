@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Agent invocation endpoints."""
+"""에이전트 호출 엔드포인트."""
 
 import logging
 

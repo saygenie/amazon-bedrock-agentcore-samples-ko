@@ -1,7 +1,7 @@
-"""Custom tools that execute Python code and shell commands non-interactively.
+"""Python 코드와 셸 명령을 비대화형으로 실행하는 사용자 지정 도구입니다.
 
-Replaces strands_tools.shell which requires interactive terminal approval
-that fails in non-interactive environments (Jupyter notebooks, CI/CD, etc.).
+비대화형 환경(Jupyter 노트북, CI/CD 등)에서는 실패하는 대화형 터미널 승인이
+필요한 strands_tools.shell을 대체합니다.
 """
 
 import os
@@ -32,7 +32,7 @@ def python_exec(code: str, working_dir: str = "") -> str:
         if working_dir:
             os.makedirs(working_dir, exist_ok=True)
 
-        # Write code to a temp file and execute in a subprocess
+        # 코드를 임시 파일에 작성하고 하위 프로세스에서 실행
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir=cwd) as tmp:
             tmp.write(code)
             tmp_path = tmp.name
@@ -72,7 +72,7 @@ def run_shell(command: str, working_dir: str = "") -> str:
     try:
         result = subprocess.run(
             command,
-            shell=True,  # nosec B602 - shell=True is intentional for this tool
+            shell=True,  # nosec B602 - 이 도구에서는 의도적으로 shell=True 사용
             capture_output=True,
             text=True,
             cwd=working_dir or None,

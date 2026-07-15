@@ -1,16 +1,16 @@
 """
-AgentCore payments — Tutorial Utilities
+AgentCore payments — 튜토리얼 Utility
 
-Only contains what the AgentCore SDK does NOT provide:
-- Environment loading and validation
+AgentCore SDK에서 제공하지 않는 다음 기능만 포함합니다.
+- Environment load 및 validation
 - IAM role assumption
-- Async resource polling (wait_for_status)
-- Idempotent resource creation
-- Cognito setup (for Gateway integration)
-- Config persistence across tutorials (via .env)
-- Observability setup (vended logs + X-Ray)
-- Privy-specific helpers
-- Display helpers
+- Async resource polling(wait_for_status)
+- Idempotent resource 생성
+- Cognito 설정(Gateway 통합용)
+- 튜토리얼 간 config 유지(.env 사용)
+- Observability 설정(vended log + X-Ray)
+- Privy 전용 helper
+- Display helper
 """
 
 import json
@@ -23,7 +23,7 @@ import botocore.exceptions
 from dotenv import load_dotenv
 
 
-# ── Fixed IAM Role Names ────────────────────────────────────────
+# ── 고정 IAM Role 이름 ─────────────────────────────────────────
 CONTROL_PLANE_ROLE = "AgentCorePaymentsControlPlaneRole"
 MANAGEMENT_ROLE = "AgentCorePaymentsManagementRole"
 PROCESS_PAYMENT_ROLE = "AgentCorePaymentsProcessPaymentRole"
@@ -31,12 +31,12 @@ RESOURCE_RETRIEVAL_ROLE = "AgentCorePaymentsResourceRetrievalRole"
 
 
 # ═════════════════════════════════════════════════════════════════
-# Environment
+# 환경
 # ═════════════════════════════════════════════════════════════════
 
 
 def load_payment_env(env_file=".env"):
-    """Load .env file and return config dict."""
+    """.env 파일을 load하고 config dict를 반환합니다."""
     load_dotenv(env_file, override=True)
     return {
         "region": os.environ.get("AWS_REGION", "us-west-2"),
@@ -59,7 +59,7 @@ def load_payment_env(env_file=".env"):
 
 
 def require_env(key):
-    """Get required environment variable or raise with a clear message."""
+    """필수 environment variable을 가져오거나 명확한 메시지와 함께 예외를 발생시킵니다."""
     val = os.environ.get(key, "").strip()
     if not val or val.startswith("<"):
         raise ValueError(f"Missing or placeholder value for {key} in .env")
@@ -67,22 +67,22 @@ def require_env(key):
 
 
 # ═════════════════════════════════════════════════════════════════
-# IAM Role Assumption
+# IAM role assume
 # ═════════════════════════════════════════════════════════════════
 
 
 def assume_role(session, role_arn, session_name="tutorial-session"):
-    """Assume an IAM role and return a new boto3 Session.
+    """IAM role을 assume하고 새 boto3 Session을 반환합니다.
 
-    Verifies the assumed identity immediately. Raises on failure.
+    Assume한 identity를 즉시 검증하며 실패하면 예외를 발생시킵니다.
 
-    Args:
-        session: Existing boto3.Session (used to call STS).
-        role_arn: Full ARN of the role to assume.
-        session_name: STS session name.
+    인수:
+        session: 기존 boto3.Session(STS 호출에 사용)
+        role_arn: Assume할 role의 전체 ARN
+        session_name: STS session name
 
-    Returns:
-        boto3.Session with temporary credentials.
+    반환:
+        Temporary credentials가 있는 boto3.Session
     """
     sts = session.client("sts")
     creds = sts.assume_role(RoleArn=role_arn, RoleSessionName=session_name)["Credentials"]
@@ -100,16 +100,16 @@ def assume_role(session, role_arn, session_name="tutorial-session"):
 
 
 # ═════════════════════════════════════════════════════════════════
-# IAM Role Setup (creates roles inline — no external scripts needed)
+# IAM Role 설정(role을 inline으로 생성하므로 외부 script 불필요)
 # ═════════════════════════════════════════════════════════════════
 
-# Role definitions — permissions for each persona.
-# ProcessPaymentRole includes read actions the Strands plugin needs at runtime.
+# Role 정의 — persona별 권한
+# ProcessPaymentRole에는 Strands plugin이 runtime에 필요한 read action이 포함됨
 #
-# These roles cover AgentCore payments operations only.
-# Infrastructure actions (CloudWatch, X-Ray, Cognito, Gateway) run under
-# the caller's default AWS credentials — not these roles.
-# See Tutorial 00 Step 8b and Tutorial 04 prerequisites for details.
+# 이 role은 AgentCore payments operation만 포함함
+# Infrastructure action(CloudWatch, X-Ray, Cognito, Gateway)은 이 role이 아니라
+# caller의 기본 AWS credentials로 실행됨
+# 자세한 내용은 Tutorial 00의 8b단계와 Tutorial 04의 사전 요구 사항 참조
 PAYMENT_ROLE_DEFINITIONS = {
     CONTROL_PLANE_ROLE: {
         "description": "AgentCore payments: control plane operations",
@@ -176,19 +176,19 @@ PAYMENT_ROLE_DEFINITIONS = {
 
 
 def setup_payment_roles(region=None):
-    """Create the 4 IAM roles needed for AgentCore payments tutorials.
+    """AgentCore payments 튜토리얼에 필요한 IAM role 4개를 생성합니다.
 
-    Checks if each role exists first. Creates only what's missing.
-    Idempotent — safe to run multiple times.
+    각 role의 존재 여부를 먼저 확인하고 누락된 항목만 생성합니다.
+    Idempotent하므로 여러 번 안전하게 실행할 수 있습니다.
 
-    Note: Creates IAM roles that persist until explicitly deleted. Run the
-    cleanup cell in Tutorial 00 to remove them when no longer needed.
+    참고: 명시적으로 삭제할 때까지 유지되는 IAM role을 생성합니다. 더 이상
+    필요하지 않으면 Tutorial 00의 cleanup 셀을 실행하여 제거하세요.
 
-    Args:
-        region: AWS region. Defaults to AWS_REGION env var or us-west-2.
+    인수:
+        region: AWS region. 기본값은 AWS_REGION env var 또는 us-west-2입니다.
 
-    Returns:
-        Dict mapping short names to role ARNs:
+    반환:
+        Short name을 role ARN에 매핑한 dict
         {
             "control_plane": "arn:aws:iam::...:role/AgentCorePaymentsControlPlaneRole",
             "management": "arn:aws:iam::...:role/AgentCorePaymentsManagementRole",
@@ -205,7 +205,7 @@ def setup_payment_roles(region=None):
     account_id = identity["Account"]
     caller_arn = identity["Arn"]
 
-    # Resolve caller to base role ARN (handles assumed-role format)
+    # Caller를 base role ARN으로 resolve(assumed-role 형식 처리)
     caller_role_arn = None
     if ":assumed-role/" in caller_arn:
         role_name = caller_arn.split(":")[-1].split("/")[1]
@@ -214,7 +214,7 @@ def setup_payment_roles(region=None):
         except Exception:
             caller_role_arn = f"arn:aws:iam::{account_id}:role/{role_name}"
 
-    # Build trust policies
+    # Trust policy 구성
     account_principal = f"arn:aws:iam::{account_id}:root"
     principals = [account_principal]
     if caller_role_arn:
@@ -255,18 +255,18 @@ def setup_payment_roles(region=None):
         short = short_names[role_name]
         trust = service_trust if config["trust"] == "service" else account_trust
 
-        # Check if role exists
+        # Role 존재 여부 확인
         try:
             existing = iam.get_role(RoleName=role_name)
             role_arn = existing["Role"]["Arn"]
             role_arns[short] = role_arn
-            # Update trust policy and permissions (idempotent)
+            # Trust policy와 권한 업데이트(idempotent)
             iam.update_assume_role_policy(
                 RoleName=role_name,
                 PolicyDocument=json.dumps(trust),
             )
         except iam.exceptions.NoSuchEntityException:
-            # Create the role
+            # Role 생성
             resp = iam.create_role(
                 RoleName=role_name,
                 AssumeRolePolicyDocument=json.dumps(trust),
@@ -276,7 +276,7 @@ def setup_payment_roles(region=None):
             role_arns[short] = role_arn
             created_count += 1
 
-        # Attach allow policy
+        # Allow policy 연결
         allow_policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -289,8 +289,8 @@ def setup_payment_roles(region=None):
             ],
         }
 
-        # Add SecretsManager write access for ControlPlaneRole
-        # Resource must be "*" because CreateSecret targets secrets that don't exist yet
+        # ControlPlaneRole에 SecretsManager write access 추가
+        # CreateSecret은 아직 존재하지 않는 secret을 대상으로 하므로 Resource는 "*"여야 함
         if config.get("secrets_manager_write"):
             allow_policy["Statement"].append(
                 {
@@ -307,7 +307,7 @@ def setup_payment_roles(region=None):
                 }
             )
 
-        # Add SecretsManager access for ResourceRetrievalRole
+        # ResourceRetrievalRole에 SecretsManager access 추가
         if config.get("secrets_manager"):
             allow_policy["Statement"].append(
                 {
@@ -332,7 +332,7 @@ def setup_payment_roles(region=None):
             PolicyDocument=json.dumps(allow_policy),
         )
 
-        # Attach deny policy if specified
+        # 지정된 경우 deny policy 연결
         if config.get("deny"):
             deny_policy = {
                 "Version": "2012-10-17",
@@ -351,8 +351,8 @@ def setup_payment_roles(region=None):
                 PolicyDocument=json.dumps(deny_policy),
             )
 
-        # Attach PassRole for ControlPlaneRole
-        # Scoped to ResourceRetrievalRole + condition per doc best practice
+        # ControlPlaneRole에 PassRole 연결
+        # 문서의 best practice에 따라 ResourceRetrievalRole + condition으로 scope 제한
         if config.get("pass_role"):
             rr_arn = f"arn:aws:iam::{account_id}:role/{RESOURCE_RETRIEVAL_ROLE}"
             iam.put_role_policy(
@@ -375,7 +375,7 @@ def setup_payment_roles(region=None):
                 ),
             )
 
-    # Wait for IAM propagation if new roles were created
+    # 새 role이 생성된 경우 IAM propagation 대기
     if created_count > 0:
         print(f"  Created {created_count} new role(s). Waiting for IAM propagation...")
         time.sleep(10)
@@ -388,16 +388,16 @@ def setup_payment_roles(region=None):
 
 
 # ═════════════════════════════════════════════════════════════════
-# Async Resource Polling
+# 비동기 resource polling
 # ═════════════════════════════════════════════════════════════════
 
 
 def wait_for_status(client_fn, expected_status, poll_interval=5, timeout=120, **kwargs):
-    """Poll a Get* API until the resource reaches expected_status.
+    """Resource가 expected_status에 도달할 때까지 Get* API를 polling합니다.
 
-    Resolves status from top-level ``status`` or nested ``paymentInstrument.status``.
-    Raises TimeoutError if not reached within timeout.
-    Raises RuntimeError immediately on terminal failure states (*_FAILED).
+    Top-level ``status`` 또는 nested ``paymentInstrument.status``에서 status를
+    resolve합니다. Timeout 내에 도달하지 못하면 TimeoutError를 발생시키고,
+    terminal failure state(*_FAILED)에서는 즉시 RuntimeError를 발생시킵니다.
     """
     deadline = time.time() + timeout
     while True:
@@ -414,14 +414,14 @@ def wait_for_status(client_fn, expected_status, poll_interval=5, timeout=120, **
 
 
 # ═════════════════════════════════════════════════════════════════
-# Idempotent Resource Creation
+# Idempotent Resource 생성
 # ═════════════════════════════════════════════════════════════════
 
 
 def idempotent_create(create_fn, conflict_msg="Resource already exists", **kwargs):
-    """Call create_fn; handle ConflictException gracefully.
+    """create_fn을 호출하고 ConflictException을 문제없이 처리합니다.
 
-    Returns the API response on success, or None if the resource already exists.
+    성공하면 API response를 반환하고 resource가 이미 있으면 None을 반환합니다.
     """
     try:
         return create_fn(**kwargs)
@@ -433,14 +433,14 @@ def idempotent_create(create_fn, conflict_msg="Resource already exists", **kwarg
 
 
 # ═════════════════════════════════════════════════════════════════
-# Cognito (Gateway integration only)
+# Cognito(Gateway 통합 전용)
 # ═════════════════════════════════════════════════════════════════
 
 
 def setup_cognito_user_pool(pool_name="AgentCorePaymentsPool"):
-    """Create a Cognito user pool with M2M client for Gateway integration.
+    """Gateway 통합을 위한 M2M client가 있는 Cognito user pool을 생성합니다.
 
-    Returns dict with pool_id, client_id, client_secret, token_url.
+    pool_id, client_id, client_secret, token_url이 있는 dict를 반환합니다.
     """
     session = boto3.Session()
     region = session.region_name
@@ -485,7 +485,7 @@ def setup_cognito_user_pool(pool_name="AgentCorePaymentsPool"):
 
 
 def get_oauth_token(token_url, client_id, client_secret):
-    """Exchange client credentials for an OAuth2 access token."""
+    """Client credentials를 OAuth2 access token으로 교환합니다."""
     import requests
 
     resp = requests.post(
@@ -503,29 +503,29 @@ def get_oauth_token(token_url, client_id, client_secret):
 
 
 # ═════════════════════════════════════════════════════════════════
-# Config Persistence (via .env — replaces payment_config.json)
+# Config 유지(.env 사용 — payment_config.json 대체)
 # ═════════════════════════════════════════════════════════════════
 
-# Tutorial 00 writes resource IDs into .env. Every downstream tutorial
-# reads them with load_dotenv() + os.environ. No JSON, no custom loader.
+# Tutorial 00은 resource ID를 .env에 기록함. 이후 모든 튜토리얼은
+# load_dotenv() + os.environ으로 이를 읽으며 JSON이나 custom loader는 사용하지 않음
 
 TUTORIAL_ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 
 
 def save_tutorial_config(config_dict, env_path=None):
-    """Write resource IDs from Tutorial 00 into .env for downstream tutorials.
+    """이후 튜토리얼을 위해 Tutorial 00의 resource ID를 .env에 기록합니다.
 
-    Appends to the existing .env (which already has provider credentials and
-    AWS config). Uses update_env_file() for idempotent upsert.
+    Provider credentials와 AWS config가 이미 있는 기존 .env에 추가합니다.
+    Idempotent upsert를 위해 update_env_file()을 사용합니다.
 
-    Args:
-        config_dict: Dict of {ENV_VAR: value} pairs to write.
-            Expected keys: PAYMENT_MANAGER_ARN, PAYMENT_MANAGER_ID,
+    인수:
+        config_dict: 기록할 {ENV_VAR: value} pair의 dict
+            예상 key: PAYMENT_MANAGER_ARN, PAYMENT_MANAGER_ID,
             PAYMENT_CONNECTOR_ID, CREDENTIAL_PROVIDER_ARN, USER_ID,
             INSTRUMENT_ID, WALLET_ADDRESS, SESSION_ID, CREDENTIAL_PROVIDER_TYPE, etc.
-        env_path: Path to .env file. Defaults to 00-getting-started/.env.
+        env_path: .env 파일 path. 기본값은 00-getting-started/.env입니다.
 
-    Example:
+    예:
         save_tutorial_config({
             "PAYMENT_MANAGER_ARN": manager_arn,
             "PAYMENT_CONNECTOR_ID": connector_id,
@@ -540,22 +540,22 @@ def save_tutorial_config(config_dict, env_path=None):
 
 
 def load_tutorial_env(env_path=None):
-    """Load .env and return a dict with the standard fields for plugin config.
+    """.env를 load하고 plugin config용 표준 field가 있는 dict를 반환합니다.
 
-    Call this at the top of any downstream tutorial (01-07) to get the
-    values needed for AgentCorePaymentsPluginConfig.
+    이후 튜토리얼(01~07) 상단에서 호출하여 AgentCorePaymentsPluginConfig에
+    필요한 값을 가져옵니다.
 
-    Args:
-        env_path: Path to .env file. Defaults to 00-getting-started/.env.
+    인수:
+        env_path: .env 파일 path. 기본값은 00-getting-started/.env입니다.
 
-    Returns:
-        Dict with: payment_manager_arn, user_id, instrument_id, session_id,
+    반환:
+        다음 항목이 있는 dict: payment_manager_arn, user_id, instrument_id, session_id,
         connector_id, region, provider_type, wallet_address.
-        For multi-provider setups (Tutorial 07), also includes
-        multi_provider=True and instruments/connectors dicts.
-        Missing keys are None (not raised).
+        Multi-provider 설정(Tutorial 07)에서는 multi_provider=True와
+        instruments/connectors dict도 포함합니다. 누락된 key는 예외를
+        발생시키지 않고 None이 됩니다.
 
-    Example:
+    예:
         cfg = load_tutorial_env()
         plugin = AgentCorePaymentsPlugin(config=AgentCorePaymentsPluginConfig(
             payment_manager_arn=cfg["payment_manager_arn"],
@@ -583,7 +583,7 @@ def load_tutorial_env(env_path=None):
         "provider_type": os.environ.get("CREDENTIAL_PROVIDER_TYPE"),
     }
 
-    # Multi-provider support (Tutorial 07)
+    # Multi-provider 지원(Tutorial 07)
     coinbase_instr = os.environ.get("COINBASE_INSTRUMENT_ID")
     privy_instr = os.environ.get("PRIVY_INSTRUMENT_ID")
 
@@ -608,12 +608,12 @@ def load_tutorial_env(env_path=None):
 
 
 # ═════════════════════════════════════════════════════════════════
-# Display Helpers
+# 출력 helper
 # ═════════════════════════════════════════════════════════════════
 
 
 def pp(label, response):
-    """Pretty-print an API response, stripping ResponseMetadata."""
+    """ResponseMetadata를 제거하고 API response를 보기 좋게 출력합니다."""
     data = {k: v for k, v in response.items() if k != "ResponseMetadata"}
     print(f"\n{'=' * 60}")
     print(f"  {label}")
@@ -622,7 +622,7 @@ def pp(label, response):
 
 
 def print_summary(title, **kwargs):
-    """Pretty-print a summary block for notebook output."""
+    """Notebook output용 summary block을 보기 좋게 출력합니다."""
     print(f"\n{'=' * 60}")
     print(f"  {title}")
     print(f"{'=' * 60}")
@@ -633,40 +633,40 @@ def print_summary(title, **kwargs):
 
 
 def client_token():
-    """Generate idempotency token (>= 33 chars)."""
+    """Idempotency token을 생성합니다(33자 이상)."""
     return f"{uuid.uuid4()}-{uuid.uuid4().hex[:8]}"
 
 
 # ═════════════════════════════════════════════════════════════════
-# Observability (Vended Logs + Traces)
+# Observability(vended log + trace)
 # ═════════════════════════════════════════════════════════════════
 
 
 def enable_observability(resource_arn, resource_id, account_id, region="us-west-2", enable_xray_spans=False):
-    """Enable CloudWatch vended logs and X-Ray traces for an AgentCore payments resource.
+    """AgentCore payments resource의 CloudWatch vended log와 X-Ray trace를 활성화합니다.
 
-    Creates delivery sources, destinations, and deliveries for both APPLICATION_LOGS
-    and TRACES. Optionally configures X-Ray span delivery to CloudWatch Logs.
+    APPLICATION_LOGS와 TRACES의 delivery source, destination, delivery를
+    생성합니다. 선택적으로 CloudWatch Logs로의 X-Ray span delivery를 구성합니다.
 
-    **Cost notice:** This function creates CloudWatch log groups, delivery sources,
-    delivery destinations, and X-Ray resources that may incur AWS charges. Delete
-    the log group ``/aws/vendedlogs/bedrock-agentcore/<manager-id>`` when finished.
+    **비용 안내:** 이 함수는 AWS 요금이 발생할 수 있는 CloudWatch log group,
+    delivery source, delivery destination, X-Ray resource를 생성합니다. 작업을
+    마치면 ``/aws/vendedlogs/bedrock-agentcore/<manager-id>`` log group을 삭제하세요.
 
-    After enabling, any data plane API call (CreateInstrument, ProcessPayment, etc.)
-    produces logs and trace data in the configured CloudWatch Log Group.
+    활성화 후 모든 data plane API 호출(CreateInstrument, ProcessPayment 등)이
+    구성된 CloudWatch Log Group에 log와 trace data를 생성합니다.
 
-    Args:
-        resource_arn: ARN of the Payment Manager.
-        resource_id: Payment Manager ID (short ID).
-        account_id: AWS account ID.
-        region: AWS region.
-        enable_xray_spans: If True, configure X-Ray to deliver spans to CloudWatch Logs.
+    인수:
+        resource_arn: Payment Manager의 ARN
+        resource_id: Payment Manager ID(short ID)
+        account_id: AWS account ID
+        region: AWS region
+        enable_xray_spans: True이면 X-Ray가 CloudWatch Logs로 span을 전달하도록 구성
 
-    Returns:
-        Dict with logs_delivery_id and traces_delivery_id.
+    반환:
+        logs_delivery_id와 traces_delivery_id가 있는 dict
 
-    Prerequisites:
-        The calling role needs these permissions:
+    사전 요구 사항:
+        호출 role에 다음 권한이 필요합니다.
         - logs:CreateDelivery, logs:CreateLogGroup, logs:CreateLogStream,
           logs:DeleteDelivery, logs:DeleteDeliveryDestination, logs:DeleteDeliverySource,
           logs:DescribeLogGroups, logs:DescribeResourcePolicies,
@@ -680,9 +680,9 @@ def enable_observability(resource_arn, resource_id, account_id, region="us-west-
         - iam:CreateServiceLinkedRole (for AWSServiceRoleForCloudWatchApplicationSignals)
         - bedrock-agentcore:AllowVendedLogDeliveryForResource
     """
-    # Step 1: Allow vended log delivery for the resource
-    # This authorizes the Bedrock AgentCore service to publish vended logs to your account.
-    # Must be called before creating delivery sources/destinations.
+    # 1단계: Resource의 vended log delivery 허용
+    # Bedrock AgentCore service가 account에 vended log를 게시하도록 authorize함
+    # Delivery source/destination을 생성하기 전에 호출해야 함
     agentcore_client = boto3.client("bedrock-agentcore-control", region_name=region)
     try:
         agentcore_client.allow_vended_log_delivery_for_resource(resourceArn=resource_arn)
@@ -690,13 +690,13 @@ def enable_observability(resource_arn, resource_id, account_id, region="us-west-
     except agentcore_client.exceptions.ConflictException:
         print(f"  Vended log delivery already allowed for {resource_arn}")
     except Exception as e:
-        # Non-fatal — some accounts may already have this enabled or the API may not
-        # be available in all regions yet.
+        # 치명적이지 않음 — 일부 account에서는 이미 활성화되었거나 아직 모든 region에서
+        # API를 사용할 수 없을 수 있음
         print(f"  Note: AllowVendedLogDeliveryForResource returned: {e}")
 
     logs_client = boto3.client("logs", region_name=region)
 
-    # Step 2: Create log group
+    # 2단계: Log group 생성
     log_group_name = f"/aws/vendedlogs/bedrock-agentcore/{resource_id}"
     try:
         logs_client.create_log_group(logGroupName=log_group_name)
@@ -706,11 +706,11 @@ def enable_observability(resource_arn, resource_id, account_id, region="us-west-
 
     log_group_arn = f"arn:aws:logs:{region}:{account_id}:log-group:{log_group_name}"
 
-    # X-Ray spans setup
+    # X-Ray span 설정
     if enable_xray_spans:
         _setup_xray_spans(logs_client, region)
 
-    # Step 3: Create delivery sources
+    # 3단계: Delivery source 생성
     print("  Creating delivery sources (APPLICATION_LOGS + TRACES)...")
     logs_src = logs_client.put_delivery_source(
         name=f"{resource_id}-logs-source",
@@ -721,7 +721,7 @@ def enable_observability(resource_arn, resource_id, account_id, region="us-west-
         name=f"{resource_id}-traces-source", logType="TRACES", resourceArn=resource_arn
     )
 
-    # Step 4: Create delivery destinations
+    # 4단계: Delivery destination 생성
     print("  Creating delivery destinations (CWL + XRAY)...")
     logs_dst = logs_client.put_delivery_destination(
         name=f"{resource_id}-logs-destination",
@@ -733,7 +733,7 @@ def enable_observability(resource_arn, resource_id, account_id, region="us-west-
         deliveryDestinationType="XRAY",
     )
 
-    # Step 5: Connect sources to destinations
+    # 5단계: Source를 destination에 연결
     print("  Creating deliveries...")
     logs_delivery = logs_client.create_delivery(
         deliverySourceName=logs_src["deliverySource"]["name"],
@@ -753,7 +753,7 @@ def enable_observability(resource_arn, resource_id, account_id, region="us-west-
 
 
 def _setup_xray_spans(logs_client, region):
-    """Configure X-Ray to deliver spans to CloudWatch Logs."""
+    """X-Ray가 CloudWatch Logs로 span을 전달하도록 구성합니다."""
     import json as _json
 
     logs_client.put_resource_policy(
@@ -786,7 +786,7 @@ def _setup_xray_spans(logs_client, region):
             raise
         print("  X-Ray already set to CloudWatchLogs")
 
-    # Wait for ACTIVE
+    # ACTIVE가 될 때까지 대기
     for attempt in range(1, 25):
         resp = xray_client.get_trace_segment_destination()
         destination = resp.get("Destination", {})
@@ -803,35 +803,34 @@ def _setup_xray_spans(logs_client, region):
 
 
 # ═════════════════════════════════════════════════════════════════
-# Privy Helpers (StripePrivy provider only)
+# Privy Helper(StripePrivy provider 전용)
 # ═════════════════════════════════════════════════════════════════
 #
-# These helpers automate the parts of Privy setup that have a public API,
-# so the tutorial can avoid sending developers through the Privy dashboard
-# more than the minimum required. What stays manual:
-#   1. Creating the Privy app itself (no public API).
-#   2. Adding allowed origins (dashboard-only).
-#   3. Running the local Privy reference frontend (browser + localhost).
+# 이 helper는 public API가 있는 Privy 설정 부분을 자동화하여 개발자가 Privy dashboard에서
+# 수행해야 하는 작업을 최소화함. 다음 항목은 수동으로 수행해야 함
+#   1. Privy app 자체 생성(public API 없음)
+#   2. 허용된 origin 추가(dashboard 전용)
+#   3. 로컬 Privy reference frontend 실행(browser + localhost)
 #
-# Everything else — generating the P-256 keypair, registering the key
-# quorum, updating .env, verifying consent landed — runs from here.
+# P-256 keypair 생성, key quorum 등록, .env 업데이트, consent 적용 검증 등
+# 나머지 모든 작업은 여기서 실행됨
 
 PRIVY_API_BASE = "https://api.privy.io/v1"
 
 
 def update_env_file(env_path_or_updates, updates=None):
-    """Idempotently upsert key=value pairs into a .env file.
+    """key=value pair를 .env 파일에 idempotent하게 upsert합니다.
 
-    Creates the file if it doesn't exist. Preserves existing lines, comments,
-    and blank lines. Each key in ``updates`` is either replaced in place (if
-    already present) or appended in a trailing block.
+    파일이 없으면 생성합니다. 기존 line, comment, blank line을 보존합니다.
+    ``updates``의 각 key는 이미 있으면 제자리에서 교체하고, 없으면 마지막
+    block에 추가합니다.
 
-    Supports two call signatures:
+    두 가지 호출 signature를 지원합니다.
         update_env_file('.env', {'KEY': 'val'})
-        update_env_file({'KEY': 'val'})  # defaults to '.env'
+        update_env_file({'KEY': 'val'})  # 기본값은 '.env'
 
-    Returns:
-        Dict with ``added`` and ``updated`` lists of keys, for reporting.
+    반환:
+        보고용 ``added`` 및 ``updated`` key 목록이 있는 dict
     """
     if updates is None:
         updates = env_path_or_updates
@@ -886,20 +885,20 @@ def update_env_file(env_path_or_updates, updates=None):
 
 
 def render_frontend_env_local(app_id, app_secret, signer_id, network_mode="testnet"):
-    """Build the contents of the Privy reference frontend's ``.env.local`` file.
+    """Privy reference frontend의 ``.env.local`` 파일 내용을 구성합니다.
 
-    Pure string builder — no filesystem access, no shell instructions. The
-    notebook prints the returned string for the developer to paste into the
-    Privy reference frontend's ``.env.local`` on their local machine.
+    Filesystem access나 shell instruction이 없는 순수 string builder입니다.
+    Notebook은 반환된 string을 출력하며 개발자는 이를 로컬 machine의 Privy
+    reference frontend ``.env.local``에 붙여 넣습니다.
 
-    Args:
-        app_id: Privy app ID (``NEXT_PUBLIC_PRIVY_APP_ID``).
-        app_secret: Privy app secret (``PRIVY_APP_SECRET`` — server-only).
-        signer_id: Privy key quorum ID (``NEXT_PUBLIC_PRIVY_SIGNER_ID``).
-        network_mode: ``testnet`` or ``mainnet``.
+    인수:
+        app_id: Privy app ID(``NEXT_PUBLIC_PRIVY_APP_ID``)
+        app_secret: Privy app secret(``PRIVY_APP_SECRET`` — server 전용)
+        signer_id: Privy key quorum ID(``NEXT_PUBLIC_PRIVY_SIGNER_ID``)
+        network_mode: ``testnet`` 또는 ``mainnet``
 
-    Returns:
-        The ``.env.local`` body as a string.
+    반환:
+        String 형태의 ``.env.local`` body
     """
     return (
         f"NEXT_PUBLIC_PRIVY_APP_ID={app_id}\n"
@@ -910,23 +909,21 @@ def render_frontend_env_local(app_id, app_secret, signer_id, network_mode="testn
 
 
 def save_privy_authorization_key(env_path, authorization_id, authorization_private_key):
-    """Save Privy authorization key credentials to .env, stripping the wallet-auth: prefix.
+    """wallet-auth: prefix를 제거하고 Privy authorization key credentials를 .env에 저장합니다.
 
-    Privy's dashboard displays the authorization private key with a ``wallet-auth:``
-    prefix. That prefix is not part of the key itself and must be removed before the
-    key is passed to the Bedrock AgentCore ``authorizationPrivateKey`` field —
-    Bedrock AgentCore validation rejects the prefixed form.
+    Privy dashboard는 authorization private key에 ``wallet-auth:`` prefix를
+    붙여 표시합니다. 이 prefix는 key 자체의 일부가 아니므로 key를 Bedrock AgentCore
+    ``authorizationPrivateKey`` field에 전달하기 전에 제거해야 합니다.
+    Bedrock AgentCore validation은 prefix가 있는 형식을 거부합니다.
 
-    Args:
-        env_path: Path to the .env file.
-        authorization_id: The authorization ID from the Privy dashboard (public
-            identifier, safe to log).
-        authorization_private_key: The private key as copied from the Privy
-            dashboard, with or without the ``wallet-auth:`` prefix. The prefix is
-            stripped if present.
+    인수:
+        env_path: .env 파일 path
+        authorization_id: Privy dashboard의 authorization ID(public identifier로 log에 안전)
+        authorization_private_key: Privy dashboard에서 복사한 private key.
+            ``wallet-auth:`` prefix는 있을 수도 있고 없을 수도 있으며 있으면 제거합니다.
 
-    Returns:
-        The result of :func:`update_env_file`.
+    반환:
+        :func:`update_env_file`의 결과
     """
     prefix = "wallet-auth:"
     key = authorization_private_key.strip()
@@ -944,33 +941,33 @@ def save_privy_authorization_key(env_path, authorization_id, authorization_priva
 
 
 def verify_privy_signer_on_wallet(app_id, app_secret, wallet_address_or_id, quorum_id):
-    """Check whether a key quorum is registered as a signer on a Privy wallet.
+    """Key quorum이 Privy wallet의 signer로 등록되었는지 확인합니다.
 
-    After the end user grants signer access in the Privy reference frontend (Step 7b of the
-    main setup notebook), Privy adds the key quorum to the wallet's
-    ``additional_signers``. Call this to confirm consent landed before
-    attempting ``ProcessPayment`` — missing delegation is the single most
-    common cause of ProcessPayment failures with the StripePrivy provider.
+    최종 사용자가 Privy reference frontend(main setup Notebook의 7b단계)에서
+    signer access를 부여하면 Privy가 key quorum을 wallet의 ``additional_signers``에
+    추가합니다. ``ProcessPayment``를 시도하기 전에 이를 호출하여 consent가
+    적용되었는지 확인하세요. Delegation 누락은 StripePrivy provider에서
+    ProcessPayment가 실패하는 가장 일반적인 원인입니다.
 
-    Accepts either a Privy wallet ID (a CUID2 like ``trv721k23pqzjd3pdqmh54o7``)
-    or an on-chain wallet address (``0x…`` for EVM, base58 for Solana). Uses
-    the right Privy endpoint for each:
+    Privy wallet ID(``trv721k23pqzjd3pdqmh54o7`` 같은 CUID2) 또는 on-chain
+    wallet address(EVM은 ``0x…``, Solana는 base58)를 받습니다. 각 형식에
+    적합한 Privy endpoint를 사용합니다.
 
     - Wallet ID:  ``GET  /v1/wallets/{wallet_id}``
     - Address:    ``POST /v1/wallets/address``  (body: ``{"address": "…"}``)
 
-    Args:
-        app_id: Privy app ID (``PRIVY_APP_ID``).
-        app_secret: Privy app secret (``PRIVY_APP_SECRET``).
-        wallet_address_or_id: Privy wallet ID or on-chain address.
-        quorum_id: Key quorum ID to look for. The Bedrock AgentCore
-            ``PRIVY_AUTHORIZATION_ID`` field.
+    인수:
+        app_id: Privy app ID(``PRIVY_APP_ID``)
+        app_secret: Privy app secret(``PRIVY_APP_SECRET``)
+        wallet_address_or_id: Privy wallet ID 또는 on-chain address
+        quorum_id: 검색할 key quorum ID. Bedrock AgentCore
+            ``PRIVY_AUTHORIZATION_ID`` field
 
-    Returns:
-        True if the quorum is present in ``additional_signers``, else False.
+    반환:
+        ``additional_signers``에 quorum이 있으면 True, 없으면 False
 
-    Raises:
-        RuntimeError: if Privy returns an unexpected error.
+    예외:
+        RuntimeError: Privy가 예상하지 못한 error를 반환한 경우
     """
     import re
     import requests
@@ -978,9 +975,9 @@ def verify_privy_signer_on_wallet(app_id, app_secret, wallet_address_or_id, quor
     auth = (app_id, app_secret)
     headers = {"privy-app-id": app_id, "Content-Type": "application/json"}
 
-    # Fetch the wallet object using whichever endpoint fits the input format.
-    # Wallet IDs are CUID2 (24 lowercase alphanumeric, starting with a letter).
-    # Anything else is treated as an on-chain address.
+    # Input 형식에 맞는 endpoint를 사용하여 wallet object 가져오기
+    # Wallet ID는 영문자로 시작하는 24자의 소문자 alphanumeric CUID2
+    # 그 외의 값은 on-chain address로 처리
     is_wallet_id = bool(re.fullmatch(r"[a-z][a-z0-9]{23}", wallet_address_or_id))
 
     if is_wallet_id:
@@ -1010,7 +1007,7 @@ def verify_privy_signer_on_wallet(app_id, app_secret, wallet_address_or_id, quor
 
     wallet = resp.json()
     signers = wallet.get("additional_signers") or wallet.get("additionalSigners") or []
-    # Entries can be dicts ({"signer_id": "..."}) or bare strings; handle both.
+    # Entry는 dict({"signer_id": "..."}) 또는 bare string일 수 있으므로 모두 처리
     signer_ids = {
         (s.get("signer_id") or s.get("id") or s.get("key_quorum_id")) if isinstance(s, dict) else s for s in signers
     }

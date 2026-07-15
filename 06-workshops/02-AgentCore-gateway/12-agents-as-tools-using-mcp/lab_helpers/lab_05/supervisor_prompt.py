@@ -1,9 +1,9 @@
 """
-Supervisor Agent System Prompt for Lab 05
-Multi-Agent Orchestration with Diagnostic, Remediation, and Prevention Agents
+Lab 05용 Supervisor Agent 시스템 Prompt
+Diagnostic, Remediation 및 Prevention Agent를 사용하는 Multi-Agent Orchestration
 
-This prompt defines the orchestration logic for the supervisor agent that
-coordinates three specialized sub-agents to provide comprehensive SRE solutions.
+이 prompt는 포괄적인 SRE 솔루션을 제공하기 위해 세 개의 전문 하위 Agent를
+조정하는 Supervisor Agent의 오케스트레이션 로직을 정의합니다.
 """
 
 SUPERVISOR_SYSTEM_PROMPT = """# Supervisor Agent System Prompt
@@ -126,7 +126,7 @@ You are an expert SRE Supervisor Agent that orchestrates three specialized sub-a
 """
 
 
-# Alternative: Concise version for token-constrained environments
+# 대안: 토큰 제약이 있는 환경을 위한 간결한 버전
 SUPERVISOR_SYSTEM_PROMPT_CONCISE = """You are an SRE Supervisor Agent orchestrating 3 specialized sub-agents:
 
 1. **Diagnostic Agent**: Identifies root causes from AWS infrastructure (CloudWatch, EC2, ALB)
@@ -155,12 +155,12 @@ Common Issues: Memory leaks, DynamoDB throttling, nginx timeouts, ALB health che
 
 def get_supervisor_prompt(concise: bool = False) -> str:
     """
-    Get the supervisor agent system prompt
+    Supervisor Agent 시스템 prompt를 반환합니다.
 
-    Args:
-        concise: If True, return the token-optimized concise version
+    인자:
+        concise: True이면 토큰에 최적화된 간결한 버전 반환
 
-    Returns:
-        System prompt string
+    반환:
+        시스템 prompt 문자열
     """
     return SUPERVISOR_SYSTEM_PROMPT_CONCISE if concise else SUPERVISOR_SYSTEM_PROMPT

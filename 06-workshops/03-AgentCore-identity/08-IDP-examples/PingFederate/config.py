@@ -1,13 +1,13 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""CDK deployment configuration."""
+"""CDK 배포 구성입니다."""
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class PingFederateConfig(BaseSettings):
-    """PingFederate DevOps credentials. Loaded from environment variables or .env file."""
+    """환경 변수 또는 .env 파일에서 불러오는 PingFederate DevOps 자격 증명입니다."""
 
     model_config = SettingsConfigDict(
         env_prefix="PING_IDENTITY_",
@@ -21,7 +21,7 @@ class PingFederateConfig(BaseSettings):
 
 
 class CdkConfig(BaseSettings):
-    """CDK deployment configuration."""
+    """CDK 배포 구성입니다."""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

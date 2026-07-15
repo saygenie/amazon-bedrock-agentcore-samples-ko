@@ -1,16 +1,16 @@
-# LlamaIndex with AWS Bedrock AgentCore Memory Integration
+# LlamaIndex와 AWS Bedrock AgentCore Memory 통합
 
-This project showcases enterprise-grade AI agents with persistent memory capabilities, demonstrating how LlamaIndex's ReAct framework integrates seamlessly with AWS Bedrock AgentCore Memory to create intelligent systems that learn, adapt, and evolve over time. Unlike traditional stateless agents, these implementations maintain contextual awareness across sessions, enabling sophisticated longitudinal analysis, cross-reference capabilities, and cumulative knowledge building that transforms how AI agents operate in professional environments.
+이 프로젝트는 지속적인 메모리 기능을 갖춘 엔터프라이즈급 AI Agent를 소개합니다. LlamaIndex의 ReAct 프레임워크를 AWS Bedrock AgentCore Memory와 원활하게 통합하여 시간이 지남에 따라 학습하고 적응하며 발전하는 지능형 시스템을 만드는 방법을 보여 줍니다. 기존의 상태 비저장 Agent와 달리, 이러한 구현은 세션 전반에서 맥락 인식을 유지합니다. 이를 통해 정교한 종단 분석, 상호 참조 기능, 누적 지식 구축이 가능하며 전문 업무 환경에서 AI Agent가 작동하는 방식을 개선할 수 있습니다.
 
-## 🚀 Key Features
+## 🚀 주요 기능
 
-- **Native LlamaIndex Integration**: Direct memory passing with `agent.run(message, memory=agentcore_memory)`
-- **Domain-Specific Examples**: Academic Research, Legal Document Analysis, Medical Knowledge, Investment Portfolio Management
-- **Comprehensive Testing**: 8-10 systematic test cases per example with expected validation
-- **Short & Long-term Memory**: Complete coverage of both memory types
-- **Enterprise-Ready**: Simple, explicit APIs suitable for production environments
+- **LlamaIndex 기본 통합**: `agent.run(message, memory=agentcore_memory)`으로 메모리를 직접 전달
+- **도메인별 예제**: 학술 연구, 법률 문서 분석, 의학 지식, 투자 포트폴리오 관리
+- **포괄적인 테스트**: 예제마다 예상 검증 결과가 포함된 8~10개의 체계적인 테스트 사례 제공
+- **단기 및 장기 메모리**: 두 메모리 유형을 모두 다룸
+- **엔터프라이즈 지원**: 프로덕션 환경에 적합한 단순하고 명시적인 API
 
-## 📁 Project Structure
+## 📁 프로젝트 구조
 
 ```
 ├── 01-short-term-memory/
@@ -26,113 +26,113 @@ This project showcases enterprise-grade AI agents with persistent memory capabil
 └── requirements.txt
 ```
 
-## 🎯 Use Cases
+## 🎯 사용 사례
 
-### Academic Research Assistant
-- **Short-term**: Paper analysis, research synthesis within single session
-- **Long-term**: Cross-session research evolution, grant proposal support over months
-- **Memory Intelligence**: Tracks research themes, citation networks, and methodology evolution
-- **Testing**: 8 comprehensive tests including contextual reasoning and cross-reference validation
+### 학술 연구 도우미
+- **단기**: 단일 세션 내 논문 분석 및 연구 종합
+- **장기**: 세션 간 연구 발전 추적 및 수개월에 걸친 연구비 지원 제안서 작성 지원
+- **메모리 인텔리전스**: 연구 주제, 인용 네트워크, 방법론의 발전 과정 추적
+- **테스트**: 맥락 추론과 상호 참조 검증을 포함한 8개의 포괄적인 테스트
 
-### Legal Document Analyzer  
-- **Short-term**: Contract analysis, risk assessment, compliance checking
-- **Long-term**: Multi-case precedent tracking, legal knowledge accumulation (12-month retention)
-- **Memory Intelligence**: Builds case law database, tracks regulatory changes, maintains client history
-- **Testing**: 9 systematic tests including precedent application and regulatory compliance
+### 법률 문서 분석기
+- **단기**: 계약 분석, 위험 평가, 규정 준수 확인
+- **장기**: 여러 사건의 판례 추적 및 법률 지식 축적(12개월 보존)
+- **메모리 인텔리전스**: 판례 데이터베이스 구축, 규제 변경 추적, 고객 기록 유지
+- **테스트**: 판례 적용 및 규정 준수를 포함한 9개의 체계적인 테스트
 
-### Medical Knowledge Assistant
-- **Short-term**: Patient consultation, drug interactions, clinical guidelines
-- **Long-term**: Longitudinal patient care, treatment outcomes, population health trends
-- **Memory Intelligence**: Maintains patient histories, tracks treatment efficacy, learns from outcomes
-- **Testing**: 10 comprehensive tests including clinical reasoning and treatment planning
+### 의학 지식 도우미
+- **단기**: 환자 상담, 약물 상호 작용, 임상 지침
+- **장기**: 종단 환자 진료, 치료 결과, 인구 집단 건강 추세
+- **메모리 인텔리전스**: 환자 기록 유지, 치료 효과 추적, 결과를 통한 학습
+- **테스트**: 임상 추론 및 치료 계획을 포함한 10개의 포괄적인 테스트
 
-### Investment Portfolio Advisor
-- **Short-term**: Client profiling, portfolio analysis, investment recommendations  
-- **Long-term**: Multi-quarter performance tracking (Q1→Q2→Q3→Q4), market intelligence, wealth management
-- **Memory Intelligence**: Tracks $3.2M→$3.45M portfolio evolution, market timing decisions, thesis adaptation
-- **Testing**: 10 systematic tests including quarterly performance attribution and multi-year investment journey analysis
+### 투자 포트폴리오 자문
+- **단기**: 고객 프로파일링, 포트폴리오 분석, 투자 추천
+- **장기**: 여러 분기의 성과 추적(Q1→Q2→Q3→Q4), 시장 인텔리전스, 자산 관리
+- **메모리 인텔리전스**: $3.2M→$3.45M의 포트폴리오 변화, 시장 진입 시점 결정, 투자 논리 조정 과정 추적
+- **테스트**: 분기별 성과 기여도와 다년간의 투자 여정 분석을 포함한 10개의 체계적인 테스트
 
-## 🏗️ System Architecture
+## 🏗️ 시스템 아키텍처
 
-*Architecture diagram will be added here*
+*아키텍처 다이어그램이 여기에 추가될 예정입니다.*
 
-## 🛠️ Prerequisites
+## 🛠️ 사전 요구 사항
 
 - Python 3.10+
-- AWS account with Bedrock AgentCore Memory permissions
-- AWS CLI configured with appropriate credentials
-- Access to Claude 3.7 Sonnet inference profile (`us.anthropic.claude-3-7-sonnet-20250219-v1:0`)
+- Bedrock AgentCore Memory 권한이 있는 AWS 계정
+- 적절한 자격 증명으로 구성된 AWS CLI
+- Claude 3.7 Sonnet inference profile(`us.anthropic.claude-3-7-sonnet-20250219-v1:0`) 액세스 권한
 
-## 📦 Installation
+## 📦 설치
 
 ```bash
-# Install all dependencies including Jupyter
+# Jupyter를 포함한 모든 종속성 설치
 pip install -r requirements.txt
 
-# Alternative: Install Jupyter separately
+# 대안: Jupyter를 별도로 설치
 pip install jupyter ipykernel
 ```
 
-## 🚀 Quick Start
+## 🚀 빠른 시작
 
-1. **Configure AWS credentials:**
+1. **AWS 자격 증명을 구성합니다.**
    ```bash
    aws configure
    ```
 
-2. **Choose a tutorial and open the notebook:**
+2. **튜토리얼을 선택하고 노트북을 엽니다.**
    ```bash
    jupyter notebook 01-short-term-memory/academic-research-assistant-short-term-memory-tutorial.ipynb
    ```
 
-3. **Follow the step-by-step tutorial** with comprehensive testing
+3. 포괄적인 테스트가 포함된 **단계별 튜토리얼을 따라 진행합니다.**
 
-## 🏗️ Key Benefits
+## 🏗️ 주요 이점
 
-- ✅ **Explicit Control**: Direct memory parameter vs hidden automation
-- ✅ **Easy Debugging**: Visible memory operations vs background hooks  
-- ✅ **Simple API**: `agent.run(message, memory=memory)` vs complex setup
-- ✅ **Comprehensive Testing**: Systematic validation with expected results
-- ✅ **Domain Expertise**: Specialized use cases vs generic examples
+- ✅ **명시적 제어**: 숨겨진 자동화 대신 메모리 파라미터를 직접 사용
+- ✅ **간편한 디버깅**: 백그라운드 hook 대신 메모리 작업을 직접 확인
+- ✅ **단순한 API**: 복잡한 구성 대신 `agent.run(message, memory=memory)` 사용
+- ✅ **포괄적인 테스트**: 예상 결과를 포함한 체계적인 검증
+- ✅ **도메인 전문성**: 일반적인 예제 대신 특화된 사용 사례 제공
 
-## 📊 Testing Methodology
+## 📊 테스트 방법론
 
-Each notebook includes **8-10 systematic tests** with clear validation:
+각 노트북에는 명확한 검증 기준을 갖춘 **8~10개의 체계적인 테스트**가 포함되어 있습니다.
 
-### Test Categories
-- **Test 1-2: Memory Storage** - Verify information persistence and tool integration
-- **Test 3-4: Context Recall** - Validate identity, metrics, and detailed information retrieval  
-- **Test 5-6: Reasoning & Synthesis** - Test cross-reference capabilities and knowledge synthesis
-- **Test 7-8: Practical Application** - Real-world scenario validation (grant proposals, case analysis)
-- **Test 9-10: Session Boundaries** - Memory isolation and cross-session behavior verification
+### 테스트 범주
+- **테스트 1~2: 메모리 저장** - 정보 지속성과 도구 통합 확인
+- **테스트 3~4: 맥락 회상** - ID, 지표, 세부 정보 검색 검증
+- **테스트 5~6: 추론 및 종합** - 상호 참조 기능과 지식 종합 테스트
+- **테스트 7~8: 실무 적용** - 실제 시나리오 검증(연구비 지원 제안서, 사건 분석)
+- **테스트 9~10: 세션 경계** - 메모리 격리 및 세션 간 동작 확인
 
-### Validation Approach
-- **✅ Expected Results**: Each test shows expected outputs for comparison
-- **🎯 Success Criteria**: Clear pass/fail indicators with specific metrics
-- **📊 Progressive Complexity**: Tests build from basic recall to advanced reasoning
-- **🔍 Edge Case Testing**: Session boundaries, memory limits, and error handling
+### 검증 방식
+- **✅ 예상 결과**: 각 테스트에 비교할 예상 출력 표시
+- **🎯 성공 기준**: 구체적인 지표를 사용한 명확한 통과/실패 기준
+- **📊 점진적 복잡도**: 기본 회상부터 고급 추론까지 단계적으로 구성된 테스트
+- **🔍 엣지 케이스 테스트**: 세션 경계, 메모리 제한, 오류 처리
 
-### Example Test Pattern
+### 테스트 패턴 예제
 ```python
-# Test 4: Detailed Metrics Recall
+# 테스트 4: 상세 지표 회상
 response = await agent.run("What were the exact accuracy percentages?", memory=memory)
 print("📊 Result:", response)
 print("✅ Expected: Zhang et al - CNNs 95.2%, Johnson et al - BERT 89.1%")
-# Users can verify: Does response contain both accuracy numbers?
+# 사용자는 응답에 두 정확도 수치가 모두 포함되는지 확인할 수 있음
 ```
 
-## 🔧 Technical Overview
+## 🔧 기술 개요
 
-**Key Long-Term Memory Components:**
-1. **Semantic Strategy Configuration**: Uses SemanticStrategy for automatic insight extraction with 365-day retention
-2. **Cross-Session Persistence**: Same actor_id + memory_id, different session_id per period enables knowledge continuity
-3. **Custom Memory Search Tool**: Wraps AgentCore's native search_long_term_memories() in LlamaIndex FunctionTool
-4. **Semantic Processing Pipeline**: 90-120 second wait for conversational events → semantic memories conversion
-5. **Dynamic Session Management**: Uses memory.context.session_id for flexible session handling
+**주요 장기 메모리 구성 요소:**
+1. **Semantic Strategy 구성**: SemanticStrategy를 사용하여 365일 동안 보존되는 인사이트를 자동으로 추출합니다.
+2. **세션 간 지속성**: 동일한 actor_id와 memory_id를 사용하고 기간마다 다른 session_id를 사용하여 지식의 연속성을 유지합니다.
+3. **사용자 지정 메모리 검색 도구**: AgentCore의 기본 search_long_term_memories()를 LlamaIndex FunctionTool로 래핑합니다.
+4. **Semantic 처리 파이프라인**: 대화 이벤트를 90~120초 동안 처리한 후 semantic memory로 변환합니다.
+5. **동적 세션 관리**: memory.context.session_id를 사용하여 세션을 유연하게 처리합니다.
 
-## 🔧 Memory Configuration
+## 🔧 메모리 구성
 
-### Short-term Memory
+### 단기 메모리
 ```python
 context = AgentCoreMemoryContext(
     actor_id="user-id",
@@ -143,47 +143,46 @@ context = AgentCoreMemoryContext(
 agentcore_memory = AgentCoreMemory(context=context)
 ```
 
-### Long-term Memory (12-Month Retention)
+### 장기 메모리(12개월 보존)
 ```python
-# Cross-session persistence with semantic strategy
+# Semantic strategy를 사용한 세션 간 지속성
 memory = memory_manager.get_or_create_memory(
     name='DomainSpecificLongTerm',
     strategies=[SemanticStrategy(name="domainLongTermMemory")],
-    event_expiry_days=365  # 12-month retention
+    event_expiry_days=365  # 12개월 보존
 )
 
-# Same context across sessions for persistence
+# 지속성을 위해 세션 간 동일한 context 사용
 context = AgentCoreMemoryContext(
-    actor_id="advisor-id",      # Same actor across sessions
-    memory_id=memory_id,        # Same memory store
-    session_id="q1-session",    # Different per interaction
+    actor_id="advisor-id",      # 세션 간 동일한 actor
+    memory_id=memory_id,        # 동일한 memory store
+    session_id="q1-session",    # 상호 작용마다 다름
     namespace="/domain-specific/"
 )
 ```
 
-### Memory Intelligence Examples
-- **Investment Advisor**: Tracks quarterly performance (Q1: +8.2% → Q2: -2.1% → Q3: recovery)
-- **Legal Analyzer**: Maintains precedent database across cases and regulatory changes
-- **Medical Assistant**: Builds longitudinal patient care records and treatment outcomes
-- **Research Assistant**: Evolves research themes and methodology insights over months
+### 메모리 인텔리전스 예제
+- **투자 자문**: 분기별 성과 추적(Q1: +8.2% → Q2: -2.1% → Q3: 회복)
+- **법률 분석기**: 여러 사건과 규제 변경에 걸친 판례 데이터베이스 유지
+- **의학 도우미**: 종단 환자 진료 기록과 치료 결과 구축
+- **연구 도우미**: 수개월에 걸쳐 연구 주제와 방법론 인사이트 발전
 
-## 🤝 Contributing
+## 🤝 기여
 
-This project demonstrates best practices for LlamaIndex + AgentCore Memory integration. Contributions welcome for:
+이 프로젝트는 LlamaIndex + AgentCore Memory 통합의 모범 사례를 보여 줍니다. 다음과 같은 기여를 환영합니다.
 
-- Additional domain examples
-- Enhanced testing methodologies  
-- Performance optimizations
-- Documentation improvements
+- 추가 도메인 예제
+- 향상된 테스트 방법론
+- 성능 최적화
+- 문서 개선
 
-## 📄 License
+## 📄 라이선스
 
-This project is licensed under the MIT License.
+이 프로젝트는 MIT License에 따라 사용이 허가됩니다.
 
-## 🙋‍♂️ Support
+## 🙋‍♂️ 지원
 
-For questions about:
-- **LlamaIndex Integration**: Refer to domain-specific notebooks
-- **AgentCore Memory**: Check AWS Bedrock documentation
-- **Testing Patterns**: Review comprehensive test examples
-
+다음 항목에 관한 질문은 아래 자료를 참조하세요.
+- **LlamaIndex 통합**: 도메인별 노트북 참조
+- **AgentCore Memory**: AWS Bedrock 문서 확인
+- **테스트 패턴**: 포괄적인 테스트 예제 검토

@@ -13,7 +13,7 @@ def get_or_create_user_pool(cognito, USER_POOL_NAME):
             user_pool_id = pool["Id"]
             response = cognito.describe_user_pool(UserPoolId=user_pool_id)
 
-            # Get the domain from user pool description
+            # User Pool 설명에서 도메인 가져오기
             user_pool = response.get("UserPool", {})
             domain = user_pool.get("Domain")
 
@@ -58,7 +58,7 @@ def get_or_create_m2m_client(cognito, user_pool_id, CLIENT_NAME, RESOURCE_SERVER
             return client["ClientId"], describe["UserPoolClient"]["ClientSecret"]
     print("creating new m2m client")
 
-    # Default scopes if not provided (for backward compatibility)
+    # 제공되지 않은 경우 이전 버전과의 호환성을 위해 기본 scope 사용
     if SCOPES is None:
         SCOPES = [
             f"{RESOURCE_SERVER_ID}/gateway:read",
@@ -149,14 +149,14 @@ def create_agentcore_gateway_role(gateway_name):
     assume_role_policy_document_json = json.dumps(assume_role_policy_document)
 
     role_policy_document = json.dumps(role_policy)
-    # Create IAM Role for the Lambda function
+    # Lambda 함수용 IAM 역할 생성
     try:
         agentcore_iam_role = iam_client.create_role(
             RoleName=agentcore_gateway_role_name,
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-        # Pause to make sure role is created
+        # 역할이 생성되도록 잠시 대기
         time.sleep(10)
     except iam_client.exceptions.EntityAlreadyExistsException:
         print("Role already exists -- deleting and creating it again")
@@ -172,7 +172,7 @@ def create_agentcore_gateway_role(gateway_name):
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-    # Attach the AWSLambdaBasicExecutionRole policy
+    # AWSLambdaBasicExecutionRole policy 연결
     print(f"attaching role policy {agentcore_gateway_role_name}")
     try:
         iam_client.put_role_policy(
@@ -188,10 +188,10 @@ def create_agentcore_gateway_role(gateway_name):
 
 def load_openapi_definition(filename):
     """
-    Load OpenAPI definition from a JSON file.
+    JSON 파일에서 OpenAPI 정의를 불러옵니다.
 
-    :param filename: The path to the OpenAPI JSON file
-    :return: Dictionary containing the OpenAPI definition
+    :param filename: OpenAPI JSON 파일 경로
+    :return: OpenAPI 정의가 포함된 딕셔너리
     """
     with open(filename, "r") as f:
         return json.load(f)
@@ -203,28 +203,28 @@ def create_and_deploy_api_from_openapi_with_extensions(
     description="Initial Deployment",
 ):
     """
-    Load OpenAPI definition with API Gateway extensions and deploy it.
-    This function expects the OpenAPI document to already have integrations and security configured.
+    API Gateway 확장이 포함된 OpenAPI 정의를 불러와 배포합니다.
+    OpenAPI 문서에 통합 및 보안 구성이 이미 설정되어 있어야 합니다.
 
-    :param filename: The path to the OpenAPI JSON file with x-amazon-apigateway extensions
-    :param stage_name: The stage name for deployment (default: 'dev')
-    :param description: Deployment description (default: 'Initial Deployment')
-    :return: Dictionary containing api_id, api_name, api_key, and invoke_url
+    :param filename: x-amazon-apigateway 확장이 포함된 OpenAPI JSON 파일 경로
+    :param stage_name: 배포 stage 이름(기본값: 'dev')
+    :param description: 배포 설명(기본값: 'Initial Deployment')
+    :return: api_id, api_name, api_key, invoke_url이 포함된 딕셔너리
     """
     import boto3
 
-    # Initialize the API Gateway client
+    # API Gateway 클라이언트 초기화
     client = boto3.client("apigateway")
 
-    # Load OpenAPI definition from file
+    # 파일에서 OpenAPI 정의 불러오기
     openapi_definition = load_openapi_definition(filename)
 
     try:
-        # Convert the OpenAPI definition to a JSON string
+        # OpenAPI 정의를 JSON 문자열로 변환
         body = json.dumps(openapi_definition)
 
         print("Importing REST API with API Gateway extensions...")
-        # Import the REST API using the OpenAPI definition
+        # OpenAPI 정의를 사용해 REST API 가져오기
         response = client.import_rest_api(
             body=body,
             failOnWarnings=False,
@@ -238,14 +238,14 @@ def create_and_deploy_api_from_openapi_with_extensions(
         print(f"  API ID: {api_id}")
         print(f"  API Name: {api_name}")
 
-        # Deploy the API
+        # API 배포
         print(f"\nDeploying API to stage '{stage_name}'...")
         deployment_response = client.create_deployment(restApiId=api_id, stageName=stage_name, description=description)
 
         deployment_id = deployment_response["id"]
         print(f"✓ Deployment created: {deployment_id}")
 
-        # Create API Key for the orders endpoint
+        # orders 엔드포인트용 API Key 생성
         print("\nCreating API Key...")
         api_key_response = client.create_api_key(
             name=f"{api_name}-api-key",
@@ -256,7 +256,7 @@ def create_and_deploy_api_from_openapi_with_extensions(
         api_key_value = api_key_response["value"]
         print(f"✓ API Key created: {api_key_id}")
 
-        # Create Usage Plan  # codeql[py/clear-text-logging-sensitive-data]
+        # Usage Plan 생성  # codeql[py/clear-text-logging-sensitive-data]
         print("\nCreating Usage Plan...")
         usage_plan_response = client.create_usage_plan(
             name=f"{api_name}-usage-plan",
@@ -268,12 +268,12 @@ def create_and_deploy_api_from_openapi_with_extensions(
         usage_plan_id = usage_plan_response["id"]
         print(f"✓ Usage Plan created: {usage_plan_id}")
 
-        # Associate API Key with Usage Plan
+        # API Key를 Usage Plan과 연결
         print("\nAssociating API Key with Usage Plan...")
         client.create_usage_plan_key(usagePlanId=usage_plan_id, keyId=api_key_id, keyType="API_KEY")
         print("✓ API Key associated with Usage Plan")
 
-        # Construct the invoke URL
+        # 호출 URL 구성
         region = client.meta.region_name
         invoke_url = f"https://{api_id}.execute-api.{region}.amazonaws.com/{stage_name}"
 
@@ -309,13 +309,13 @@ def create_and_deploy_api_from_openapi_with_extensions(
 
 def test_api_gateway_endpoints(invoke_url, api_key, region):
     """
-    Test API Gateway endpoints with proper authorization.
-    Tests both IAM-authorized /pets endpoints and API Key-authorized /orders endpoint.
+    올바른 권한 부여를 사용해 API Gateway 엔드포인트를 테스트합니다.
+    IAM 권한을 사용하는 /pets 엔드포인트와 API Key 권한을 사용하는 /orders 엔드포인트를 모두 테스트합니다.
 
-    :param invoke_url: The API Gateway invoke URL
-    :param api_key: The API key for /orders endpoint
-    :param region: AWS region (default: 'us-west-2')
-    :return: Dictionary with test results
+    :param invoke_url: API Gateway 호출 URL
+    :param api_key: /orders 엔드포인트용 API Key
+    :param region: AWS 리전(기본값: 'us-west-2')
+    :return: 테스트 결과가 포함된 딕셔너리
     """
     import boto3
     import requests
@@ -330,7 +330,7 @@ def test_api_gateway_endpoints(invoke_url, api_key, region):
     session = boto3.Session()
     credentials = session.get_credentials()
 
-    # Test 1: GET /pets (IAM Authorization)
+    # 테스트 1: GET /pets(IAM 권한 부여)
     print("1. Testing GET /pets (IAM Authorization)...")
     try:
         url = f"{invoke_url}/pets"
@@ -351,7 +351,7 @@ def test_api_gateway_endpoints(invoke_url, api_key, region):
         print(f"   ✗ ERROR: {e}")
         results["get_pets"] = {"status": "error", "error": str(e)}
 
-    # Test 2: GET /pets/1 (IAM Authorization)
+    # 테스트 2: GET /pets/1(IAM 권한 부여)
     print("\n2. Testing GET /pets/1 (IAM Authorization)...")
     try:
         url = f"{invoke_url}/pets/1"
@@ -372,7 +372,7 @@ def test_api_gateway_endpoints(invoke_url, api_key, region):
         print(f"   ✗ ERROR: {e}")
         results["get_pet_by_id"] = {"status": "error", "error": str(e)}
 
-    # Test 3: POST /pets (IAM Authorization)
+    # 테스트 3: POST /pets(IAM 권한 부여)
     print("\n3. Testing POST /pets (IAM Authorization)...")
     try:
         url = f"{invoke_url}/pets"
@@ -393,7 +393,7 @@ def test_api_gateway_endpoints(invoke_url, api_key, region):
         print(f"   ✗ ERROR: {e}")
         results["post_pets"] = {"status": "error", "error": str(e)}
 
-    # Test 4: GET /orders/1 (API Key Authorization)
+    # 테스트 4: GET /orders/1(API Key 권한 부여)
     print("\n4. Testing GET /orders/1 (API Key Authorization)...")
     try:
         url = f"{invoke_url}/orders/1"
@@ -413,7 +413,7 @@ def test_api_gateway_endpoints(invoke_url, api_key, region):
         print(f"   ✗ ERROR: {e}")
         results["get_order_by_id"] = {"status": "error", "error": str(e)}
 
-    # Test 5: GET /orders/1 without API Key (should fail)
+    # 테스트 5: API Key 없이 GET /orders/1 호출(실패해야 함)
     print("\n5. Testing GET /orders/1 WITHOUT API Key (should fail with 403)...")
     try:
         url = f"{invoke_url}/orders/1"
@@ -437,7 +437,7 @@ def test_api_gateway_endpoints(invoke_url, api_key, region):
         print(f"   ✗ ERROR: {e}")
         results["get_order_no_key"] = {"status": "error", "error": str(e)}
 
-    # Test 6: GET /pets without IAM Auth (should fail)
+    # 테스트 6: IAM 인증 없이 GET /pets 호출(실패해야 함)
     print("\n6. Testing GET /pets WITHOUT IAM Auth (should fail with 403)...")
     try:
         url = f"{invoke_url}/pets"
@@ -474,12 +474,12 @@ def test_api_gateway_endpoints(invoke_url, api_key, region):
 
 def delete_api_gateway_and_resources(api_id, api_key_id=None, usage_plan_id=None):
     """
-    Delete API Gateway and all related resources (API key, usage plan).
+    API Gateway와 모든 관련 리소스(API Key, Usage Plan)를 삭제합니다.
 
-    :param api_id: The API Gateway REST API ID
-    :param api_key_id: The API Key ID (optional)
-    :param usage_plan_id: The Usage Plan ID (optional)
-    :return: Dictionary with deletion results
+    :param api_id: API Gateway REST API ID
+    :param api_key_id: API Key ID(선택 사항)
+    :param usage_plan_id: Usage Plan ID(선택 사항)
+    :return: 삭제 결과가 포함된 딕셔너리
     """
     import boto3
 
@@ -495,7 +495,7 @@ def delete_api_gateway_and_resources(api_id, api_key_id=None, usage_plan_id=None
     print("Deleting API Gateway Resources")
     print(f"{'=' * 70}\n")
 
-    # Delete Usage Plan Key association first (if usage plan and api key exist)
+    # Usage Plan과 API Key가 있으면 Usage Plan Key 연결부터 삭제
     if usage_plan_id and api_key_id:
         try:
             print("1. Removing API Key from Usage Plan...")
@@ -510,12 +510,12 @@ def delete_api_gateway_and_resources(api_id, api_key_id=None, usage_plan_id=None
             print(f"   ✗ {error_msg}")
             results["errors"].append(error_msg)
 
-    # Delete Usage Plan
+    # Usage Plan 삭제
     if usage_plan_id:
         try:
             print(f"\n2. Deleting Usage Plan: {usage_plan_id}...")
 
-            # First, get the usage plan to find associated API stages
+            # 연결된 API stage를 찾기 위해 먼저 Usage Plan 가져오기
             try:
                 usage_plan = client.get_usage_plan(usagePlanId=usage_plan_id)
                 api_stages = usage_plan.get("apiStages", [])
@@ -543,7 +543,7 @@ def delete_api_gateway_and_resources(api_id, api_key_id=None, usage_plan_id=None
             except Exception as e:
                 print(f"   ⚠ Could not get usage plan details: {e}")
 
-            # Now delete the usage plan
+            # Usage Plan 삭제
             client.delete_usage_plan(usagePlanId=usage_plan_id)
             print("   ✓ Usage Plan deleted")
             results["usage_plan_deleted"] = True
@@ -560,7 +560,7 @@ def delete_api_gateway_and_resources(api_id, api_key_id=None, usage_plan_id=None
             print(f"   ✗ {error_msg}")
             results["errors"].append(error_msg)
 
-    # Delete API Key
+    # API Key 삭제
     if api_key_id:
         try:
             print(f"\n3. Deleting API Key: {api_key_id}...")  # codeql[py/clear-text-logging-sensitive-data]
@@ -580,7 +580,7 @@ def delete_api_gateway_and_resources(api_id, api_key_id=None, usage_plan_id=None
             print(f"   ✗ {error_msg}")
             results["errors"].append(error_msg)
 
-    # Delete REST API
+    # REST API 삭제
     try:
         print(f"\n4. Deleting REST API: {api_id}...")
         client.delete_rest_api(restApiId=api_id)
@@ -622,11 +622,11 @@ def delete_api_gateway_and_resources(api_id, api_key_id=None, usage_plan_id=None
 
 def delete_agentcore_gateway_and_targets(gateway_id, region="us-west-2"):
     """
-    Delete AgentCore Gateway and all its targets.
+    AgentCore Gateway와 모든 대상을 삭제합니다.
 
-    :param gateway_id: The AgentCore Gateway ID
-    :param region: AWS region (default: 'us-west-2')
-    :return: Dictionary with deletion results
+    :param gateway_id: AgentCore Gateway ID
+    :param region: AWS 리전(기본값: 'us-west-2')
+    :return: 삭제 결과가 포함된 딕셔너리
     """
     import boto3
 
@@ -638,7 +638,7 @@ def delete_agentcore_gateway_and_targets(gateway_id, region="us-west-2"):
     print("Deleting AgentCore Gateway and Targets")
     print(f"{'=' * 70}\n")
 
-    # List and delete all targets first
+    # 모든 대상을 먼저 나열하고 삭제
     try:
         print(f"1. Listing all targets for gateway: {gateway_id}...")
         list_response = gateway_client.list_gateway_targets(gatewayIdentifier=gateway_id, maxResults=100)
@@ -658,15 +658,15 @@ def delete_agentcore_gateway_and_targets(gateway_id, region="us-west-2"):
                     print(f"   ✓ Target deletion initiated: {target_id}")
                     results["targets_deleted"].append(target_id)
 
-                    # Wait for target to be fully deleted
+                    # 대상이 완전히 삭제될 때까지 대기
                     print("   Waiting for target to be fully deleted...")
-                    max_wait = 30  # Maximum wait time in seconds
+                    max_wait = 30  # 최대 대기 시간(초)
                     wait_interval = 2
                     elapsed = 0
 
                     while elapsed < max_wait:
                         try:
-                            # Try to get the target - if it doesn't exist, deletion is complete
+                            # 대상을 가져오되 존재하지 않으면 삭제 완료로 판단
                             gateway_client.get_gateway_target(gatewayIdentifier=gateway_id, targetId=target_id)
                             time.sleep(wait_interval)
                             elapsed += wait_interval
@@ -709,7 +709,7 @@ def delete_agentcore_gateway_and_targets(gateway_id, region="us-west-2"):
         print(f"   ✗ {error_msg}")
         results["errors"].append(error_msg)
 
-    # Delete the gateway
+    # Gateway 삭제
     try:
         print(f"\n2. Deleting gateway: {gateway_id}...")
         gateway_client.delete_gateway(gatewayIdentifier=gateway_id)
@@ -749,12 +749,12 @@ def delete_agentcore_gateway_and_targets(gateway_id, region="us-west-2"):
 
 def delete_agentcore_credential_provider(credential_provider_arn, region="us-west-2"):
     """
-    Delete AgentCore Identity API Key Credential Provider.
-    This will also delete the associated secret in AWS Secrets Manager.
+    AgentCore Identity API Key Credential Provider를 삭제합니다.
+    AWS Secrets Manager의 연결된 secret도 함께 삭제됩니다.
 
-    :param credential_provider_arn: The credential provider ARN
-    :param region: AWS region (default: 'us-west-2')
-    :return: Dictionary with deletion results
+    :param credential_provider_arn: Credential Provider ARN
+    :param region: AWS 리전(기본값: 'us-west-2')
+    :return: 삭제 결과가 포함된 딕셔너리
     """
     import boto3
 
@@ -766,8 +766,8 @@ def delete_agentcore_credential_provider(credential_provider_arn, region="us-wes
     print("Deleting AgentCore Identity Credential Provider")
     print(f"{'=' * 70}\n")
 
-    # Extract the credential provider name from ARN
-    # ARN format: arn:aws:bedrock-agentcore:region:account:token-vault/default/apikeycredentialprovider/name
+    # ARN에서 Credential Provider 이름 추출
+    # ARN 형식: arn:aws:bedrock-agentcore:region:account:token-vault/default/apikeycredentialprovider/name
     try:
         provider_name = credential_provider_arn.split("/")[-1]
         print(f"Credential Provider Name: {provider_name}")
@@ -778,7 +778,7 @@ def delete_agentcore_credential_provider(credential_provider_arn, region="us-wes
         results["errors"].append(error_msg)
         return results
 
-    # Delete the credential provider
+    # Credential Provider 삭제
     try:
         print(f"Deleting API Key Credential Provider: {provider_name}...")
         bedrock_agent_client.delete_api_key_credential_provider(name=provider_name)
@@ -818,11 +818,11 @@ def delete_agentcore_credential_provider(credential_provider_arn, region="us-wes
 
 def delete_cognito_user_pool(user_pool_name, region="us-west-2"):
     """
-    Delete Cognito User Pool and all associated resources (domain, clients, resource servers).
+    Cognito User Pool과 모든 관련 리소스(도메인, 클라이언트, Resource Server)를 삭제합니다.
 
-    :param user_pool_name: The Cognito User Pool name
-    :param region: AWS region (default: 'us-west-2')
-    :return: Dictionary with deletion results
+    :param user_pool_name: Cognito User Pool 이름
+    :param region: AWS 리전(기본값: 'us-west-2')
+    :return: 삭제 결과가 포함된 딕셔너리
     """
     import boto3
 
@@ -839,7 +839,7 @@ def delete_cognito_user_pool(user_pool_name, region="us-west-2"):
     print(f"Deleting Cognito User Pool: {user_pool_name}")
     print(f"{'=' * 70}\n")
 
-    # Find the user pool by name
+    # 이름으로 User Pool 찾기
     try:
         print(f"1. Finding User Pool: {user_pool_name}...")
         response = cognito.list_user_pools(MaxResults=60)
@@ -862,7 +862,7 @@ def delete_cognito_user_pool(user_pool_name, region="us-west-2"):
         results["errors"].append(error_msg)
         return results
 
-    # Delete domain if exists
+    # 도메인이 있으면 삭제
     try:
         print("\n2. Checking for User Pool Domain...")
         describe_response = cognito.describe_user_pool(UserPoolId=user_pool_id)
@@ -887,7 +887,7 @@ def delete_cognito_user_pool(user_pool_name, region="us-west-2"):
         print(f"   ✗ {error_msg}")
         results["errors"].append(error_msg)
 
-    # Delete all clients
+    # 모든 클라이언트 삭제
     try:
         print("\n3. Deleting User Pool Clients...")
         clients_response = cognito.list_user_pool_clients(UserPoolId=user_pool_id, MaxResults=60)
@@ -914,7 +914,7 @@ def delete_cognito_user_pool(user_pool_name, region="us-west-2"):
         print(f"   ✗ {error_msg}")
         results["errors"].append(error_msg)
 
-    # Delete the user pool
+    # User Pool 삭제
     try:
         print(f"\n4. Deleting User Pool: {user_pool_id}...")
         cognito.delete_user_pool(UserPoolId=user_pool_id)
@@ -955,10 +955,10 @@ def delete_cognito_user_pool(user_pool_name, region="us-west-2"):
 
 def delete_iam_role(role_name):
     """
-    Delete IAM Role and all attached inline policies.
+    IAM 역할과 연결된 모든 인라인 policy를 삭제합니다.
 
-    :param role_name: The IAM Role name
-    :return: Dictionary with deletion results
+    :param role_name: IAM 역할 이름
+    :return: 삭제 결과가 포함된 딕셔너리
     """
     import boto3
 
@@ -970,7 +970,7 @@ def delete_iam_role(role_name):
     print(f"Deleting IAM Role: {role_name}")
     print(f"{'=' * 70}\n")
 
-    # Delete inline policies first
+    # 인라인 policy부터 삭제
     try:
         print(f"1. Listing inline policies for role: {role_name}...")
         policies_response = iam_client.list_role_policies(RoleName=role_name, MaxItems=100)
@@ -1006,7 +1006,7 @@ def delete_iam_role(role_name):
         print(f"   ✗ {error_msg}")
         results["errors"].append(error_msg)
 
-    # Delete the role
+    # 역할 삭제
     try:
         print(f"\n2. Deleting IAM Role: {role_name}...")
         iam_client.delete_role(RoleName=role_name)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-AgentCore Cleanup Script
-Removes all resources created by main.py including gateways, runtimes, Cognito resources, and IAM roles.
+AgentCore 정리 스크립트
+Gateway, Runtime, Cognito 리소스, IAM 역할 등 main.py에서 생성한 모든 리소스를 제거합니다.
 """
 
 import os
@@ -28,14 +28,14 @@ def main():
 
     args = parser.parse_args()
 
-    # Parse runtime names from JSON
+    # JSON에서 Runtime 이름 파싱
     try:
         runtime_names = json.loads(args.runtime_names)
     except json.JSONDecodeError:
         print("Error: Invalid JSON format for --runtime-names")
         return 1
 
-    # Confirmation prompt
+    # 확인 프롬프트
     if not args.confirm:
         print("This will delete the following resources:")
         print(f"  Gateway: {args.gateway_name}")

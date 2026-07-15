@@ -2,14 +2,14 @@
 
 set -e
 
-# Colors for output
+# 출력용 색상
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+NC='\033[0m' # 색상 없음
 
-# Parse command line arguments
+# 명령줄 인수 파싱
 WEBSOCKET_FOLDER=""
 
 usage() {
@@ -27,7 +27,7 @@ usage() {
     exit 1
 }
 
-# Check if folder argument is provided
+# 폴더 인수 제공 여부 확인
 if [ $# -eq 0 ]; then
     echo -e "${RED}❌ Error: websocket folder argument is required${NC}"
     echo ""
@@ -36,11 +36,11 @@ fi
 
 WEBSOCKET_FOLDER="$1"
 
-# Resolve the base directory (parent of utils/)
+# 기본 디렉터리 확인(utils/의 상위 디렉터리)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Validate folder exists
+# 폴더 존재 여부 검증
 if [ ! -d "$BASE_DIR/$WEBSOCKET_FOLDER" ]; then
     echo -e "${RED}❌ Error: Folder not found: $BASE_DIR/$WEBSOCKET_FOLDER${NC}"
     echo ""
@@ -57,7 +57,7 @@ fi
 echo -e "${BLUE}🚀 Starting $WEBSOCKET_FOLDER Client${NC}"
 echo ""
 
-# Check for configuration file
+# 구성 파일 확인
 CONFIG_FILE="$BASE_DIR/$WEBSOCKET_FOLDER/setup_config.json"
 
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -69,14 +69,14 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# Check for jq
+# jq 확인
 if ! command -v jq &> /dev/null; then
     echo -e "${RED}❌ Error: jq is not installed${NC}"
     echo "Please install jq to parse JSON configuration"
     exit 1
 fi
 
-# Load configuration
+# 구성 불러오기
 echo -e "${YELLOW}📋 Loading configuration from $CONFIG_FILE...${NC}"
 AGENT_ARN=$(jq -r '.agent_arn' "$CONFIG_FILE")
 AWS_REGION=$(jq -r '.aws_region' "$CONFIG_FILE")
@@ -99,10 +99,10 @@ echo "   Agent ARN:    $AGENT_ARN"
 echo "   AWS Region:   $AWS_REGION"
 echo ""
 
-# Export environment variables
+# 환경 변수 내보내기
 export AWS_REGION="$AWS_REGION"
 
-# Check if virtual environment exists (not needed for pipecat — uses npm)
+# 가상 환경 존재 여부 확인(npm을 사용하는 Pipecat에는 불필요)
 if [ "$WEBSOCKET_FOLDER" != "04-pipecat-sonic-ws" ]; then
     if [ ! -d "$BASE_DIR/venv" ]; then
         echo -e "${YELLOW}⚠️  Virtual environment not found${NC}"
@@ -116,13 +116,13 @@ if [ "$WEBSOCKET_FOLDER" != "04-pipecat-sonic-ws" ]; then
     fi
 fi
 
-# Start the client
+# 클라이언트 시작
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}🎉 Starting Client${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-# Different clients have different interfaces
+# 클라이언트별 인터페이스 처리
 case "$WEBSOCKET_FOLDER" in
     "echo")
         echo -e "${YELLOW}Starting Echo client...${NC}"
@@ -139,8 +139,8 @@ case "$WEBSOCKET_FOLDER" in
             npm install
         fi
 
-        # Start the signing server in the background (port 8081).
-        # The Vite dev server proxies /start to it.
+        # 서명 서버를 백그라운드에서 시작(포트 8081)
+        # Vite 개발 서버가 /start를 이 서버로 프록시함
         echo -e "${YELLOW}Starting signing server on port 8081...${NC}"
         python "$BASE_DIR/$WEBSOCKET_FOLDER/client/client.py" \
             --runtime-arn "$AGENT_ARN" \
@@ -152,7 +152,7 @@ case "$WEBSOCKET_FOLDER" in
         echo -e "${YELLOW}Open the URL shown below in your browser${NC}"
         echo ""
 
-        # Run Vite in foreground; kill signing server on exit
+        # Vite를 포그라운드에서 실행하고 종료 시 서명 서버 중지
         trap "kill $SIGNING_PID 2>/dev/null" EXIT
         npm run dev
         ;;

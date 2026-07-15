@@ -1,7 +1,7 @@
 """
-MCP OAuth Proxy Lambda - Handles OAuth metadata, callback interception, token proxying, and MCP forwarding.
+MCP OAuth 프록시 Lambda - OAuth 메타데이터, 콜백 가로채기, 토큰 프록시, MCP 전달을 처리합니다.
 
-This Lambda function replaces the local mcp_oauth_proxy.py script, enabling serverless deployment.
+이 Lambda 함수는 로컬 mcp_oauth_proxy.py 스크립트를 대체하여 서버리스 배포를 지원합니다.
 """
 
 import json
@@ -12,7 +12,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 
-# Configuration from environment variables
+# 환경 변수에서 가져오는 구성
 GATEWAY_URL = os.environ.get("GATEWAY_URL", "")
 COGNITO_DOMAIN = os.environ.get("COGNITO_DOMAIN", "")
 CLIENT_ID = os.environ.get("CLIENT_ID", "")
@@ -21,11 +21,11 @@ CALLBACK_LAMBDA_URL = os.environ.get("CALLBACK_LAMBDA_URL", "")
 
 
 def lambda_handler(event, context):
-    """Main Lambda handler - routes requests based on path."""
+    """경로에 따라 요청을 라우팅하는 기본 Lambda 핸들러입니다."""
     path = event.get("rawPath", event.get("path", "/"))
     method = event.get("requestContext", {}).get("http", {}).get("method", "GET")
 
-    # Route to appropriate handler
+    # 적절한 핸들러로 라우팅
     if path == "/.well-known/oauth-authorization-server":
         return handle_oauth_metadata(event)
     elif path == "/.well-known/oauth-protected-resource":
@@ -43,7 +43,7 @@ def lambda_handler(event, context):
 
 
 def handle_oauth_metadata(event):
-    """Serve OAuth Authorization Server Metadata (RFC 8414)."""
+    """OAuth Authorization Server Metadata(RFC 8414)를 제공합니다."""
     api_url = get_api_url(event)
 
     metadata = {
@@ -62,16 +62,16 @@ def handle_oauth_metadata(event):
 
 
 def handle_protected_resource_metadata(event):
-    """Serve OAuth Protected Resource Metadata (RFC 9728).
+    """OAuth Protected Resource Metadata(RFC 9728)를 제공합니다.
 
-    The proxy acts as the MCP server from the client's perspective, so the
-    resource identifier must be the proxy URL (API Gateway), not the underlying
-    AgentCore Gateway URL. This ensures the 'resource' parameter in OAuth token
-    requests matches this metadata, avoiding resource mismatch errors.
+    클라이언트 관점에서는 프록시가 MCP 서버 역할을 하므로 리소스 식별자는
+    기반 AgentCore Gateway URL이 아니라 프록시 URL(API Gateway)이어야 합니다.
+    이렇게 하면 OAuth 토큰 요청의 'resource' 파라미터가 이 메타데이터와 일치하여
+    리소스 불일치 오류를 방지할 수 있습니다.
 
-    Note: We intentionally do NOT proxy the AgentCore Gateway's metadata here
-    because that would return the Gateway URL as the resource, causing a mismatch
-    when the client (VS Code) uses the proxy URL in its token requests.
+    참고: 여기서는 의도적으로 AgentCore Gateway의 메타데이터를 프록시하지 않습니다.
+    프록시하면 Gateway URL이 리소스로 반환되어 클라이언트(VS Code)가 토큰 요청에
+    프록시 URL을 사용할 때 불일치가 발생하기 때문입니다.
     """
     api_url = get_api_url(event)
     return json_response(
@@ -86,22 +86,22 @@ def handle_protected_resource_metadata(event):
 
 
 def handle_authorize(event):
-    """Redirect /authorize to Cognito with callback interception.
+    """콜백을 가로채면서 /authorize를 Cognito로 리디렉션합니다.
 
-    Since Lambda is stateless, we encode the original redirect_uri in the state parameter
-    so it survives across Lambda invocations.
+    Lambda는 상태 비저장 방식이므로 여러 Lambda 호출에서도 유지되도록 원래
+    redirect_uri를 state 파라미터에 인코딩합니다.
     """
     params = event.get("queryStringParameters", {}) or {}
 
-    # Override client_id
+    # client_id 재정의
     params["client_id"] = CLIENT_ID
 
-    # Encode original redirect_uri and state together in a new state parameter
+    # 원래 redirect_uri와 state를 새 state 파라미터에 함께 인코딩
     original_redirect_uri = params.get("redirect_uri", "")
     original_state = params.get("state", "")
 
     if original_redirect_uri:
-        # Create compound state: base64(json({original_state, original_redirect_uri}))
+        # 복합 state 생성: base64(json({original_state, original_redirect_uri}))
         compound_state = {
             "state": original_state,
             "redirect_uri": urllib.parse.unquote(original_redirect_uri),
@@ -109,7 +109,7 @@ def handle_authorize(event):
         encoded_state = base64.urlsafe_b64encode(json.dumps(compound_state).encode()).decode()
         params["state"] = encoded_state
 
-        # Replace redirect_uri with our callback
+        # redirect_uri를 이 프록시의 콜백으로 교체
         api_url = get_api_url(event)
         params["redirect_uri"] = f"{api_url}/callback"
 
@@ -119,9 +119,9 @@ def handle_authorize(event):
 
 
 def handle_callback(event):
-    """Handle OAuth callback from Cognito and forward to VS Code.
+    """Cognito의 OAuth 콜백을 처리하여 VS Code로 전달합니다.
 
-    Decodes the compound state parameter to extract original redirect_uri and state.
+    복합 state 파라미터를 디코딩하여 원래 redirect_uri와 state를 추출합니다.
     """
     params = event.get("queryStringParameters", {}) or {}
     code = params.get("code", "")
@@ -131,11 +131,11 @@ def handle_callback(event):
     if error:
         return json_response(400, {"error": error})
 
-    # Decode compound state to get original redirect_uri and state
+    # 복합 state를 디코딩하여 원래 redirect_uri와 state 가져오기
     try:
-        # Handle URL encoding issues (spaces become + or %20)
+        # URL 인코딩 문제 처리(공백이 + 또는 %20으로 변환됨)
         encoded_state_clean = encoded_state.replace(" ", "+")
-        # Add padding if needed
+        # 필요한 경우 패딩 추가
         padding = 4 - len(encoded_state_clean) % 4
         if padding != 4:
             encoded_state_clean += "=" * padding
@@ -151,7 +151,7 @@ def handle_callback(event):
     if not original_redirect_uri:
         return json_response(400, {"error": "Missing redirect_uri in state"})
 
-    # Forward to VS Code's callback with original state
+    # 원래 state와 함께 VS Code의 콜백으로 전달
     forward_params = urllib.parse.urlencode({"code": code, "state": original_state})
     forward_url = f"{original_redirect_uri}?{forward_params}"
 
@@ -159,19 +159,19 @@ def handle_callback(event):
 
 
 def handle_token(event):
-    """Proxy token requests to Cognito with redirect_uri rewriting."""
+    """redirect_uri를 다시 작성하여 토큰 요청을 Cognito로 프록시합니다."""
     body = event.get("body", "")
     if event.get("isBase64Encoded"):
         body = base64.b64decode(body).decode()
 
     params = dict(urllib.parse.parse_qsl(body))
 
-    # Override client_id and add secret
+    # client_id를 재정의하고 보안 암호 추가
     params["client_id"] = CLIENT_ID
     if CLIENT_SECRET:
         params["client_secret"] = CLIENT_SECRET
 
-    # Rewrite redirect_uri
+    # redirect_uri 다시 작성
     if "redirect_uri" in params:
         api_url = get_api_url(event)
         params["redirect_uri"] = f"{api_url}/callback"
@@ -193,7 +193,7 @@ def handle_token(event):
 
 
 def handle_dcr(event):
-    """Handle Dynamic Client Registration - return pre-registered client_id."""
+    """Dynamic Client Registration을 처리하여 사전 등록된 client_id를 반환합니다."""
     return json_response(
         200,
         {
@@ -207,7 +207,7 @@ def handle_dcr(event):
 
 
 def proxy_to_gateway(event):
-    """Forward MCP requests to AgentCore Gateway."""
+    """MCP 요청을 AgentCore Gateway로 전달합니다."""
     path = event.get("rawPath", event.get("path", "/"))
     method = event.get("requestContext", {}).get("http", {}).get("method", "GET")
     headers = event.get("headers", {})
@@ -218,18 +218,18 @@ def proxy_to_gateway(event):
 
     target_url = f"{GATEWAY_URL.rstrip('/')}{path}" if path != "/" else GATEWAY_URL
 
-    # Build request headers
+    # 요청 헤더 구성
     req_headers = {
         "Content-Type": headers.get("content-type", "application/json"),
         "Accept": headers.get("accept", "application/json"),
     }
 
-    # Forward auth header
+    # 인증 헤더 전달
     auth = headers.get("authorization")
     if auth:
         req_headers["Authorization"] = auth
 
-    # Forward MCP headers
+    # MCP 헤더 전달
     for h in ["mcp-protocol-version", "mcp-session-id"]:
         if headers.get(h):
             req_headers[h.title()] = headers[h]
@@ -248,12 +248,12 @@ def proxy_to_gateway(event):
             resp_body = resp.read().decode()
             resp_headers = {"Content-Type": resp.headers.get("Content-Type", "application/json")}
 
-            # Forward session ID
+            # 세션 ID 전달
             session_id = resp.headers.get("Mcp-Session-Id")
             if session_id:
                 resp_headers["Mcp-Session-Id"] = session_id
 
-            # Check for 3LO elicitation and store token
+            # 3LO elicitation을 확인하고 토큰 저장
             try:
                 data = json.loads(resp_body)
                 if is_elicitation(data) and CALLBACK_LAMBDA_URL:
@@ -280,7 +280,7 @@ def proxy_to_gateway(event):
 
 
 def is_elicitation(data):
-    """Check if response is a 3LO elicitation."""
+    """응답이 3LO elicitation인지 확인합니다."""
     if not isinstance(data, dict):
         return False
     error = data.get("error", {})
@@ -288,7 +288,7 @@ def is_elicitation(data):
 
 
 def store_token_for_3lo(auth_header):
-    """Store user token in callback Lambda for 3LO session binding."""
+    """3LO 세션 바인딩을 위해 콜백 Lambda에 사용자 토큰을 저장합니다."""
     if not auth_header or not CALLBACK_LAMBDA_URL:
         return
 
@@ -305,7 +305,7 @@ def store_token_for_3lo(auth_header):
 
 
 def get_api_url(event):
-    """Extract API Gateway URL from event."""
+    """이벤트에서 API Gateway URL을 추출합니다."""
     ctx = event.get("requestContext", {})
     domain = ctx.get("domainName", "")
     stage = ctx.get("stage", "")
@@ -317,7 +317,7 @@ def get_api_url(event):
 
 
 def json_response(status_code, body):
-    """Create JSON response."""
+    """JSON 응답을 생성합니다."""
     return {
         "statusCode": status_code,
         "headers": {"Content-Type": "application/json"},

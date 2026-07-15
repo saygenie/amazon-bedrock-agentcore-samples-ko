@@ -8,11 +8,11 @@ import { NagSuppressions } from 'cdk-nag';
 import { Construct } from 'constructs';
 
 /**
- * Workaround ALB with a public ACM certificate. This ALB provides
- * a publicly trusted TLS termination point that AgentCore can verify.
+ * Public ACM Certificate를 사용하는 우회용 ALB입니다. 이 ALB는 AgentCore가
+ * 검증할 수 있는 공개 신뢰 TLS 종료 지점을 제공합니다.
  *
- * It targets the same backend EC2 instance as the customer's existing
- * private-cert ALB, providing an alternative entry point for AgentCore.
+ * 고객의 기존 Private Certificate ALB와 동일한 백엔드 EC2 인스턴스를 대상으로
+ * 하여 AgentCore용 대체 진입점을 제공합니다.
  */
 export interface PublicCertProxyStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
@@ -26,7 +26,7 @@ export class PublicCertProxyStack extends cdk.Stack {
 
     const publicCert = acm.Certificate.fromCertificateArn(this, 'PublicCert', props.publicCertArn);
 
-    // --- Internal ALB with public certificate ---
+    // --- Public Certificate가 있는 Internal ALB ---
     const albSg = new ec2.SecurityGroup(this, 'AlbSg', {
       vpc: props.vpc,
       description: 'Public cert proxy ALB - HTTPS from VPC',
@@ -39,9 +39,9 @@ export class PublicCertProxyStack extends cdk.Stack {
       'Allow HTTPS from VPC',
     );
 
-    // The backend EC2 security group already allows port 8000 from the VPC CIDR,
-    // which covers this ALB. No additional ingress rule needed here — adding one
-    // would create a circular cross-stack dependency.
+    // 백엔드 EC2 Security Group이 이미 VPC CIDR에서 8000 포트를 허용하며
+    // 이 ALB도 포함합니다. 추가 인바운드 규칙은 필요하지 않고, 추가할 경우
+    // 스택 간 순환 종속성이 생성됩니다.
 
     const accessLogBucket = new s3.Bucket(this, 'AlbAccessLogs', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -60,7 +60,7 @@ export class PublicCertProxyStack extends cdk.Stack {
 
     alb.logAccessLogs(accessLogBucket, 'alb-logs');
 
-    // HTTPS listener with public cert — terminates TLS and forwards HTTP to EC2
+    // Public Certificate가 있는 HTTPS Listener - TLS를 종료하고 EC2에 HTTP 전달
     const httpsListener = alb.addListener('HttpsListener', {
       port: 443,
       protocol: elbv2.ApplicationProtocol.HTTPS,
@@ -78,7 +78,7 @@ export class PublicCertProxyStack extends cdk.Stack {
       },
     });
 
-    // --- Outputs ---
+    // --- 출력 ---
     new cdk.CfnOutput(this, 'AlbDnsName', {
       value: alb.loadBalancerDnsName,
       description: 'Public cert ALB DNS (publicly resolvable, use as routingDomain)',

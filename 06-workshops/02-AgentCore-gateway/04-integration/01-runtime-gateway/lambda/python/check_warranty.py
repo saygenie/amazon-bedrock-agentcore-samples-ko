@@ -5,18 +5,18 @@ from botocore.exceptions import ClientError
 import logging
 import re
 
-# Setting logger
+# 로거 설정
 logging.basicConfig(
     format="[%(asctime)s] p%(process)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
-# Initialize DynamoDB resource
+# DynamoDB 리소스 초기화
 dynamodb = boto3.resource("dynamodb")
 smm_client = boto3.client("ssm")
 
-# Get warranty table name from Parameter Store
+# Parameter Store에서 보증 테이블 이름 가져오기
 warranty_table = smm_client.get_parameter(
     Name="/app/customersupport/dynamodb/warranty_table_name", WithDecryption=False
 )
@@ -24,7 +24,7 @@ warranty_table_name = warranty_table["Parameter"]["Value"]
 
 
 def ensure_warranty_table_exists():
-    """Create the DynamoDB warranty table if it doesn't exist."""
+    """DynamoDB 보증 테이블이 없으면 생성합니다."""
     try:
         table = dynamodb.Table(warranty_table_name)
         table.load()
@@ -34,13 +34,13 @@ def ensure_warranty_table_exists():
 
 
 def validate_serial_number(serial_number: str) -> bool:
-    """Validate serial number format."""
+    """일련번호 형식을 검증합니다."""
     pattern = r"^[A-Z0-9]{8,20}$"
     return bool(re.match(pattern, serial_number.upper()))
 
 
 def calculate_days_remaining(end_date: str) -> int:
-    """Calculate days remaining until warranty expires."""
+    """보증 만료일까지 남은 일수를 계산합니다."""
     try:
         end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
         today = datetime.now()
@@ -51,7 +51,7 @@ def calculate_days_remaining(end_date: str) -> int:
 
 
 def get_warranty_status_text(days_remaining: int) -> str:
-    """Get warranty status text based on days remaining."""
+    """남은 일수에 따라 보증 상태 텍스트를 가져옵니다."""
     if days_remaining > 30:
         return "✅ Active"
     elif days_remaining > 0:
@@ -62,18 +62,18 @@ def get_warranty_status_text(days_remaining: int) -> str:
 
 def check_warranty_status(serial_number: str, customer_email: str = None) -> str:
     """
-    Check the warranty status of a product using its serial number.
+    일련번호를 사용해 제품의 보증 상태를 확인합니다.
 
-    Args:
-        serial_number (str): Product serial number (8-20 alphanumeric characters).
-        customer_email (str, optional): Customer email for verification purposes.
+    인수:
+        serial_number (str): 제품 일련번호(영숫자 8~20자)
+        customer_email (str, optional): 확인용 고객 이메일
 
-    Returns:
-        str: Formatted warranty status information including coverage details and expiration date.
+    반환값:
+        str: 보증 범위 세부 정보와 만료일을 포함해 구성된 보증 상태 정보
 
-    Raises:
-        ValueError: If the serial number format is invalid.
-        ClientError: If there's an issue with DynamoDB operations.
+    예외:
+        ValueError: 일련번호 형식이 잘못된 경우
+        ClientError: DynamoDB 작업에 문제가 있는 경우
     """
     logger.info(
         json.dumps(
@@ -113,7 +113,7 @@ def check_warranty_status(serial_number: str, customer_email: str = None) -> str
 
         warranty_item = response["Item"]
 
-        # Extract warranty information
+    # 보증 정보 추출
         product_name = warranty_item.get("product_name", "Unknown Product")
         purchase_date = warranty_item.get("purchase_date", "Unknown")
         warranty_end_date = warranty_item.get("warranty_end_date", "Unknown")
@@ -121,11 +121,11 @@ def check_warranty_status(serial_number: str, customer_email: str = None) -> str
         customer_name = warranty_item.get("customer_name", "Unknown")
         coverage_details = warranty_item.get("coverage_details", "Standard coverage applies")
 
-        # Calculate days remaining
+    # 남은 일수 계산
         days_remaining = calculate_days_remaining(warranty_end_date) if warranty_end_date != "Unknown" else 0
         status_text = get_warranty_status_text(days_remaining)
 
-        # Format warranty information
+    # 보증 정보 구성
         warranty_info = [
             "🛡️ Warranty Status Information",
             "===============================",
@@ -139,7 +139,7 @@ def check_warranty_status(serial_number: str, customer_email: str = None) -> str
             "",
         ]
 
-        # Add days remaining information
+    # 남은 일수 정보 추가
         if days_remaining > 0:
             warranty_info.append(f"📆 Days Remaining: {days_remaining} days")
         elif days_remaining == 0:
@@ -149,7 +149,7 @@ def check_warranty_status(serial_number: str, customer_email: str = None) -> str
 
         warranty_info.extend(["", "🔧 Coverage Details:", f"   {coverage_details}", ""])
 
-        # Add recommendations based on status
+    # 상태에 따른 권장 사항 추가
         if days_remaining > 30:
             warranty_info.append("✨ Your warranty is active. Contact support for any issues.")
         elif days_remaining > 0:

@@ -1,13 +1,13 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""CDK deployment configuration."""
+"""CDK 배포 설정."""
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class OidcConfig(BaseSettings):
-    """OIDC configuration for ALB authentication. Loaded from environment variables or .env file."""
+    """ALB 인증용 OIDC 설정. 환경 변수 또는 .env 파일에서 불러온다."""
 
     model_config = SettingsConfigDict(env_prefix="OIDC_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -26,7 +26,7 @@ class OidcConfig(BaseSettings):
 
 
 class DnsConfig(BaseSettings):
-    """DNS configuration for Route 53. Loaded from environment variables or .env file."""
+    """Route 53용 DNS 설정. 환경 변수 또는 .env 파일에서 불러온다."""
 
     model_config = SettingsConfigDict(env_prefix="DNS_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -35,7 +35,7 @@ class DnsConfig(BaseSettings):
 
 
 class CdkConfig(BaseModel):
-    """CDK deployment configuration."""
+    """CDK 배포 설정."""
 
     aws_region: str = Field(default="eu-west-1", description="AWS region for main stack deployment")
     identity_aws_region: str = Field(default="eu-central-1", description="AWS region for identity stack deployment")
@@ -49,7 +49,7 @@ class CdkConfig(BaseModel):
 
     @property
     def model_id(self) -> str:
-        """Extract model ID from inference profile by removing region prefix."""
+        """추론 프로파일에서 리전 접두사를 제거하여 모델 ID를 추출한다."""
         parts = self.inference_profile_id.split(".", 1)
         return parts[1] if len(parts) > 1 else parts[0]
 

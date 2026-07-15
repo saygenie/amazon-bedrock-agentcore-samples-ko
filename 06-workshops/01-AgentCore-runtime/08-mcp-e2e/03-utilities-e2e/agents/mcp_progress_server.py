@@ -19,14 +19,14 @@ async def generate_report(user_alias: str, ctx: Context) -> str:
     """
     total = 5
 
-    # Step 1: Fetch transactions
+    # 1단계: Transaction 가져오기
     await ctx.report_progress(progress=1, total=total)
     await asyncio.sleep(0.5)
     transactions = db.get_transactions(user_alias)
     if not transactions:
         return f"No transactions found for {user_alias}."
 
-    # Step 2: Group by category
+    # 2단계: Category별로 그룹화
     await ctx.report_progress(progress=2, total=total)
     await asyncio.sleep(0.5)
     by_category = {}
@@ -34,12 +34,12 @@ async def generate_report(user_alias: str, ctx: Context) -> str:
         cat = t["category"]
         by_category[cat] = by_category.get(cat, 0) + abs(float(t["amount"]))
 
-    # Step 3: Fetch budgets
+    # 3단계: Budget 가져오기
     await ctx.report_progress(progress=3, total=total)
     await asyncio.sleep(0.5)
     budgets = {b["category"]: float(b["monthly_limit"]) for b in db.get_budgets(user_alias)}
 
-    # Step 4: Compare spending vs budgets
+    # 4단계: 지출과 budget 비교
     await ctx.report_progress(progress=4, total=total)
     await asyncio.sleep(0.5)
     lines = []
@@ -52,7 +52,7 @@ async def generate_report(user_alias: str, ctx: Context) -> str:
         else:
             lines.append(f"  {cat:<15} ${spent:>8.2f}  (no budget set)")
 
-    # Step 5: Format report
+    # 5단계: Report 형식 지정
     await ctx.report_progress(progress=5, total=total)
     await asyncio.sleep(0.2)
     total_spent = sum(by_category.values())

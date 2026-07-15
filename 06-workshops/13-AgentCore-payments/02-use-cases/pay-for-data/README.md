@@ -1,18 +1,18 @@
-# Pay for Data — Heurist Finance Agent
+# 데이터 결제 - Heurist Finance Agent
 
-## Overview
+## 개요
 
-A finance research agent that pays for real-time market data using **Amazon Bedrock AgentCore payments**. The agent calls paid [Heurist](https://heurist.xyz) endpoints for live prices, SEC filings, and macro indicators, analyzes the data with AgentCore Code Interpreter, and returns charts and reports as S3 presigned URLs — all without any manual payment code in the tools.
+**Amazon Bedrock AgentCore Payments**를 사용하여 실시간 시장 데이터 비용을 결제하는 금융 조사 에이전트입니다. 에이전트는 실시간 가격, SEC 공시 및 거시 지표를 제공하는 유료 [Heurist](https://heurist.xyz) 엔드포인트를 호출하고 AgentCore Code Interpreter로 데이터를 분석한 후, 차트와 보고서를 S3 presigned URL로 반환합니다. 이 모든 과정에서 도구에 수동 결제 코드를 작성할 필요가 없습니다.
 
-The agent is deployed to **AgentCore Runtime**: a managed container endpoint with HTTPS invocation, SigV4 auth, and automatic observability via CloudWatch.
+에이전트는 HTTPS 호출, SigV4 인증 및 CloudWatch를 통한 자동 관찰성을 제공하는 관리형 컨테이너 엔드포인트인 **AgentCore Runtime**에 배포됩니다.
 
-> **Mainnet sample.** This walkthrough targets Base mainnet and calls the live [Heurist mesh x402 registry](https://mesh.heurist.xyz/x402/agents?details=true). Every invocation settles real USDC on-chain. Typical per-call prices are $0.002–$0.005, so $1 USDC covers ~200 calls. A Base Sepolia variant of the catalog exists at `/x402/base-sepolia/agents?details=true`, but the EIP-712 signing path on AgentCore's Coinbase connector follows the connector's network selection, so this sample uses Base mainnet.
+> **Mainnet 샘플.** 이 실습은 Base mainnet을 대상으로 하며 실제 [Heurist mesh x402 registry](https://mesh.heurist.xyz/x402/agents?details=true)를 호출합니다. 호출할 때마다 실제 USDC가 온체인에서 정산됩니다. 일반적인 호출당 가격은 $0.002~$0.005이므로 $1 USDC로 약 200회 호출할 수 있습니다. `/x402/base-sepolia/agents?details=true`에는 카탈로그의 Base Sepolia 변형이 있지만, AgentCore Coinbase 커넥터의 EIP-712 서명 경로는 커넥터의 네트워크 선택을 따르므로 이 샘플에서는 Base mainnet을 사용합니다.
 
-Heurist endpoints use the [x402 protocol](https://x402.org) — they return HTTP 402 until a valid payment proof is attached. The `AgentCorePaymentsPlugin` handles payment end-to-end: it intercepts 402 responses, generates a USDC proof via the AgentCore payment manager, attaches it, and retries. Your tool code stays a plain `http_request` call.
+Heurist 엔드포인트는 [x402 프로토콜](https://x402.org)을 사용하며 유효한 결제 증명이 첨부될 때까지 HTTP 402를 반환합니다. `AgentCorePaymentsPlugin`은 결제를 처음부터 끝까지 처리합니다. 402 응답을 가로채고 AgentCore Payment Manager를 통해 USDC 증명을 생성하여 첨부한 후 다시 시도합니다. 도구 코드는 일반 `http_request` 호출 형태를 유지합니다.
 
-![CloudWatch GenAI Observability — Heurist Finance Agent](images/obs-dashboard.png)
+![CloudWatch GenAI Observability - Heurist Finance Agent](images/obs-dashboard.png)
 
-## Architecture
+## 아키텍처
 
 ```
 App Backend (ManagementRole)              AgentCore Runtime
@@ -32,9 +32,9 @@ App Backend (ManagementRole)              AgentCore Runtime
                                           (automatic via OpenTelemetry)
 ```
 
-## How It Works
+## 작동 방식
 
-`AgentCorePaymentsPlugin` handles the entire x402 payment lifecycle:
+`AgentCorePaymentsPlugin`은 전체 x402 결제 수명 주기를 처리합니다.
 
 ```python
 from bedrock_agentcore.payments.integrations.strands import (
@@ -59,102 +59,102 @@ agent = Agent(
 )
 ```
 
-See [`agent/main.py`](agent/main.py) for the full implementation.
+전체 구현은 [`agent/main.py`](agent/main.py)을 참조하세요.
 
-## Sample Details
+## 샘플 세부 정보
 
 | | |
 |---|---|
-| AgentCore components | AgentCore payments, AgentCore Code Interpreter, AgentCore Runtime |
-| Agent framework | [Strands Agents](https://strandsagents.com/) |
-| Model | Claude Sonnet 4.6 on Amazon Bedrock (configurable) |
-| Payment protocol | [x402](https://x402.org) |
-| Payment network | Base (USDC) |
+| AgentCore 구성 요소 | AgentCore Payments, AgentCore Code Interpreter, AgentCore Runtime |
+| 에이전트 프레임워크 | [Strands Agents](https://strandsagents.com/) |
+| 모델 | Amazon Bedrock의 Claude Sonnet 4.6(구성 가능) |
+| 결제 프로토콜 | [x402](https://x402.org) |
+| 결제 네트워크 | Base(USDC) |
 
-## Data Sources
+## 데이터 소스
 
-Fetched at runtime from the [Heurist mesh registry](https://mesh.heurist.xyz/x402/agents?details=true). By default the sample loads tools from four agents:
+런타임에 [Heurist mesh registry](https://mesh.heurist.xyz/x402/agents?details=true)에서 가져옵니다. 기본적으로 샘플은 네 에이전트의 도구를 로드합니다.
 
-| Agent | Representative tools | Typical price |
+| 에이전트 | 대표 도구 | 일반적인 가격 |
 |-------|----------------------|---------------|
 | `YahooFinanceAgent` | `price_history`, `quote_snapshot`, `futures_snapshot` | $0.002 |
 | `FredMacroAgent` | `macro_series_snapshot`, `macro_regime_context` | $0.003 |
 | `SecEdgarAgent` | `filing_timeline`, `filing_diff`, `xbrl_fact_trends` | $0.002 |
 | `ExaSearchDigestAgent` | `exa_web_search`, `exa_scrape_url` | $0.005 |
 
-Override with the `HEURIST_AGENT_IDS` environment variable.
+`HEURIST_AGENT_IDS` 환경 변수로 재정의할 수 있습니다.
 
-## Prerequisites
+## 사전 요구 사항
 
-- An **AgentCore payment manager** created in your AWS account
-- A **payment instrument** created and funded — embedded crypto wallet with USDC on **Base mainnet** (default; the notebook walks through this in Step 4)
-- Coinbase CDP project with **Delegated signing** enabled, and a per-wallet delegation grant approved via the WalletHub URL returned at instrument creation
+- AWS 계정에 생성된 **AgentCore Payment Manager**
+- 생성되고 자금이 공급된 **Payment Instrument** - **Base mainnet**의 USDC가 있는 내장형 암호화폐 지갑(기본값, Notebook의 4단계에서 안내)
+- **Delegated signing**이 활성화된 Coinbase CDP 프로젝트 및 결제 수단 생성 시 반환된 WalletHub URL을 통해 승인된 지갑별 위임 권한
 - Python 3.11+
-- AWS credentials with Bedrock and AgentCore access in `us-west-2`
-- Node.js 20+ (for the `@aws/agentcore` CLI)
-- Docker (running, for `agentcore deploy` container build)
-- [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) installed globally
+- `us-west-2`에서 Bedrock 및 AgentCore 액세스 권한이 있는 AWS 자격 증명
+- Node.js 20+(`@aws/agentcore` CLI용)
+- 실행 중인 Docker(`agentcore deploy` 컨테이너 빌드용)
+- 전역으로 설치된 [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html)
 
-## Layout
+## 디렉터리 구성
 
 ```
 pay-for-data/
 ├── README.md
 ├── .env.example
-├── pay-for-data.ipynb                    # notebook: deploy and invoke via AgentCore Runtime
-└── agent/                                # everything below ships in the Runtime container
-    ├── main.py                           # AgentCore Runtime entry point (BedrockAgentCoreApp)
-    ├── catalog.py                        # fetches Heurist registry, formats for system prompt
-    ├── catalog_live_cache.json           # synced catalog (bundled in Runtime image)
-    ├── config.py                         # loads .env / payment context
-    ├── sync_registry.py                  # CLI: refreshes the catalog cache (run before deploy)
-    ├── requirements.txt                  # container Python deps
+├── pay-for-data.ipynb                    # Notebook: AgentCore Runtime을 통한 배포 및 호출
+└── agent/                                # 아래 항목은 모두 Runtime container에 포함
+    ├── main.py                           # AgentCore Runtime 진입점(BedrockAgentCoreApp)
+    ├── catalog.py                        # Heurist registry 조회 후 system prompt용으로 형식 지정
+    ├── catalog_live_cache.json           # 동기화된 catalog(Runtime image에 포함)
+    ├── config.py                         # .env / payment context 로드
+    ├── sync_registry.py                  # CLI: catalog cache 갱신(배포 전에 실행)
+    ├── requirements.txt                  # Container Python 의존성
     └── Dockerfile                        # opentelemetry-instrument python -m main
 ```
 
-## Quick Start
+## 빠른 시작
 
-Open [`pay-for-data.ipynb`](pay-for-data.ipynb) and run the cells in order:
+[`pay-for-data.ipynb`](pay-for-data.ipynb)을 열고 셀을 순서대로 실행합니다.
 
-| Step | What happens |
+| 단계 | 수행 작업 |
 |------|-------------|
-| 1 | Configure credentials and confirm AWS identity |
-| 2 | Sync the Heurist tool catalog (bundled in the container image) |
-| 3 | Create the S3 artifacts bucket |
-| 4 | Provision embedded wallet resources (credential provider, manager, connector, instrument) |
-| 5 | Fund the wallet and grant signing delegation via WalletHub |
-| 6 | Enable Payment Manager observability (CW Logs + X-Ray vended-log delivery) |
-| 7 | Scaffold and deploy to AgentCore Runtime via the `agentcore` CLI |
-| 8 | Grant execution-role permissions (payment, Code Interpreter, S3, Bedrock + inference profile) |
-| 9 | Invoke the deployed agent and inspect results |
-| 10 | View observability traces in CloudWatch |
-| 11 | Cleanup |
+| 1 | 자격 증명 구성 및 AWS ID 확인 |
+| 2 | Heurist 도구 카탈로그 동기화(컨테이너 이미지에 포함) |
+| 3 | S3 아티팩트 버킷 생성 |
+| 4 | 내장형 지갑 리소스 프로비저닝(credential provider, manager, connector, instrument) |
+| 5 | 지갑에 자금 공급 및 WalletHub를 통한 서명 위임 권한 부여 |
+| 6 | Payment Manager 관찰성 활성화(CW Logs + X-Ray vended-log 전달) |
+| 7 | `agentcore` CLI를 통해 AgentCore Runtime 스캐폴딩 및 배포 |
+| 8 | 실행 역할 권한 부여(결제, Code Interpreter, S3, Bedrock + inference profile) |
+| 9 | 배포된 에이전트 호출 및 결과 검사 |
+| 10 | CloudWatch에서 관찰성 추적 확인 |
+| 11 | 정리 |
 
-## Payment Flow
+## 결제 흐름
 
-When the agent calls a paid Heurist endpoint:
+에이전트가 유료 Heurist 엔드포인트를 호출하면 다음 흐름이 진행됩니다.
 
-1. `http_request` sends a POST to the endpoint URL.
-2. Heurist returns HTTP 402 with x402 payment terms (network, asset, amount, recipient).
-3. `AgentCorePaymentsPlugin` intercepts the response.
-4. The plugin asks the AgentCore payment manager to generate a payment proof.
-5. The payment manager uses the payment instrument to sign a USDC transfer and returns a proof.
-6. The plugin attaches the proof as `X-PAYMENT` and retries — Heurist validates and returns the data.
+1. `http_request`가 엔드포인트 URL로 POST를 전송합니다.
+2. Heurist가 x402 결제 조건(network, asset, amount, recipient)과 함께 HTTP 402를 반환합니다.
+3. `AgentCorePaymentsPlugin`이 응답을 가로챕니다.
+4. 플러그인이 AgentCore Payment Manager에 결제 증명 생성을 요청합니다.
+5. Payment Manager가 Payment Instrument를 사용하여 USDC 전송에 서명하고 증명을 반환합니다.
+6. 플러그인이 증명을 `X-PAYMENT`로 첨부하여 다시 시도하면 Heurist가 이를 검증하고 데이터를 반환합니다.
 
-The plugin retries up to 3 times per tool call. Payment limits are enforced at the session scope — the agent cannot exceed `maxSpendAmount`.
+플러그인은 도구 호출당 최대 3회 다시 시도합니다. 결제 한도는 세션 범위에서 적용되므로 에이전트가 `maxSpendAmount`를 초과할 수 없습니다.
 
-## How the Runtime Agent Works
+## Runtime 에이전트 작동 방식
 
-`agent/main.py` implements the AgentCore Runtime service contract with full feature parity:
+`agent/main.py`는 모든 기능을 동일하게 지원하는 AgentCore Runtime 서비스 계약을 구현합니다.
 
-**Stateless, payload-driven**
-All payment config (manager ARN, session ID, instrument ID) comes from the invocation payload. The container holds no credentials. The app backend (ManagementRole) creates payment sessions with spending limits before each invocation. The Runtime execution role (ProcessPaymentRole) can only spend within those limits.
+**상태 비저장, 페이로드 기반**
+모든 결제 구성(manager ARN, session ID, instrument ID)은 호출 페이로드에서 전달됩니다. 컨테이너는 자격 증명을 보유하지 않습니다. 앱 백엔드(ManagementRole)는 각 호출 전에 지출 한도가 있는 결제 세션을 생성합니다. Runtime 실행 역할(ProcessPaymentRole)은 해당 한도 내에서만 지출할 수 있습니다.
 
 **AgentCore Code Interpreter**
-Code Interpreter is a remote AWS API — it works identically from a Runtime container as from any other environment. The agent uses it for pandas/matplotlib analysis and chart generation.
+Code Interpreter는 원격 AWS API이므로 Runtime 컨테이너와 다른 환경에서 동일하게 작동합니다. 에이전트는 pandas/matplotlib 분석 및 차트 생성에 이를 사용합니다.
 
-**S3 artifact storage**
-Artifacts produced by Code Interpreter are uploaded to S3 and returned as presigned download URLs. The response shape is:
+**S3 아티팩트 저장**
+Code Interpreter에서 생성한 아티팩트는 S3에 업로드되고 presigned 다운로드 URL로 반환됩니다. 응답 형식은 다음과 같습니다.
 
 ```json
 {
@@ -165,70 +165,70 @@ Artifacts produced by Code Interpreter are uploaded to S3 and returned as presig
 }
 ```
 
-If `CI_ARTIFACTS_BUCKET` is not configured, the agent degrades gracefully: charts become markdown tables, text returns inline.
+`CI_ARTIFACTS_BUCKET`이 구성되지 않으면 에이전트는 기능을 단계적으로 축소합니다. 차트는 Markdown 표가 되고 텍스트는 인라인으로 반환됩니다.
 
-**Observability**
-The `agentcore deploy` CLI configures the container to run under `opentelemetry-instrument`. Combined with `aws-opentelemetry-distro` (included in `agent/requirements.txt`), this provides:
-- Strands agent spans (LLM calls, tool calls, agent turns) → CloudWatch GenAI Observability
-- Code Interpreter calls stitched as child spans via W3C `traceparent` botocore instrumentation
-- Payment calls (`ProcessPayment`, `GetPaymentInstrument`) as boto3 child spans
+**관찰성**
+`agentcore deploy` CLI는 컨테이너가 `opentelemetry-instrument`에서 실행되도록 구성합니다. 이를 `agent/requirements.txt`에 포함된 `aws-opentelemetry-distro`와 함께 사용하면 다음 항목이 제공됩니다.
+- Strands 에이전트 span(LLM 호출, 도구 호출, 에이전트 턴) → CloudWatch GenAI Observability
+- W3C `traceparent` botocore 계측을 통해 하위 span으로 연결된 Code Interpreter 호출
+- boto3 하위 span으로 표시되는 결제 호출(`ProcessPayment`, `GetPaymentInstrument`)
 
-No instrumentation code required in `agent/main.py`.
+`agent/main.py`에는 계측 코드가 필요하지 않습니다.
 
-**Execution role permissions** (attached by the notebook, Step 8):
+**실행 역할 권한**(Notebook의 8단계에서 연결):
 
-| Permission set | Actions | Resource scope |
+| 권한 세트 | 작업 | 리소스 범위 |
 |---|---|---|
-| Payment data-plane | `ProcessPayment`, `GetPaymentInstrument`, `GetPaymentInstrumentBalance`, `GetPaymentSession`, `GetResourcePaymentToken` | `payment-manager/*`, `payment-manager/*/instrument/*`, `payment-manager/*/session/*` |
+| 결제 데이터 플레인 | `ProcessPayment`, `GetPaymentInstrument`, `GetPaymentInstrumentBalance`, `GetPaymentSession`, `GetResourcePaymentToken` | `payment-manager/*`, `payment-manager/*/instrument/*`, `payment-manager/*/session/*` |
 | Code Interpreter | `StartCodeInterpreterSession`, `InvokeCodeInterpreter`, `StopCodeInterpreterSession` | `code-interpreter/*` |
-| S3 artifacts | `PutObject`, `GetObject` | `<bucket>/heurist-finance-artifacts/*` |
-| Bedrock model | `InvokeModel`, `InvokeModelWithResponseStream` | `foundation-model/*`, `inference-profile/*`, `application-inference-profile/*` (the latter two are required for CRIS-fronted models like Claude Sonnet 4.6 in us-west-2) |
+| S3 아티팩트 | `PutObject`, `GetObject` | `<bucket>/heurist-finance-artifacts/*` |
+| Bedrock 모델 | `InvokeModel`, `InvokeModelWithResponseStream` | `foundation-model/*`, `inference-profile/*`, `application-inference-profile/*`(뒤의 두 항목은 us-west-2의 Claude Sonnet 4.6처럼 CRIS를 사용하는 모델에 필요) |
 
-## Environment Variables
+## 환경 변수
 
-See [`.env.example`](.env.example). Required on the host (notebook):
+호스트(Notebook)에 필요한 항목은 [`.env.example`](.env.example)을 참조하세요.
 
-| Variable | Description |
+| 변수 | 설명 |
 |----------|-------------|
-| `PAYMENT_MANAGER_ARN` | ARN of the AgentCore payment manager |
-| `PAYMENT_SESSION_ID` | ID of an active payment session |
-| `PAYMENT_INSTRUMENT_ID` | ID of a funded payment instrument (embedded crypto wallet) |
-| `USER_ID` | User identifier for payment tracking |
-| `BEDROCK_MODEL_ID` | Bedrock model (default: Claude Sonnet 4.6) |
-| `HEURIST_AGENT_IDS` | Comma-separated Heurist agents to load |
-| `HEURIST_CATALOG_URL` | Catalog endpoint — `https://mesh.heurist.xyz/x402/agents?details=true` (mainnet) or the `/x402/base-sepolia/...` variant for testnet |
+| `PAYMENT_MANAGER_ARN` | AgentCore Payment Manager의 ARN |
+| `PAYMENT_SESSION_ID` | 활성 결제 세션의 ID |
+| `PAYMENT_INSTRUMENT_ID` | 자금이 공급된 Payment Instrument(내장형 암호화폐 지갑)의 ID |
+| `USER_ID` | 결제 추적용 사용자 식별자 |
+| `BEDROCK_MODEL_ID` | Bedrock 모델(기본값: Claude Sonnet 4.6) |
+| `HEURIST_AGENT_IDS` | 로드할 Heurist 에이전트의 쉼표로 구분된 목록 |
+| `HEURIST_CATALOG_URL` | 카탈로그 엔드포인트 - `https://mesh.heurist.xyz/x402/agents?details=true`(mainnet) 또는 테스트넷용 `/x402/base-sepolia/...` 변형 |
 
-Bundled in the container `.env` (set by Step 7):
+컨테이너 `.env`에 포함되는 항목(7단계에서 설정):
 
-| Variable | Description |
+| 변수 | 설명 |
 |----------|-------------|
-| `CI_ARTIFACTS_BUCKET` | S3 bucket used for artifact upload |
-| `CI_ARTIFACTS_PREFIX` | S3 key prefix (default: `heurist-finance-artifacts`) |
-| `CI_ARTIFACTS_TTL` | Presigned URL TTL in seconds (default: 3600) |
-| `AWS_REGION` | Region for boto3 clients |
-| `AGENT_NAME` | Reported in payment observability |
-| `BYPASS_TOOL_CONSENT` | Set to `true` so `strands_tools.http_request` skips its TTY confirm prompt — required because the Runtime container has no TTY |
-| `AGENT_MAX_TOKENS` | Max Bedrock output tokens per agent turn (default: `32000`). Lower this if you only need short Q&A — Bedrock charges per output token, so a 32k cap is a worst-case ~$0.48 per turn for Claude Sonnet 4.6. Most turns use far less. The SDK default (4k) is too low for workflows that fetch data, run Code Interpreter, and write a markdown report in one turn — it raises `MaxTokensReachedException` mid-run. |
+| `CI_ARTIFACTS_BUCKET` | 아티팩트 업로드에 사용하는 S3 버킷 |
+| `CI_ARTIFACTS_PREFIX` | S3 키 접두사(기본값: `heurist-finance-artifacts`) |
+| `CI_ARTIFACTS_TTL` | Presigned URL TTL(초)(기본값: 3600) |
+| `AWS_REGION` | boto3 클라이언트용 리전 |
+| `AGENT_NAME` | 결제 관찰성에 보고되는 이름 |
+| `BYPASS_TOOL_CONSENT` | `strands_tools.http_request`가 TTY 확인 프롬프트를 건너뛰도록 `true`로 설정. Runtime 컨테이너에는 TTY가 없으므로 필요 |
+| `AGENT_MAX_TOKENS` | 에이전트 턴당 최대 Bedrock 출력 토큰 수(기본값: `32000`). 짧은 Q&A만 필요하다면 낮추세요. Bedrock은 출력 토큰당 요금을 부과하므로 32k 한도에서 Claude Sonnet 4.6의 턴당 최악의 비용은 약 $0.48입니다. 대부분의 턴에서는 이보다 훨씬 적게 사용합니다. SDK 기본값(4k)은 데이터를 가져오고 Code Interpreter를 실행하며 한 번의 턴에 Markdown 보고서를 작성하는 워크플로에는 너무 낮아 실행 중 `MaxTokensReachedException`이 발생합니다. |
 
-Payment context (`PAYMENT_MANAGER_ARN`, `PAYMENT_SESSION_ID`, `PAYMENT_INSTRUMENT_ID`, `USER_ID`) is passed in the **invocation payload** at runtime, not via env vars in the container.
+결제 컨텍스트(`PAYMENT_MANAGER_ARN`, `PAYMENT_SESSION_ID`, `PAYMENT_INSTRUMENT_ID`, `USER_ID`)는 컨테이너의 환경 변수가 아니라 런타임의 **호출 페이로드**로 전달됩니다.
 
-## Costs
+## 비용
 
-A single agent invocation incurs charges across four categories. Approximate worst-case figures for the default config:
+에이전트를 한 번 호출하면 다음 범주에서 요금이 발생합니다. 기본 구성의 대략적인 최악의 비용은 다음과 같습니다.
 
-| Category | Driver | Approx. cost per turn | Notes |
+| 범주 | 비용 요인 | 턴당 예상 비용 | 참고 |
 |---|---|---|---|
-| **Heurist x402 (USDC on Base mainnet)** | Each paid tool call | $0.002–$0.005 per call | Settles real USDC on-chain. A typical research run uses 3–10 paid calls. The wallet must be funded. |
-| **Bedrock model output** | `AGENT_MAX_TOKENS` × Claude Sonnet 4.6 output rate | up to ~$0.90 per turn at the 32k cap | Bedrock charges $0.015 per 1k output tokens for Claude Sonnet 4.6 in us-west-2 (input is cheaper at $0.003 per 1k). Most turns use far less than the cap; lower `AGENT_MAX_TOKENS` for short Q&A. |
-| **Bedrock AgentCore Runtime** | Container vCPU × seconds + memory × seconds while invoked | a few cents per minute of active invocation | Idle minutes between invocations are not billed (`idleRuntimeSessionTimeout=600s`). |
-| **Bedrock AgentCore Code Interpreter** | Sessions started + minutes active | a few cents per turn | Only billed when the agent actually invokes the Code Interpreter tool. |
-| **S3 + CloudWatch** | Artifact storage + log/trace ingestion | rounding error | A small chart + report is well under 1 MB. Vended-log delivery to CW Logs and X-Ray is metered the same as your other CW usage. |
+| **Heurist x402(Base mainnet의 USDC)** | 각 유료 도구 호출 | 호출당 $0.002~$0.005 | 실제 USDC를 온체인에서 정산합니다. 일반적인 조사 실행에서는 3~10회의 유료 호출을 사용합니다. 지갑에 자금이 있어야 합니다. |
+| **Bedrock 모델 출력** | `AGENT_MAX_TOKENS` × Claude Sonnet 4.6 출력 요율 | 32k 한도에서 턴당 최대 약 $0.90 | Bedrock은 us-west-2의 Claude Sonnet 4.6 출력 토큰 1,000개당 $0.015를 부과합니다(입력은 1,000개당 $0.003로 더 저렴). 대부분의 턴은 한도보다 훨씬 적게 사용합니다. 짧은 Q&A에는 `AGENT_MAX_TOKENS`를 낮추세요. |
+| **Bedrock AgentCore Runtime** | 호출 중 컨테이너 vCPU × 초 + 메모리 × 초 | 활성 호출 시간 분당 수 센트 | 호출 사이의 유휴 시간에는 요금이 부과되지 않습니다(`idleRuntimeSessionTimeout=600s`). |
+| **Bedrock AgentCore Code Interpreter** | 시작된 세션 수 + 활성 시간(분) | 턴당 수 센트 | 에이전트가 실제로 Code Interpreter 도구를 호출할 때만 요금이 부과됩니다. |
+| **S3 + CloudWatch** | 아티팩트 스토리지 + 로그/추적 수집 | 매우 적음 | 작은 차트와 보고서는 1MB보다 훨씬 작습니다. CW Logs 및 X-Ray로의 vended log 전달에는 다른 CW 사용량과 동일한 방식으로 요금이 부과됩니다. |
 
-Tune `AGENT_MAX_TOKENS` and `SESSION_MAX_SPEND` in `.env` to match the workflow you actually run. The notebook uses a $0.25 per-session spend cap by default, which is plenty for a multi-call research workflow.
+실제로 실행하는 워크플로에 맞게 `.env`의 `AGENT_MAX_TOKENS`와 `SESSION_MAX_SPEND`를 조정하세요. Notebook은 기본적으로 세션당 $0.25의 지출 한도를 사용하며 여러 번 호출하는 조사 워크플로에 충분합니다.
 
-## Notes
+## 참고 사항
 
-- Payment sessions expire. Create a fresh session before each invocation in automated workflows.
-- Each paid call settles USDC on Base. Ensure your payment instrument is funded.
-- Sync the catalog cache before building the container image (`python agent/sync_registry.py`). The cache is bundled in the image — the container does not call the Heurist registry at startup.
-- Presigned artifact URLs expire after `CI_ARTIFACTS_TTL` seconds (default: 1 hour). Download or forward the URL to the end user promptly.
+- 결제 세션은 만료됩니다. 자동화된 워크플로에서는 호출할 때마다 새 세션을 생성하세요.
+- 각 유료 호출은 Base에서 USDC로 정산됩니다. Payment Instrument에 자금이 있는지 확인하세요.
+- 컨테이너 이미지를 빌드하기 전에 카탈로그 캐시를 동기화하세요(`python agent/sync_registry.py`). 캐시는 이미지에 포함되므로 컨테이너가 시작 시 Heurist registry를 호출하지 않습니다.
+- Presigned 아티팩트 URL은 `CI_ARTIFACTS_TTL`초 후 만료됩니다(기본값: 1시간). URL을 즉시 다운로드하거나 최종 사용자에게 전달하세요.

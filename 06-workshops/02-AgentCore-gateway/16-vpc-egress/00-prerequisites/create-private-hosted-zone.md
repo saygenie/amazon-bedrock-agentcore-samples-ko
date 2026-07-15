@@ -1,20 +1,20 @@
 <!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Create a Private Hosted Zone
+# Private Hosted Zone 생성
 
-> **Note:** The guidance in this document is intended for **workshop and learning purposes only**. For production deployments, please adhere to your organization's security policies and DNS management practices.
+> **참고:** 이 문서의 가이드는 **워크숍 및 학습 전용**입니다. 프로덕션 배포에서는 조직의 보안 정책 및 DNS 관리 방식을 준수하세요.
 
-Create a Route 53 private hosted zone for your domain, associated with your VPC. Records in this zone only resolve from inside the associated VPCs.
+도메인의 Route 53 private hosted zone을 생성하여 VPC에 연결합니다. 이 zone의 record는 연결된 VPC 내부에서만 확인할 수 있습니다.
 
-> Some CDK stacks in this workshop create the private hosted zone automatically. Check the lab instructions before creating one manually.
+> 이 워크숍의 일부 CDK 스택은 private hosted zone을 자동으로 생성합니다. 수동으로 생성하기 전에 실습 지침을 확인하세요.
 
-## Prerequisites
+## 사전 요구 사항
 
-- Your VPC ID
-- AWS CLI configured
+- VPC ID
+- 구성된 AWS CLI
 
-## Step 1: Create the private hosted zone
+## 1단계: private hosted zone 생성
 
 ```bash
 aws route53 create-hosted-zone \
@@ -25,13 +25,13 @@ aws route53 create-hosted-zone \
   --profile default
 ```
 
-Note the `HostedZoneId` from the response.
+응답의 `HostedZoneId`를 기록합니다.
 
-> You can use the same domain name as your public hosted zone. Route 53 resolves private zones first for associated VPCs. The public zone is unaffected.
+> public hosted zone과 동일한 도메인 이름을 사용할 수 있습니다. Route 53은 연결된 VPC에서 private zone을 먼저 확인하며 public zone은 영향을 받지 않습니다.
 
-## Step 2: Add a DNS record
+## 2단계: DNS record 추가
 
-After deploying the CDK stack, add an Alias A record pointing your domain to the load balancer:
+CDK 스택을 배포한 후 도메인에서 load balancer를 가리키는 Alias A record를 추가합니다.
 
 ```bash
 aws route53 change-resource-record-sets \
@@ -53,35 +53,35 @@ aws route53 change-resource-record-sets \
   }'
 ```
 
-> Use an Alias A record (not CNAME) for load balancers: it's free and supports zone apex.
+> load balancer에는 CNAME이 아닌 Alias A record를 사용하세요. 무료이며 zone apex를 지원합니다.
 
-## Verify
+## 확인
 
-From **inside the VPC** (bastion or CloudShell VPC mode):
+**VPC 내부**(bastion 또는 CloudShell VPC mode)에서:
 ```bash
 dig internal-mcp.your-domain.com A +short
-# Returns load balancer private IPs
+# Load balancer의 private IP 반환
 ```
 
-From **outside the VPC**:
+**VPC 외부**에서:
 ```bash
 dig @8.8.8.8 internal-mcp.your-domain.com A +short
-# Returns nothing (NXDOMAIN)
+# 아무것도 반환하지 않음(NXDOMAIN)
 ```
 
-## Cleanup
+## 정리
 
-Delete the DNS record first, then the hosted zone:
+DNS record를 먼저 삭제한 다음 hosted zone을 삭제합니다.
 
 ```bash
-# Delete the record (use the same change batch with Action: DELETE)
+# Record 삭제(Action: DELETE를 사용하여 동일한 change batch 적용)
 
-# Delete the hosted zone
+# Hosted zone 삭제
 aws route53 delete-hosted-zone \
   --id <private-hosted-zone-id> \
   --profile default
 ```
 
-## License
+## 라이선스
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](../LICENSE.txt) file for details.
+이 프로젝트는 Apache License 2.0에 따라 라이선스가 부여됩니다. 자세한 내용은 [LICENSE](../LICENSE.txt) 파일을 참조하세요.

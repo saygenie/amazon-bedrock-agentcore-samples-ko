@@ -1,38 +1,38 @@
-# Hosting Java Agents on AgentCore Runtime
+# AgentCore Runtime에서 Java 에이전트 호스팅
 
-## Overview
+## 개요
 
-These tutorials demonstrate how to host **Java-based AI agents** on Amazon Bedrock AgentCore Runtime — the first Java examples in the official tutorials.
+이 자습서에서는 Amazon Bedrock AgentCore Runtime에서 **Java 기반 AI 에이전트**를 호스팅하는 방법을 보여 줍니다. 공식 자습서에서 처음 제공되는 Java 예제입니다.
 
-All existing tutorials in this repository use Python. These Java tutorials show equivalent patterns using Spring AI and the Embabel Agent Framework.
+이 repository의 기존 자습서는 모두 Python을 사용합니다. 이 Java 자습서는 Spring AI와 Embabel Agent Framework를 사용하여 동일한 패턴을 보여 줍니다.
 
-## Tutorial Examples
+## 자습서 예제
 
-| Example                                                                    | Framework              | Features                          | Complexity   |
+| 예제                                                                       | 프레임워크             | 기능                              | 난이도       |
 | -------------------------------------------------------------------------- | ---------------------- | --------------------------------- | ------------ |
-| **[01-springai-with-bedrock-model](01-springai-with-bedrock-model)**       | Spring AI              | Conversational agent, ChatClient  | Easy         |
-| **[02-embabel-with-bedrock-model](02-embabel-with-bedrock-model)**         | Embabel + Spring AI    | GOAP planning, AgentCore Browser  | Intermediate |
+| **[01-springai-with-bedrock-model](01-springai-with-bedrock-model)**       | Spring AI              | 대화형 에이전트, ChatClient       | 쉬움         |
+| **[02-embabel-with-bedrock-model](02-embabel-with-bedrock-model)**         | Embabel + Spring AI    | GOAP 계획, AgentCore Browser      | 중급         |
 
-## Key Differences from Python Tutorials
+## Python 자습서와의 주요 차이점
 
-| Concept              | Python                          | Java                                              |
+| 개념                 | Python                          | Java                                              |
 |----------------------|---------------------------------|---------------------------------------------------|
-| Entry point          | `@app.entrypoint`               | `@AgentCoreInvocation`                            |
-| Agent framework      | Strands / LangGraph / CrewAI    | Spring AI ChatClient / Embabel GOAP               |
-| Runtime starter      | `bedrock-agentcore-sdk`         | `spring-ai-agentcore-runtime-starter`              |
-| Browser integration  | Direct SDK call                 | `spring-ai-agentcore-browser` + `ChatClient`       |
-| Container base       | Python slim                     | Amazon Corretto 21                                 |
-| Build tool           | pip / poetry                    | Maven                                              |
+| 진입점               | `@app.entrypoint`               | `@AgentCoreInvocation`                            |
+| 에이전트 프레임워크  | Strands / LangGraph / CrewAI    | Spring AI ChatClient / Embabel GOAP               |
+| Runtime starter      | `bedrock-agentcore-sdk`         | `spring-ai-agentcore-runtime-starter`             |
+| Browser 통합         | 직접 SDK 호출                   | `spring-ai-agentcore-browser` + `ChatClient`      |
+| Container base       | Python slim                     | Amazon Corretto 21                                |
+| Build 도구           | pip / poetry                    | Maven                                             |
 
 ## Spring AI AgentCore Library
 
-These tutorials use the [spring-ai-agentcore](https://github.com/spring-ai-community/spring-ai-agentcore) community library — a Spring Boot starter that enables existing Spring Boot applications to conform to the Amazon AgentCore Runtime contract with minimal configuration. It provides auto-configured `/invoke` and `/ping` endpoints, the `@AgentCoreInvocation` annotation, SSE streaming support, AgentCore Memory integration, browser automation, and more.
+이 자습서는 [spring-ai-agentcore](https://github.com/spring-ai-community/spring-ai-agentcore) community library를 사용합니다. 이 Spring Boot starter를 사용하면 기존 Spring Boot 애플리케이션이 최소한의 구성으로 Amazon AgentCore Runtime 계약을 준수할 수 있습니다. 자동 구성된 `/invoke` 및 `/ping` 엔드포인트, `@AgentCoreInvocation` annotation, SSE 스트리밍 지원, AgentCore Memory 통합, 브라우저 자동화 등을 제공합니다.
 
-## Prerequisites
+## 사전 요구 사항
 
-* Java 21 (Amazon Corretto recommended)
+* Java 21(Amazon Corretto 권장)
 * Maven 3.9+
 * Docker
-* Node.js 18+ and npm (for CDK)
-* AWS CLI configured with appropriate credentials
+* Node.js 18+ 및 npm(CDK용)
+* 적절한 자격 증명으로 구성된 AWS CLI
 * AWS CDK CLI (`npm install -g aws-cdk`)

@@ -1,6 +1,6 @@
 """
-Setup script to create Gateway with Lambda targets for Insurance Underwriting
-Run this after deploying Lambda functions with deploy_lambdas.py
+보험 인수용 Lambda 대상을 포함하는 Gateway 생성 설정 스크립트
+deploy_lambdas.py로 Lambda 함수를 배포한 후 실행합니다.
 """
 
 import json
@@ -15,7 +15,7 @@ GATEWAY_NAME = "GW-Insurance-Underwriting"
 
 
 def _find_gateway_by_name(region: str) -> str | None:
-    """Return the gateway ID if a gateway with GATEWAY_NAME already exists."""
+    """GATEWAY_NAME과 같은 Gateway가 이미 있으면 해당 ID를 반환합니다."""
     client = boto3.client("bedrock-agentcore-control", region_name=region)
     try:
         resp = client.list_gateways()
@@ -31,13 +31,13 @@ def _find_gateway_by_name(region: str) -> str | None:
 
 
 def _delete_gateway(region: str, gateway_id: str) -> None:
-    """Delete all targets then the gateway itself, waiting for targets to clear."""
+    """모든 대상을 삭제하고 대상이 정리될 때까지 기다린 후 Gateway를 삭제합니다."""
     client = boto3.client("bedrock-agentcore-control", region_name=region)
     try:
         targets = client.list_gateway_targets(gatewayIdentifier=gateway_id).get("items", [])
         for t in targets:
             client.delete_gateway_target(gatewayIdentifier=gateway_id, targetId=t["targetId"])
-        # Wait until all targets are gone (deletion is asynchronous)
+        # 삭제는 비동기로 진행되므로 모든 대상이 사라질 때까지 대기
         for _ in range(30):
             remaining = client.list_gateway_targets(gatewayIdentifier=gateway_id).get("items", [])
             if not remaining:
@@ -51,7 +51,7 @@ def _delete_gateway(region: str, gateway_id: str) -> None:
 
 
 def load_config():
-    """Load existing config.json"""
+    """기존 config.json을 로드합니다."""
     config_file = Path(__file__).parent.parent / "config.json"
 
     if not config_file.exists():
@@ -69,11 +69,11 @@ def load_config():
 
 
 def setup_gateway():
-    """Setup AgentCore Gateway with Insurance Underwriting Lambda targets"""
+    """보험 인수용 Lambda 대상을 포함하는 AgentCore Gateway를 설정합니다."""
 
     print("🚀 Setting up AgentCore Gateway for Insurance Underwriting...\n")
 
-    # Load existing configuration (contains the region set by deploy_lambdas.py)
+    # 기존 구성 로드(deploy_lambdas.py에서 설정한 리전 포함)
     print("📦 Loading configuration...")
     existing_config, config_file = load_config()
 
@@ -83,7 +83,7 @@ def setup_gateway():
 
     print(f"Region: {region}\n")
 
-    # --- Idempotency: reuse existing gateway if config is complete --------
+    # --- 멱등성: 구성이 완전하면 기존 Gateway 재사용 ----------------------
     saved_gateway = existing_config.get("gateway", {})
     saved_gw_id = saved_gateway.get("gateway_id")
     if saved_gw_id:
@@ -98,7 +98,7 @@ def setup_gateway():
         except Exception:
             print(f"   Gateway {saved_gw_id} not found in AWS — will create fresh.")
 
-    # --- No config: detect and remove stale gateway by name ---------------
+    # --- 구성이 없으면 이름으로 오래된 Gateway를 찾아 제거 ----------------
     stale_id = _find_gateway_by_name(region)
     if stale_id:
         print(f"⚠️  Found stale gateway '{GATEWAY_NAME}' ({stale_id}) with no saved config.")
@@ -117,40 +117,40 @@ def setup_gateway():
         print(f"   • {name}: {arn}")
     print()
 
-    # Initialize client
+    # 클라이언트 초기화
     print("� Iniutializing AgentCore client...")
     client = GatewayClient(region_name=region)
     client.logger.setLevel(logging.INFO)
 
-    # Step 1: Create OAuth authorizer
+    # 1단계: OAuth 권한 부여자 생성
     print("\n📝 Step 1: Creating OAuth authorization server...")
     cognito_response = client.create_oauth_authorizer_with_cognito("InsuranceUnderwritingGateway")
     print("✅ Authorization server created")
 
-    # Step 2: Create Gateway (role will be auto-created)
+    # 2단계: Gateway 생성(역할은 자동 생성)
     print("\n📝 Step 2: Creating AgentCore Gateway...")
     gateway = client.create_mcp_gateway(
         name=GATEWAY_NAME,
-        role_arn=None,  # Let the toolkit create the role
+        role_arn=None,  # 툴킷에서 역할 생성
         authorizer_config=cognito_response["authorizer_config"],
         enable_semantic_search=True,
     )
     print(f"✅ Gateway created: {gateway['gatewayUrl']}")
 
-    # Fix IAM permissions for the auto-created role
+    # 자동 생성된 역할의 IAM 권한 수정
     print("\n📝 Step 2.1: Configuring IAM permissions...")
     client.fix_iam_permissions(gateway)
     print("⏳ Waiting 30s for IAM propagation...")
     time.sleep(30)
     print("✅ IAM permissions configured")
 
-    # Step 3: Add Lambda targets
+    # 3단계: Lambda 대상 추가
     print("\n📝 Step 3: Adding Lambda targets...")
 
-    # Define Lambda functions with their schemas
+    # 스키마와 함께 Lambda 함수 정의
     lambda_functions = []
 
-    # ApplicationTool - Stage 1: Application Submission
+    # ApplicationTool - 1단계: 신청서 제출
     if "ApplicationTool" in lambda_config:
         lambda_functions.append(
             {
@@ -180,7 +180,7 @@ def setup_gateway():
             }
         )
 
-    # RiskModelTool - Stage 3: External Scoring Integration
+    # RiskModelTool - 3단계: 외부 점수 산정 통합
     if "RiskModelTool" in lambda_config:
         lambda_functions.append(
             {
@@ -213,7 +213,7 @@ def setup_gateway():
             }
         )
 
-    # ApprovalTool - Stage 7: Senior Approval
+    # ApprovalTool - 7단계: 상급자 승인
     if "ApprovalTool" in lambda_config:
         lambda_functions.append(
             {
@@ -243,7 +243,7 @@ def setup_gateway():
             }
         )
 
-    # Add each Lambda target to the gateway
+    # 각 Lambda 대상을 Gateway에 추가
     gateway_arn = None
     for lambda_func in lambda_functions:
         print(f"\n   🔧 Adding {lambda_func['name']} target...")
@@ -268,10 +268,10 @@ def setup_gateway():
         except Exception as e:
             print(f"   ❌ Error adding {lambda_func['name']} target: {e}")
 
-    # Step 4: Update existing config.json with gateway information
+    # 4단계: 기존 config.json에 Gateway 정보 업데이트
     print("\n📝 Step 4: Updating config.json with gateway information...")
 
-    # Add gateway configuration to existing config
+    # 기존 구성에 Gateway 구성 추가
     existing_config["gateway"] = {
         "gateway_url": gateway["gatewayUrl"],
         "gateway_id": gateway["gatewayId"],
@@ -280,7 +280,7 @@ def setup_gateway():
         "client_info": cognito_response["client_info"],
     }
 
-    # Write updated config back to config.json
+    # 업데이트된 구성을 config.json에 다시 쓰기
     with open(config_file, "w", encoding="utf-8") as f:
         json.dump(existing_config, f, indent=2)
 

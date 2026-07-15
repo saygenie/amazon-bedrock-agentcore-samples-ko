@@ -9,36 +9,36 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-# Patch httpx at the request level to inject User-Agent header
-# This ensures ALL HTTP requests have the User-Agent header, including OAuth discovery calls
+# 요청 수준에서 httpx를 패치하여 User-Agent header 주입
+# 이렇게 하면 OAuth discovery 호출을 포함한 모든 HTTP 요청에 User-Agent header가 포함됨
 _original_httpx_request = httpx.Request.__init__
 
 
 def _patched_httpx_request_init(self, method, url, *args, **kwargs):
-    """Patched Request.__init__ that injects User-Agent header into all HTTP requests."""
-    # Get or create headers
+    """모든 HTTP 요청에 User-Agent header를 주입하도록 패치한 Request.__init__입니다."""
+    # Header를 가져오거나 생성
     headers = kwargs.get("headers")
     if headers is None:
         headers = {}
         kwargs["headers"] = headers
 
-    # Convert to mutable dict if needed
+    # 필요한 경우 변경 가능한 dict로 변환
     if not isinstance(headers, dict):
         headers = dict(headers)
         kwargs["headers"] = headers
 
-    # Inject User-Agent if not present (case-insensitive check)
+    # User-Agent가 없으면 주입(대소문자 구분 없이 확인)
     if "User-Agent" not in headers and "user-agent" not in headers:
         headers["User-Agent"] = "python-mcp-sdk/1.0 (BedrockAgentCore-Runtime)"
 
-    # Call original __init__
+    # 원본 __init__ 호출
     _original_httpx_request(self, method, url, *args, **kwargs)
 
 
-# Apply the patch globally before importing MCP modules
+# MCP module을 import하기 전에 전역으로 패치 적용
 httpx.Request.__init__ = _patched_httpx_request_init
 
-# Now import MCP modules - they will use patched httpx
+# 이제 MCP module import - 패치된 httpx를 사용함
 from mcp.client.auth import OAuthClientProvider, TokenStorage  # noqa: E402
 from mcp.client.session import ClientSession  # noqa: E402
 from mcp.client.sse import sse_client  # noqa: E402
@@ -47,7 +47,7 @@ from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAu
 
 
 class InMemoryTokenStorage(TokenStorage):
-    """Simple in-memory token storage implementation."""
+    """간단한 in-memory token storage 구현입니다."""
 
     def __init__(self):
         self._tokens: OAuthToken | None = None
@@ -67,15 +67,15 @@ class InMemoryTokenStorage(TokenStorage):
 
 
 class CallbackHandler(BaseHTTPRequestHandler):
-    """Simple HTTP handler to capture OAuth callback."""
+    """OAuth callback을 캡처하는 간단한 HTTP handler입니다."""
 
     def __init__(self, request, client_address, server, callback_data):
-        """Initialize with callback data storage."""
+        """Callback data storage로 초기화합니다."""
         self.callback_data = callback_data
         super().__init__(request, client_address, server)
 
     def do_GET(self):
-        """Handle GET request from OAuth redirect."""
+        """OAuth redirect의 GET 요청을 처리합니다."""
         parsed = urlparse(self.path)
         query_params = parse_qs(parsed.query)
         # print(f'Query Params parsed: {query_params}')
@@ -116,12 +116,12 @@ class CallbackHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def log_message(self, format, *args):
-        """Suppress default logging."""
+        """기본 logging을 억제합니다."""
         pass
 
 
 class CallbackServer:
-    """Simple server to handle OAuth callbacks."""
+    """OAuth callback을 처리하는 간단한 server입니다."""
 
     def __init__(self, port=3030):
         self.port = port
@@ -130,7 +130,7 @@ class CallbackServer:
         self.callback_data = {"authorization_code": None, "state": None, "error": None}
 
     def _create_handler_with_data(self):
-        """Create a handler class with access to callback data."""
+        """Callback data에 액세스할 수 있는 handler class를 생성합니다."""
         callback_data = self.callback_data
 
         class DataCallbackHandler(CallbackHandler):
@@ -140,7 +140,7 @@ class CallbackServer:
         return DataCallbackHandler
 
     def start(self):
-        """Start the callback server in a background thread."""
+        """Background thread에서 callback server를 시작합니다."""
         handler_class = self._create_handler_with_data()
         self.server = HTTPServer(("localhost", self.port), handler_class)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -148,7 +148,7 @@ class CallbackServer:
         print(f"🖥️  Started callback server on http://localhost:{self.port}")
 
     def stop(self):
-        """Stop the callback server."""
+        """Callback server를 중지합니다."""
         if self.server:
             self.server.shutdown()
             self.server.server_close()
@@ -156,7 +156,7 @@ class CallbackServer:
             self.thread.join(timeout=1)
 
     def wait_for_callback(self, timeout=300):
-        """Wait for OAuth callback with timeout."""
+        """Timeout 동안 OAuth callback을 기다립니다."""
         start_time = time.time()
         while time.time() - start_time < timeout:
             if self.callback_data["authorization_code"]:
@@ -167,42 +167,42 @@ class CallbackServer:
         raise Exception("Timeout waiting for OAuth callback")
 
     def get_state(self):
-        """Get the received state parameter."""
+        """수신한 state parameter를 가져옵니다."""
         return self.callback_data["state"]
 
 
 def add_auth0_audience_parameter(authorization_url: str, audience: str) -> str:
     """
-    Add Auth0 'audience' parameter to authorization URL.
+    Authorization URL에 Auth0 'audience' parameter를 추가합니다.
 
-    Auth0 requires the 'audience' parameter to identify which API's token settings
-    to use. Without it, Auth0 returns opaque tokens or JWE instead of JWT.
+    Auth0에서는 사용할 API의 token 설정을 식별하기 위해 'audience' parameter가
+    필요합니다. 이 값이 없으면 Auth0가 JWT 대신 opaque token 또는 JWE를 반환합니다.
 
-    This function properly adds the audience parameter while preserving all existing
-    query parameters (including the OAuth 'resource' parameter).
+    이 함수는 기존 query parameter(OAuth 'resource' parameter 포함)를 모두
+    유지하면서 audience parameter를 올바르게 추가합니다.
 
-    Args:
-        authorization_url: The authorization URL from the OAuth flow
-        audience: The Auth0 API identifier (e.g., "runtime-api")
+    인수:
+        authorization_url: OAuth flow의 authorization URL
+        audience: Auth0 API 식별자(예: "runtime-api")
 
-    Returns:
-        Modified URL with audience parameter added
+    반환:
+        Audience parameter가 추가된 URL
 
-    Reference:
+    참고:
         https://auth0.com/docs/secure/tokens/access-tokens/get-access-tokens
     """
-    # Only apply to Auth0 URLs that don't already have audience
+    # Audience가 아직 없는 Auth0 URL에만 적용
     if "auth0.com" not in authorization_url or "audience=" in authorization_url:
         return authorization_url
 
-    # Parse URL and query parameters
+    # URL 및 query parameter 파싱
     parsed = urlparse(authorization_url)
     query_params = parse_qs(parsed.query, keep_blank_values=True)
 
-    # Add audience parameter
+    # Audience parameter 추가
     query_params["audience"] = [audience]
 
-    # Rebuild URL with new parameter
+    # 새 parameter로 URL 재구성
     new_query = urlencode(query_params, doseq=True)
     return urlunparse(
         (
@@ -217,7 +217,7 @@ def add_auth0_audience_parameter(authorization_url: str, audience: str) -> str:
 
 
 class SimpleAuthClient:
-    """Simple MCP client with Auth0 OAuth support."""
+    """Auth0 OAuth를 지원하는 간단한 MCP client입니다."""
 
     def __init__(
         self,
@@ -231,7 +231,7 @@ class SimpleAuthClient:
         self.session: ClientSession | None = None
 
     async def connect(self):
-        """Connect to the MCP server."""
+        """MCP server에 연결합니다."""
         print(f"🔗 Attempting to connect to {self.server_url}...")
 
         try:
@@ -239,7 +239,7 @@ class SimpleAuthClient:
             callback_server.start()
 
             async def callback_handler() -> tuple[str, str | None]:
-                """Wait for OAuth callback and return auth code and state."""
+                """OAuth callback을 기다린 후 auth code와 state를 반환합니다."""
                 print("⏳ Waiting for authorization callback...")
                 try:
                     auth_code = callback_server.wait_for_callback(timeout=300)
@@ -255,16 +255,16 @@ class SimpleAuthClient:
             }
 
             async def redirect_handler(authorization_url: str) -> None:
-                """Redirect handler that opens the URL in a browser with Auth0 audience parameter."""
-                # Add Auth0 audience parameter if configured
+                """Auth0 audience parameter가 포함된 URL을 browser에서 여는 redirect handler입니다."""
+                # 구성된 경우 Auth0 audience parameter 추가
                 if self.auth0_audience:
                     authorization_url = add_auth0_audience_parameter(authorization_url, self.auth0_audience)
 
                 webbrowser.open(authorization_url)
 
             print("\n🔧 Creating OAuth client provider...")
-            # Create OAuth authentication handler
-            # Note: httpx.AsyncClient is globally patched to inject User-Agent header
+            # OAuth authentication handler 생성
+            # 참고: User-Agent header를 주입하도록 httpx.AsyncClient가 전역으로 패치됨
             oauth_auth = OAuthClientProvider(
                 server_url=self.server_url,
                 client_metadata=OAuthClientMetadata.model_validate(client_metadata_dict),
@@ -274,7 +274,7 @@ class SimpleAuthClient:
             )
             print("🔧 OAuth client provider created successfully")
 
-            # Create transport with auth handler based on transport type
+            # Transport type에 따라 auth handler가 포함된 transport 생성
             if self.transport_type == "sse":
                 print("📡 Opening SSE transport connection with auth...")
                 async with sse_client(
@@ -299,7 +299,7 @@ class SimpleAuthClient:
             traceback.print_exc()
 
     async def _run_session(self, read_stream, write_stream, get_session_id):
-        """Run the MCP session with the given streams."""
+        """주어진 stream으로 MCP session을 실행합니다."""
         print("🤝 Initializing MCP session...")
         async with ClientSession(read_stream, write_stream) as session:
             self.session = session
@@ -313,12 +313,12 @@ class SimpleAuthClient:
                 if session_id:
                     print(f"Session ID: {session_id}")
 
-            # Run interactive loop
+            # Interactive loop 실행
             # await self.interactive_loop()
             await self.invoke_mcp_server()
 
     async def list_tools(self):
-        """List available tools from the server."""
+        """Server에서 사용 가능한 tool을 나열합니다."""
         if not self.session:
             print("❌ Not connected to server")
             return
@@ -338,7 +338,7 @@ class SimpleAuthClient:
             print(f"❌ Failed to list tools: {e}")
 
     async def call_tool(self, tool_name: str, arguments: dict[str, Any] | None = None):
-        """Call a specific tool."""
+        """특정 tool을 호출합니다."""
         if not self.session:
             print("❌ Not connected to server")
             return
@@ -358,7 +358,7 @@ class SimpleAuthClient:
             print(f"❌ Failed to call tool '{tool_name}': {e}")
 
     async def invoke_mcp_server(self):
-        """Invoke MCP server and tools"""
+        """MCP server 및 tool을 호출합니다."""
         print("Showing available tools: ")
         await self.list_tools()
 
@@ -379,20 +379,20 @@ class SimpleAuthClient:
 
 
 async def main(agent_arn, base_endpoint, auth0_audience):
-    """Main entry point."""
+    """기본 entry point입니다."""
 
     if not agent_arn:
         print("❌ Please set AGENT_ARN environment variable")
         print("Example: export AGENT_ARN='arn:aws:bedrock:us-west-2:123456789012:agent/ABCD1234'")
         return
 
-    # Encode the ARN for use in URL
+    # URL에서 사용할 수 있도록 ARN encoding
     encoded_arn = agent_arn.replace(":", "%3A").replace("/", "%2F")
 
-    # Construct MCP URL from encoded ARN (no qualifier - SDK discovers it from PRM API)
+    # Encoding된 ARN으로 MCP URL 구성(qualifier 없음 - SDK가 PRM API에서 검색)
     server_url = f"{base_endpoint}/runtimes/{encoded_arn}/invocations"
 
-    # Get optional transport type
+    # 선택적 transport type 가져오기
     transport_type = os.getenv("MCP_TRANSPORT_TYPE", "streamable-http")
 
     print("🚀 MCP Auth0 Client")
@@ -403,7 +403,7 @@ async def main(agent_arn, base_endpoint, auth0_audience):
     if auth0_audience:
         print(f"Auth0 audience: {auth0_audience}")
 
-    # Start connection flow - OAuth will be handled automatically
+    # 연결 flow 시작 - OAuth는 자동으로 처리됨
     client = SimpleAuthClient(
         server_url,
         transport_type,
@@ -413,7 +413,7 @@ async def main(agent_arn, base_endpoint, auth0_audience):
 
 
 def run_test():
-    """CLI entry point for uv script."""
+    """uv script용 CLI entry point입니다."""
     asyncio.run(main())
 
 

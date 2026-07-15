@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Configuration
+# 구성
 STACK_NAME="sample-ecommerce-stack"
 REGION="us-east-1"
 

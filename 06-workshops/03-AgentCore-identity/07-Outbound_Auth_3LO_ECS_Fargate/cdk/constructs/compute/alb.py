@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Application Load Balancer construct."""
+"""Application Load Balancer 구성을 정의합니다."""
 
 from aws_cdk import aws_certificatemanager as acm
 from aws_cdk import aws_ec2 as ec2
@@ -10,7 +10,7 @@ from constructs import Construct
 
 
 class Alb(Construct):
-    """Application Load Balancer with security group."""
+    """보안 그룹이 포함된 Application Load Balancer."""
 
     def __init__(
         self,
@@ -20,7 +20,7 @@ class Alb(Construct):
         certificate: acm.ICertificate,
         access_logs_bucket: s3.IBucket,
     ):
-        """Initialize ALB with HTTPS listener."""
+        """HTTPS 리스너가 포함된 ALB를 초기화한다."""
         super().__init__(scope, id)
 
         self.security_group = ec2.SecurityGroup(

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Heurist Finance Agent — AgentCore Runtime entry point.
+Heurist Finance Agent — AgentCore Runtime entry point입니다.
 
-Pay-for-data agent that:
-  - Calls paid Heurist endpoints via x402 (HTTP 402 → ProcessPayment → retry)
-  - Uses AgentCore Code Interpreter for sandboxed pandas/matplotlib analysis
-  - Uploads chart/CSV/report artifacts to S3 and returns presigned URLs
-  - Stateless — payment config (manager ARN, session, instrument) comes from
-    the invocation payload; the container holds no credentials
+다음 기능이 있는 pay-for-data agent입니다.
+  - x402를 통해 유료 Heurist endpoint 호출(HTTP 402 → ProcessPayment → retry)
+  - Sandboxed pandas/matplotlib 분석에 AgentCore Code Interpreter 사용
+  - Chart/CSV/report artifact를 S3에 upload하고 presigned URL 반환
+  - Stateless — payment config(manager ARN, session, instrument)는 invocation
+    payload에서 가져오며 container에는 credentials가 없음
 
-If `CI_ARTIFACTS_BUCKET` is not set, the agent degrades gracefully: charts
-become markdown tables, text is returned inline.
+`CI_ARTIFACTS_BUCKET`을 설정하지 않으면 agent는 정상적으로 기능을 축소합니다.
+Chart는 Markdown table이 되고 text는 inline으로 반환됩니다.
 
-Required IAM permissions for the execution role (see notebook Step 8):
+Execution role에 필요한 IAM 권한(Notebook 8단계 참조):
   Payments       — ProcessPayment, GetPaymentInstrument, GetPaymentSession,
                    GetPaymentInstrumentBalance, GetResourcePaymentToken
                    on payment-manager/* and its instrument/* and session/*
@@ -23,23 +23,23 @@ Required IAM permissions for the execution role (see notebook Step 8):
                    Claude Sonnet 4.6)
   CloudWatch     — added automatically by `agentcore deploy`
 
-Environment variables (set via .env bundled in the container image):
-  CI_ARTIFACTS_BUCKET    S3 bucket for artifact storage (optional but recommended)
-  CI_ARTIFACTS_PREFIX    S3 key prefix (default: "heurist-finance-artifacts")
-  CI_ARTIFACTS_TTL       Presigned URL TTL seconds (default: 3600)
-  HEURIST_AGENT_IDS      Comma-separated Heurist agent IDs to load
-  BEDROCK_MODEL_ID       Override the default Bedrock model ID
-  AGENT_NAME             Name reported in payment observability
-  BYPASS_TOOL_CONSENT    Set to "true" so http_request skips its TTY confirm prompt
-                         (Runtime containers have no TTY)
+Environment variable(container image에 포함된 .env를 통해 설정):
+  CI_ARTIFACTS_BUCKET    Artifact 저장용 S3 bucket(선택 사항이지만 권장)
+  CI_ARTIFACTS_PREFIX    S3 key prefix(기본값: "heurist-finance-artifacts")
+  CI_ARTIFACTS_TTL       Presigned URL TTL 초(기본값: 3600)
+  HEURIST_AGENT_IDS      Load할 comma-separated Heurist agent ID
+  BEDROCK_MODEL_ID       기본 Bedrock model ID override
+  AGENT_NAME             Payment observability에 보고되는 이름
+  BYPASS_TOOL_CONSENT    http_request가 TTY confirm prompt를 건너뛰도록 "true"로 설정
+                         (Runtime container에는 TTY가 없음)
 
 Invocation payload:
-  prompt                (str, required)  — research request
+  prompt                (str, 필수)      — research request
   payment_manager_arn   (str, required)
   user_id               (str, required)
-  payment_session_id    (str, required)  — created by app backend with budget
+  payment_session_id    (str, required)  — app backend에서 budget과 함께 생성
   payment_instrument_id (str, required)
-  bedrock_model_id      (str, optional)  — per-invocation model override
+  bedrock_model_id      (str, optional)  — invocation별 model override
 
 Response:
   {
@@ -54,18 +54,18 @@ Response:
 from __future__ import annotations
 
 # ---------------------------------------------------------------------------
-# MINIMAL MODULE-LEVEL IMPORTS
+# 최소 MODULE-LEVEL IMPORT
 #
-# Only import what's needed for BedrockAgentCoreApp to start and respond to
-# the /ping health check within the Runtime's 120s initialization timeout.
-# All heavy imports (strands, bedrock_agentcore.payments, boto3 clients,
-# catalog loading) are deferred to first request via _ensure_initialized().
+# BedrockAgentCoreApp이 Runtime의 120초 initialization timeout 내에 시작되어
+# /ping health check에 응답하는 데 필요한 항목만 import함
+# 무거운 import(strands, bedrock_agentcore.payments, boto3 client,
+# catalog load)는 _ensure_initialized()를 통해 첫 request까지 지연
 #
-# This is critical because `opentelemetry-instrument` (the CMD prefix in the
-# Dockerfile) instruments every import at load time. With the full dependency
-# tree (strands + bedrock_agentcore + boto3 + botocore), instrumentation
-# alone can exceed 120s on cold start. Deferring keeps startup fast while
-# preserving full OTel trace propagation for all request-time operations.
+# Dockerfile의 CMD prefix인 `opentelemetry-instrument`가 load 시 모든 import를
+# instrument하므로 중요함. 전체 dependency tree(strands + bedrock_agentcore +
+# boto3 + botocore)에서는 instrumentation만으로 cold start 시 120초를 초과할 수 있음
+# 지연 import를 사용하면 모든 request-time operation의 전체 OTel trace propagation을
+# 유지하면서 빠르게 시작할 수 있음
 # ---------------------------------------------------------------------------
 import json
 import logging
@@ -80,14 +80,13 @@ from bedrock_agentcore.runtime import BedrockAgentCoreApp
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# App instance — must be at module level for the @app.entrypoint decorator.
-# BedrockAgentCoreApp is lightweight; it just starts a uvicorn server with
-# /ping and /invoke endpoints.
+# App instance — @app.entrypoint decorator를 위해 module level에 있어야 함
+# BedrockAgentCoreApp은 가벼우며 /ping 및 /invoke endpoint가 있는 uvicorn server만 시작
 # ---------------------------------------------------------------------------
 app = BedrockAgentCoreApp()
 
 # ---------------------------------------------------------------------------
-# Environment config (lightweight — just reads env vars)
+# Environment config(env var만 읽으므로 가벼움)
 # ---------------------------------------------------------------------------
 REGION = os.environ.get("AWS_REGION", "us-west-2")
 MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-6")
@@ -108,14 +107,13 @@ HEURIST_AGENT_IDS: tuple[str, ...] = (
 )
 
 # ---------------------------------------------------------------------------
-# Lazy-initialized heavy dependencies.
+# Lazy initialization되는 무거운 dependency
 #
-# Deferred from module load to first request so the container can respond to
-# the Runtime /ping health check within the 120s init timeout. The
-# opentelemetry-instrument wrapper adds significant overhead to module
-# imports; deferring keeps cold-start under the limit while preserving full
-# OTel trace propagation at request time (all boto3 calls, LLM calls, and
-# tool calls are still instrumented).
+# Container가 Runtime /ping health check에 120초 init timeout 내에 응답하도록
+# module load에서 첫 request까지 지연함. opentelemetry-instrument wrapper는
+# module import에 상당한 overhead를 추가함. 지연하면 request 시 전체 OTel trace
+# propagation을 유지하면서 cold start를 limit 아래로 유지함(모든 boto3 호출,
+# LLM 호출, tool 호출은 계속 instrument됨)
 # ---------------------------------------------------------------------------
 _init_lock = threading.Lock()
 _initialized = False
@@ -126,7 +124,7 @@ _http_request_tool = None
 
 
 def _ensure_initialized() -> None:
-    """Lazily import heavy deps and initialize service clients on first request."""
+    """무거운 dependency를 lazy import하고 첫 request에서 service client를 초기화합니다."""
     global _initialized, _CI_CLIENT, _S3_CLIENT, _catalog_ref, _http_request_tool
 
     if _initialized:
@@ -158,7 +156,7 @@ def _ensure_initialized() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Per-invocation state (thread-local for concurrent request isolation)
+# Invocation별 state(concurrent request 격리를 위한 thread-local)
 # ---------------------------------------------------------------------------
 _invocation = threading.local()
 
@@ -181,12 +179,12 @@ def _reset_invocation_state() -> None:
 
 
 # ---------------------------------------------------------------------------
-# CI result extraction helpers
+# CI result 추출 helper
 # ---------------------------------------------------------------------------
 
 
 def _extract_ci_text(tool_result: dict) -> str:
-    """Extract the printed text output from a Code Interpreter tool result."""
+    """Code Interpreter tool result에서 출력된 text output을 추출합니다."""
     import ast
 
     content = tool_result.get("content", [])
@@ -203,30 +201,29 @@ def _extract_ci_text(tool_result: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Artifact tools — defined as module-level functions with @tool decorator.
-# They use the lazily-initialized _S3_CLIENT and _CI_CLIENT globals which
-# are guaranteed to be set before any tool is called (handle_request calls
-# _ensure_initialized() before constructing the Agent).
+# Artifact tool — @tool decorator가 있는 module-level 함수로 정의
+# Lazy initialization되는 _S3_CLIENT와 _CI_CLIENT global을 사용하며
+# tool 호출 전 설정되는 것이 보장됨(handle_request가 Agent 생성 전에
+# _ensure_initialized() 호출)
 # ---------------------------------------------------------------------------
 import re
 from pathlib import Path
 
 
 def _safe_s3_key_name(raw: str) -> str:
-    """Return a safe S3 key filename component."""
+    """안전한 S3 key filename component를 반환합니다."""
     name = Path(raw).name
     name = re.sub(r"[^A-Za-z0-9._-]", "_", name).strip("._")
     return name or "artifact"
 
 
-# We need the @tool decorator from strands, but importing strands at module
-# level is what causes the slow startup. Solution: define the tool functions
-# as plain functions and wrap them with @tool inside _ensure_initialized().
-# However, the Agent() constructor needs the tool references at request time.
+# Strands의 @tool decorator가 필요하지만 module level에서 strands를 import하면
+# 시작이 느려짐. 해결 방법은 tool 함수를 일반 함수로 정의하고
+# _ensure_initialized() 내부에서 @tool로 래핑하는 것임
+# 하지만 Agent() constructor는 request 시 tool reference가 필요함
 #
-# Simpler approach: import just the decorator (it's lightweight) and define
-# tools normally. The heavy part is strands.Agent and strands.models, not
-# the @tool decorator itself.
+# 더 간단한 방법은 가벼운 decorator만 import하고 tool을 일반적으로 정의하는 것임
+# 무거운 부분은 @tool decorator 자체가 아니라 strands.Agent와 strands.models임
 from strands import tool
 
 
@@ -406,7 +403,7 @@ def list_invocation_artifacts() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# System prompt builder (invocation-specific: includes CI session name)
+# System prompt builder(invocation별 CI session name 포함)
 # ---------------------------------------------------------------------------
 
 
@@ -470,34 +467,34 @@ settles USDC on-chain and retries the request. You do not need to handle payment
 
 
 # ---------------------------------------------------------------------------
-# Entry point
+# 진입점
 # ---------------------------------------------------------------------------
 
 
 @app.entrypoint
 def handle_request(payload: dict, context=None) -> dict:
-    """Handle an invocation from the app backend.
+    """App backend의 invocation을 처리합니다.
 
-    The app backend creates a payment session with an appropriate budget before
-    invoking. Session ID and instrument ID are passed in the payload — the agent
-    cannot create or modify sessions (enforced at the IAM level).
+    App backend는 호출 전에 적절한 budget이 있는 payment session을 생성합니다.
+    Session ID와 instrument ID는 payload로 전달되며 agent는 session을 생성하거나
+    수정할 수 없습니다(IAM level에서 적용).
 
-    Required payload fields:
-        prompt                (str) — the research request
-        payment_manager_arn   (str) — ARN of the Payment Manager
-        user_id               (str) — user identity for payment isolation
-        payment_session_id    (str) — active session with a spending limit
-        payment_instrument_id (str) — funded embedded wallet
+    필수 payload field:
+        prompt                (str) — research request
+        payment_manager_arn   (str) — Payment Manager의 ARN
+        user_id               (str) — payment 격리를 위한 user identity
+        payment_session_id    (str) — spending limit이 있는 active session
+        payment_instrument_id (str) — 자금이 입금된 embedded wallet
 
-    Optional payload fields:
-        bedrock_model_id      (str) — per-invocation model override
+    선택적 payload field:
+        bedrock_model_id      (str) — invocation별 model override
     """
-    # Lazy-init heavy deps on first request (keeps cold-start under 120s)
+    # 첫 request에서 무거운 dependency를 lazy initialization(cold start를 120초 미만으로 유지)
     _ensure_initialized()
     _reset_invocation_state()
     ci_session = _session_name()
 
-    # Import heavy deps (already cached after _ensure_initialized)
+    # 무거운 dependency import(_ensure_initialized 후 이미 cache됨)
     import boto3
     from bedrock_agentcore.payments.integrations.strands import (
         AgentCorePaymentsPlugin,
@@ -507,7 +504,7 @@ def handle_request(payload: dict, context=None) -> dict:
     from strands import Agent
     from strands.models import BedrockModel
 
-    # Unwrap the agentcore invoke double-wrapping:
+    # agentcore invoke의 이중 wrapping 해제
     # `agentcore invoke '{"key": "val"}'` → payload = {"prompt": '{"key":"val"}'}
     raw_prompt = payload.get("prompt", "")
     if isinstance(raw_prompt, str) and raw_prompt.strip().startswith("{"):
@@ -551,12 +548,12 @@ def handle_request(payload: dict, context=None) -> dict:
         )
     )
 
-    # Claude Sonnet 4.6 supports up to 64k output tokens. Multi-step workflows
-    # (5+ paid tool calls + Code Interpreter + chart export + markdown
-    # report) routinely need more than the SDK's default 4k cap, which
-    # otherwise raises Strands' MaxTokensReachedException mid-run.
-    # The custom client config keeps long single-turn streamed responses
-    # from tripping the default 60s bedrock-runtime read timeout.
+    # Claude Sonnet 4.6은 최대 64k output token을 지원함. Multi-step workflow
+    # (유료 tool 호출 5회 이상 + Code Interpreter + chart export + Markdown
+    # report)는 일반적으로 SDK 기본 상한 4k보다 많이 필요하며 그렇지 않으면 실행 중
+    # Strands MaxTokensReachedException이 발생함
+    # Custom client config는 긴 single-turn streaming response가 기본 60초
+    # bedrock-runtime read timeout에 걸리지 않도록 함
     model = BedrockModel(
         boto_session=boto3.Session(region_name=REGION),
         boto_client_config=BotoConfig(

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Lab 5 Evaluation Helper — Strands-based agent setup for evaluation data generation.
+Lab 5 평가 헬퍼 - 평가 데이터 생성을 위한 Strands 기반 에이전트 설정.
 
-This script replicates Labs 1-4 using Strands agents with COMPLETELY DIFFERENT
-resource names to avoid conflicts with the Google ADK workshop labs.
+이 스크립트는 Google ADK 워크숍 Lab과의 충돌을 방지하도록 완전히 다른
+리소스 이름을 사용하여 Strands 에이전트로 Lab 1~4를 재현한다.
 
-Workshop labs use:
+워크숍 Lab에서 사용하는 항목:
   - Memory: "CustomerSupportMemory"
   - Gateway: "customersupport-gw"
   - Runtime agent: "customer_support_agent"
@@ -13,19 +13,19 @@ Workshop labs use:
   - IAM role: "CustomerSupportAssistantBedrockAgentCoreRole-{region}"
   - Cognito pool: "customer-support-pool"
 
-This script uses:
+이 스크립트에서 사용하는 항목:
   - Memory: "EvalSupportMemory"
   - Gateway: "evalsupport-gw"
   - Runtime agent: "eval_support_agent"
   - SSM prefix: "/app/evalsupport/agentcore/"
   - IAM role: "EvalSupportAgentCoreRole-{region}"
-  - Cognito pool: reuses existing (read-only)
+  - Cognito pool: 기존 항목 재사용(읽기 전용)
 
-Usage:
-    python lab5_evaluation_helper.py setup      # Create all resources (Labs 1-4)
-    python lab5_evaluation_helper.py test       # Single invocation test
-    python lab5_evaluation_helper.py generate   # Generate data for 30 minutes
-    python lab5_evaluation_helper.py cleanup    # Tear down eval resources
+사용법:
+    python lab5_evaluation_helper.py setup      # 모든 리소스 생성(Lab 1~4)
+    python lab5_evaluation_helper.py test       # 단일 호출 테스트
+    python lab5_evaluation_helper.py generate   # 30분 동안 데이터 생성
+    python lab5_evaluation_helper.py cleanup    # 평가 리소스 제거
 """
 
 import argparse
@@ -39,7 +39,7 @@ import boto3
 from boto3.session import Session
 
 # ---------------------------------------------------------------------------
-# Constants — all names are prefixed with "eval" to avoid conflicts
+# 상수 - 충돌 방지를 위해 모든 이름에 "eval" 접두사 사용
 # ---------------------------------------------------------------------------
 EVAL_MEMORY_NAME = "EvalSupportMemory"
 EVAL_GATEWAY_NAME = "evalsupport-gw"
@@ -57,7 +57,7 @@ ACCOUNT_ID = boto3.client("sts").get_caller_identity()["Account"]
 
 
 # ---------------------------------------------------------------------------
-# SSM helpers (self-contained, no import from lab_helpers.utils)
+# SSM 헬퍼(자체 완결형이며 lab_helpers.utils에서 가져오지 않음)
 # ---------------------------------------------------------------------------
 ssm_client = boto3.client("ssm", region_name=REGION)
 
@@ -78,7 +78,7 @@ def delete_ssm(name):
 
 
 # ---------------------------------------------------------------------------
-# Step 1 — Create Strands Agent tools (Lab 1 equivalent)
+# 1단계 - Strands Agent 도구 생성(Lab 1에 해당)
 # ---------------------------------------------------------------------------
 SYSTEM_PROMPT = """You are a helpful and professional customer support assistant for an electronics e-commerce company.
 Your role is to:
@@ -96,7 +96,7 @@ Always use the appropriate tool to get accurate, up-to-date information."""
 
 
 def _get_return_policy(product_category: str) -> str:
-    """Return policy lookup (mock data)."""
+    """반품 정책을 조회한다(모의 데이터)."""
     policies = {
         "smartphones": {
             "window": "30 days",
@@ -116,7 +116,7 @@ def _get_return_policy(product_category: str) -> str:
 
 
 def _get_product_info(product_type: str) -> str:
-    """Product info lookup (mock data)."""
+    """제품 정보를 조회한다(모의 데이터)."""
     products = {
         "laptops": "Intel/AMD, 8-64GB RAM, SSD, Thunderbolt, 1yr warranty",
         "smartphones": "5G, 128GB-1TB, water resistant, wireless charging, 1yr warranty",
@@ -128,7 +128,7 @@ def _get_product_info(product_type: str) -> str:
 
 
 def _get_technical_support(issue_description: str) -> str:
-    """KB retrieval via Bedrock Knowledge Base."""
+    """Bedrock Knowledge Base를 통해 기술 지원 자료를 검색한다."""
     try:
         kb_id = ssm_client.get_parameter(Name=f"/{ACCOUNT_ID}-{REGION}/kb/knowledge-base-id")["Parameter"]["Value"]
         bedrock_agent_runtime = boto3.client("bedrock-agent-runtime", region_name=REGION)
@@ -145,16 +145,16 @@ def _get_technical_support(issue_description: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Step 2 — Create AgentCore Memory (Lab 2 equivalent)
+# 2단계 - AgentCore Memory 생성(Lab 2에 해당)
 # ---------------------------------------------------------------------------
 def create_eval_memory():
-    """Create or retrieve the eval memory resource."""
+    """평가용 Memory 리소스를 생성하거나 조회한다."""
     from bedrock_agentcore.memory import MemoryClient
     from bedrock_agentcore.memory.constants import StrategyType
 
     client = MemoryClient(region_name=REGION)
 
-    # Check if already exists
+    # 이미 있는지 확인
     try:
         memory_id = get_ssm(f"{EVAL_SSM_PREFIX}/memory_id")
         client.gmcp_client.get_memory(memoryId=memory_id)
@@ -194,17 +194,17 @@ def create_eval_memory():
 
 
 # ---------------------------------------------------------------------------
-# Step 3 — Create AgentCore Gateway (Lab 3 equivalent)
+# 3단계 - AgentCore Gateway 생성(Lab 3에 해당)
 # ---------------------------------------------------------------------------
 def create_eval_gateway():
-    """Create or retrieve the eval gateway."""
-    # Reuse the existing Cognito pool (read-only, same account)
+    """평가용 Gateway를 생성하거나 조회한다."""
+    # 기존 Cognito 풀 재사용(읽기 전용, 동일 계정)
     try:
         from lab_helpers.utils import get_or_create_cognito_pool
 
         cognito_config = get_or_create_cognito_pool(refresh_token=True)
     except ImportError:
-        # Fallback: read from SSM if lab_helpers not on path
+        # 대체 처리: lab_helpers가 경로에 없으면 SSM에서 읽기
         cognito_config = {
             "client_id": get_ssm("/app/customersupport/agentcore/client_id"),
             "discovery_url": get_ssm("/app/customersupport/agentcore/discovery_url"),
@@ -213,7 +213,7 @@ def create_eval_gateway():
 
     gateway_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
 
-    # Check if already exists
+    # 이미 있는지 확인
     try:
         gw_id = get_ssm(f"{EVAL_SSM_PREFIX}/gateway_id")
         gw = gateway_client.get_gateway(gatewayIdentifier=gw_id)
@@ -226,7 +226,7 @@ def create_eval_gateway():
     except Exception:
         pass
 
-    # Get the gateway IAM role (reuse the one from workshop prereqs)
+    # Gateway IAM 역할 가져오기(워크숍 사전 요구 사항의 역할 재사용)
     gateway_role_arn = get_ssm("/app/customersupport/agentcore/gateway_iam_role")
 
     auth_config = {
@@ -246,7 +246,7 @@ def create_eval_gateway():
     )
     gw_id = create_response["gatewayId"]
 
-    # Wait for gateway to be ready
+    # Gateway가 준비될 때까지 대기
     while True:
         gw = gateway_client.get_gateway(gatewayIdentifier=gw_id)
         status = gw.get("status", "CREATING")
@@ -260,7 +260,7 @@ def create_eval_gateway():
     put_ssm(f"{EVAL_SSM_PREFIX}/gateway_id", gw_id)
     print(f"✅ Eval gateway created: {gw_id}")
 
-    # Add Lambda target (reuse the same Lambda from workshop prereqs)
+    # Lambda 대상 추가(워크숍 사전 요구 사항과 동일한 Lambda 재사용)
     lambda_arn = get_ssm("/app/customersupport/agentcore/lambda_arn")
     api_spec_path = os.path.join(
         os.path.dirname(__file__),
@@ -290,7 +290,7 @@ def create_eval_gateway():
         targetConfiguration=target_config,
     )
 
-    # Wait for target to be ready
+    # 대상이 준비될 때까지 대기
     time.sleep(5)
     targets = gateway_client.list_gateway_targets(gatewayIdentifier=gw_id)
     for t in targets.get("items", []):
@@ -314,10 +314,10 @@ def create_eval_gateway():
 
 
 # ---------------------------------------------------------------------------
-# Step 4 — Create IAM Role + Deploy to AgentCore Runtime (Lab 4 equivalent)
+# 4단계 - IAM 역할 생성 및 AgentCore Runtime에 배포(Lab 4에 해당)
 # ---------------------------------------------------------------------------
 def create_eval_execution_role():
-    """Create the IAM execution role for the eval runtime agent."""
+    """평가용 Runtime 에이전트의 IAM 실행 역할을 생성한다."""
     iam = boto3.client("iam")
     role_name = EVAL_ROLE_NAME_TEMPLATE.format(region=REGION)
     policy_name = EVAL_POLICY_NAME_TEMPLATE.format(region=REGION)
@@ -470,7 +470,7 @@ def create_eval_execution_role():
 
 
 def write_eval_runtime_entrypoint(memory_id, gateway_id):
-    """Write the runtime entrypoint file for the eval agent (Strands-based)."""
+    """평가용 에이전트의 Runtime 진입점 파일을 작성한다(Strands 기반)."""
     entrypoint_path = os.path.join(os.path.dirname(__file__), "eval_runtime_entrypoint.py")
     code = f'''#!/usr/bin/env python3
 """Eval agent runtime entrypoint — Strands-based, isolated from workshop labs."""
@@ -616,18 +616,18 @@ if __name__ == "__main__":
 
 
 def deploy_eval_runtime(memory_id, gateway_id):
-    """Deploy the eval agent to AgentCore Runtime."""
+    """평가용 에이전트를 AgentCore Runtime에 배포한다."""
     from bedrock_agentcore_starter_toolkit import Runtime
 
     execution_role_arn = create_eval_execution_role()
     entrypoint_path = write_eval_runtime_entrypoint(memory_id, gateway_id)
 
-    # Requirements file for the runtime container
+    # Runtime 컨테이너의 요구 사항 파일
     req_path = os.path.join(os.path.dirname(__file__), "requirements.txt")
 
     agentcore_runtime = Runtime()
 
-    # Reuse existing Cognito for JWT auth
+    # JWT 인증에 기존 Cognito 재사용
     client_id = get_ssm("/app/customersupport/agentcore/client_id")
     discovery_url = get_ssm("/app/customersupport/agentcore/discovery_url")
 
@@ -658,7 +658,7 @@ def deploy_eval_runtime(memory_id, gateway_id):
     put_ssm(f"{EVAL_SSM_PREFIX}/runtime_arn", agent_arn)
     print(f"✅ Eval runtime launched: {agent_arn}")
 
-    # Wait for READY
+    # READY 상태가 될 때까지 대기
     while True:
         status_response = agentcore_runtime.status()
         status = status_response.endpoint["status"]
@@ -674,15 +674,15 @@ def deploy_eval_runtime(memory_id, gateway_id):
 
 
 # ---------------------------------------------------------------------------
-# Test — single invocation
+# 테스트 - 단일 호출
 # ---------------------------------------------------------------------------
 def test_single_invocation(agentcore_runtime=None):
-    """Test the eval agent with a single invocation."""
+    """평가용 에이전트를 단일 호출로 테스트한다."""
     if agentcore_runtime is None:
         from bedrock_agentcore_starter_toolkit import Runtime
 
         agentcore_runtime = Runtime()
-        # Re-configure to point at existing eval agent
+        # 기존 평가용 에이전트를 가리키도록 다시 설정
         execution_role_arn = get_ssm(f"{EVAL_SSM_PREFIX}/runtime_execution_role_arn")
         client_id = get_ssm("/app/customersupport/agentcore/client_id")
         discovery_url = get_ssm("/app/customersupport/agentcore/discovery_url")
@@ -703,7 +703,7 @@ def test_single_invocation(agentcore_runtime=None):
             },
         )
 
-    # Get bearer token
+    # Bearer 토큰 가져오기
     try:
         from lab_helpers.utils import get_or_create_cognito_pool
 
@@ -727,7 +727,7 @@ def test_single_invocation(agentcore_runtime=None):
 
 
 # ---------------------------------------------------------------------------
-# Generate data — invoke the agent for 30 minutes with varied prompts
+# 데이터 생성 - 다양한 프롬프트로 30분 동안 에이전트 호출
 # ---------------------------------------------------------------------------
 EVAL_PROMPTS = [
     "What is the return policy for smartphones?",
@@ -764,7 +764,7 @@ EVAL_PROMPTS = [
 
 
 def generate_eval_data(duration_minutes=30, agentcore_runtime=None):
-    """Invoke the eval agent repeatedly for the specified duration."""
+    """지정된 시간 동안 평가용 에이전트를 반복 호출한다."""
     if agentcore_runtime is None:
         from bedrock_agentcore_starter_toolkit import Runtime
 
@@ -823,7 +823,7 @@ def generate_eval_data(duration_minutes=30, agentcore_runtime=None):
             error_count += 1
             print(f"   [{invocation_count}] ❌ {prompt[:50]}... → Error: {e}")
 
-            # Refresh token if auth error
+            # 인증 오류가 발생하면 토큰 새로 고침
             if "401" in str(e) or "unauthorized" in str(e).lower():
                 try:
                     from lab_helpers.utils import get_or_create_cognito_pool
@@ -834,7 +834,7 @@ def generate_eval_data(duration_minutes=30, agentcore_runtime=None):
                 except Exception:
                     pass
 
-        # Small delay between invocations to avoid throttling
+        # 제한을 피하도록 호출 사이에 짧은 지연 추가
         time.sleep(random.uniform(2, 5))
 
     print("\n📊 Data generation complete:")
@@ -844,16 +844,16 @@ def generate_eval_data(duration_minutes=30, agentcore_runtime=None):
 
 
 # ---------------------------------------------------------------------------
-# Cleanup — tear down all eval-specific resources
+# 정리 - 평가 전용 리소스 모두 제거
 # ---------------------------------------------------------------------------
 def cleanup_eval_resources():
-    """Delete all eval-specific resources to avoid lingering costs."""
+    """불필요한 비용이 남지 않도록 평가 전용 리소스를 모두 삭제한다."""
     print("\n🧹 Cleaning up eval resources...\n")
 
     iam = boto3.client("iam")
     gateway_client = boto3.client("bedrock-agentcore-control", region_name=REGION)
 
-    # 1. Delete runtime
+    # 1. Runtime 삭제
     try:
         runtime_arn = get_ssm(f"{EVAL_SSM_PREFIX}/runtime_arn")
         runtime_id = runtime_arn.split(":")[-1].split("/")[-1]
@@ -864,14 +864,14 @@ def cleanup_eval_resources():
     except Exception as e:
         print(f"⚠️  Runtime cleanup: {e}")
 
-    # 2. Delete gateway targets then gateway
+    # 2. Gateway 대상을 삭제한 다음 Gateway 삭제
     try:
         gw_id = get_ssm(f"{EVAL_SSM_PREFIX}/gateway_id")
         targets = gateway_client.list_gateway_targets(gatewayIdentifier=gw_id)
         for t in targets.get("items", []):
             gateway_client.delete_gateway_target(gatewayIdentifier=gw_id, targetId=t["targetId"])
             print(f"   Deleted gateway target: {t['targetId']}")
-        # Wait for targets to be deleted
+        # 대상이 삭제될 때까지 대기
         time.sleep(10)
         gateway_client.delete_gateway(gatewayIdentifier=gw_id)
         print(f"✅ Deleted eval gateway: {gw_id}")
@@ -879,7 +879,7 @@ def cleanup_eval_resources():
     except Exception as e:
         print(f"⚠️  Gateway cleanup: {e}")
 
-    # 3. Delete memory
+    # 3. Memory 삭제
     try:
         memory_id = get_ssm(f"{EVAL_SSM_PREFIX}/memory_id")
         from bedrock_agentcore.memory import MemoryClient
@@ -891,7 +891,7 @@ def cleanup_eval_resources():
     except Exception as e:
         print(f"⚠️  Memory cleanup: {e}")
 
-    # 4. Delete IAM role + policy
+    # 4. IAM 역할 및 정책 삭제
     role_name = EVAL_ROLE_NAME_TEMPLATE.format(region=REGION)
     policy_name = EVAL_POLICY_NAME_TEMPLATE.format(region=REGION)
     policy_arn = f"arn:aws:iam::{ACCOUNT_ID}:policy/{policy_name}"
@@ -905,7 +905,7 @@ def cleanup_eval_resources():
     except Exception as e:
         print(f"⚠️  IAM cleanup: {e}")
 
-    # 5. Clean up generated entrypoint file
+    # 5. 생성된 진입점 파일 정리
     entrypoint_path = os.path.join(os.path.dirname(__file__), "eval_runtime_entrypoint.py")
     if os.path.exists(entrypoint_path):
         os.remove(entrypoint_path)
@@ -915,26 +915,26 @@ def cleanup_eval_resources():
 
 
 # ---------------------------------------------------------------------------
-# Main — CLI interface
+# 메인 - CLI 인터페이스
 # ---------------------------------------------------------------------------
 def setup_all():
-    """Run the full setup: memory → gateway → deploy runtime."""
+    """전체 설정 실행: Memory → Gateway → Runtime 배포."""
     print("=" * 60)
     print("  Lab 5 Evaluation Helper — Full Setup (Strands Agent)")
     print("=" * 60)
 
-    # Step 1: Agent tools are defined inline (no separate setup needed)
+    # 1단계: 에이전트 도구는 인라인으로 정의됨(별도 설정 불필요)
     print("\n📦 Step 1: Agent tools ready (Strands @tool decorators)")
 
-    # Step 2: Memory
+    # 2단계: Memory
     print("\n📦 Step 2: Creating eval memory...")
     memory_id, _ = create_eval_memory()
 
-    # Step 3: Gateway
+    # 3단계: Gateway
     print("\n📦 Step 3: Creating eval gateway...")
     gateway_info, cognito_config = create_eval_gateway()
 
-    # Step 4: Deploy runtime
+    # 4단계: Runtime 배포
     print("\n📦 Step 4: Deploying eval agent to AgentCore Runtime...")
     agentcore_runtime, agent_arn = deploy_eval_runtime(memory_id, gateway_info["id"])
 

@@ -20,7 +20,7 @@ from bedrock_agentcore.runtime import BedrockAgentCoreApp
 
 
 def sanitize_task_id(task_id):
-    # Only allow alphanumeric characters and hyphens
+    # 영숫자와 하이픈만 허용
     if not re.match(r"^[a-zA-Z0-9\-]+$", str(task_id)):
         raise ValueError("Invalid task_id format")
     return str(task_id)
@@ -28,21 +28,21 @@ def sanitize_task_id(task_id):
 
 def validate_prompt_with_guardrails(prompt: str, region: str = "us-east-2") -> bool:
     """
-    Validate user prompt using Amazon Bedrock Guardrails Standard Tier.
+    Amazon Bedrock Guardrails Standard Tier를 사용해 사용자 prompt를 검증합니다.
 
-    Args:
-        prompt: User input prompt to validate
-        region: AWS region for Bedrock service
+    인자:
+        prompt: 검증할 사용자 입력 prompt
+        region: Amazon Bedrock 서비스의 AWS 리전
 
-    Returns:
-        bool: True if prompt is safe, False if blocked
+    반환:
+        bool: prompt가 안전하면 True, 차단되면 False
     """
     try:
         import boto3
 
         bedrock_runtime = boto3.client("bedrock-runtime", region_name=region)
 
-        # Apply Bedrock Guardrails with Standard Tier for code domain protection
+        # 코드 도메인 보호를 위해 Standard Tier의 Amazon Bedrock Guardrails 적용
         guardrail_id = os.environ.get("BEDROCK_GUARDRAIL_ID", "async-data-analysis-code-safety")
 
         response = bedrock_runtime.apply_guardrail(
@@ -52,7 +52,7 @@ def validate_prompt_with_guardrails(prompt: str, region: str = "us-east-2") -> b
             content=[{"text": {"text": prompt}}],
         )
 
-        # Check if content was blocked by guardrails
+        # Guardrail이 콘텐츠를 차단했는지 확인
         if response["action"] == "GUARDRAIL_INTERVENED":
             outputs = response.get("outputs", [])
             blocked_categories = []
@@ -68,38 +68,38 @@ def validate_prompt_with_guardrails(prompt: str, region: str = "us-east-2") -> b
 
     except Exception as e:
         logging.warning(f"Bedrock Guardrails validation failed: {e}")
-        # Fail open for legitimate analysis - don't block on service errors
+        # 정상적인 분석을 위해 장애 허용 방식 적용 - 서비스 오류로 차단하지 않음
         return True
 
 
 def validate_generated_code_with_guardrails(code: str, region: str = "us-east-2") -> bool:
     """
-    Validate generated code using Amazon Bedrock Guardrails Standard Tier.
-    Specifically designed for code domain protection.
+    Amazon Bedrock Guardrails Standard Tier를 사용해 생성된 코드를 검증합니다.
+    코드 도메인 보호를 위해 특별히 설계되었습니다.
 
-    Args:
-        code: Python code to validate
-        region: AWS region for Bedrock service
+    인자:
+        code: 검증할 Python 코드
+        region: Amazon Bedrock 서비스의 AWS 리전
 
-    Returns:
-        bool: True if code is safe, False if dangerous
+    반환:
+        bool: 코드가 안전하면 True, 위험하면 False
     """
     try:
         import boto3
 
         bedrock_runtime = boto3.client("bedrock-runtime", region_name=region)
 
-        # Apply Bedrock Guardrails to generated code
+        # 생성된 코드에 Amazon Bedrock Guardrails 적용
         guardrail_id = os.environ.get("BEDROCK_GUARDRAIL_ID", "async-data-analysis-code-safety")
 
         response = bedrock_runtime.apply_guardrail(
             guardrailIdentifier=guardrail_id,
             guardrailVersion="DRAFT",
-            source="OUTPUT",  # Validating model output (generated code)
+            source="OUTPUT",  # 모델 출력(생성된 코드) 검증
             content=[{"text": {"text": code}}],
         )
 
-        # Check if code was blocked
+        # 코드가 차단되었는지 확인
         if response["action"] == "GUARDRAIL_INTERVENED":
             outputs = response.get("outputs", [])
             blocked_reasons = []
@@ -115,32 +115,32 @@ def validate_generated_code_with_guardrails(code: str, region: str = "us-east-2"
 
     except Exception as e:
         logging.warning(f"Code validation with Bedrock Guardrails failed: {e}")
-        # Fail open - allow execution if guardrails service unavailable
+        # 장애 허용 방식 적용 - Guardrails 서비스를 사용할 수 없으면 실행 허용
         return True
 
 
 def validate_s3_bucket_access(bucket_name: str) -> bool:
     """
-    Validate S3 bucket ownership and access permissions.
+    S3 버킷 소유권과 접근 권한을 검증합니다.
 
-    Args:
-        bucket_name: S3 bucket name to validate
+    인자:
+        bucket_name: 검증할 S3 버킷 이름
 
-    Returns:
-        bool: True if bucket is accessible and owned by current account
+    반환:
+        bool: 현재 계정이 소유하고 접근할 수 있는 버킷이면 True
 
-    Raises:
-        ValueError: If bucket access is denied or bucket doesn't exist
+    예외:
+        ValueError: 버킷 접근이 거부되거나 버킷이 존재하지 않는 경우
     """
     try:
         import boto3
 
         s3_client = boto3.client("s3")
 
-        # Check bucket ownership by attempting to get bucket location
+        # 버킷 위치 조회를 시도해 버킷 소유권 확인
         s3_client.get_bucket_location(Bucket=bucket_name)
 
-        # Verify we have necessary permissions
+        # 필요한 권한이 있는지 확인
         s3_client.head_bucket(Bucket=bucket_name)
 
         return True
@@ -157,14 +157,14 @@ logging.basicConfig(
 )
 logging.getLogger("strands.multiagent").setLevel(logging.DEBUG)
 
-# Use thread pool with proper synchronization
-# Make thread pool size configurable via environment variable
+# 적절한 동기화와 함께 스레드 풀 사용
+# 환경 변수로 스레드 풀 크기를 구성할 수 있도록 설정
 THREAD_POOL_SIZE = int(os.environ.get("ASYNC_TASK_THREAD_POOL_SIZE", "5"))
 executor = concurrent.futures.ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE)
 lock = threading.Lock()
 
 
-# Register cleanup handler
+# 정리 핸들러 등록
 def cleanup_executor():
     logging.info("Shutting down thread pool executor...")
     executor.shutdown(wait=True)
@@ -173,7 +173,7 @@ def cleanup_executor():
 
 atexit.register(cleanup_executor)
 
-# Code Security Validation
+# 코드 보안 검증
 DANGEROUS_IMPORTS = {
     "os",
     "subprocess",
@@ -229,14 +229,14 @@ DANGEROUS_PATTERNS = [
 
 
 def validate_generated_code(code: str) -> tuple[bool, str]:
-    """Validate code for security issues."""
+    """코드에 보안 문제가 있는지 검증합니다."""
     try:
-        # Check for dangerous patterns
+        # 위험한 패턴 확인
         for pattern in DANGEROUS_PATTERNS:
             if re.search(pattern, code, re.IGNORECASE):
                 return False, f"Dangerous function detected: {pattern}"
 
-        # Parse AST to check imports
+        # import를 확인하기 위해 AST 파싱
         try:
             tree = ast.parse(code)
             for node in ast.walk(tree):
@@ -263,14 +263,14 @@ def validate_generated_code(code: str) -> tuple[bool, str]:
         return False, f"Validation failed: {str(e)}"
 
 
-# Initialize models
+# 모델 초기화
 sonnet = BedrockModel(model_id="us.anthropic.claude-sonnet-4-20250514-v1:0")
 
 haiku = BedrockModel(model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0")
 
 
 class CodeInterpreterClient:
-    """Direct boto3 client for AWS Bedrock AgentCore CodeInterpreter"""
+    """Amazon Bedrock AgentCore CodeInterpreter용 직접 boto3 클라이언트입니다."""
 
     def __init__(self, region="us-east-1"):
         self.client = boto3.client(
@@ -282,7 +282,7 @@ class CodeInterpreterClient:
         self._start_session()
 
     def _start_session(self):
-        """Start a new CodeInterpreter session"""
+        """새 CodeInterpreter 세션을 시작합니다."""
         try:
             response = self.client.start_code_interpreter_session(
                 codeInterpreterIdentifier="aws.codeinterpreter.v1",
@@ -296,7 +296,7 @@ class CodeInterpreterClient:
             raise
 
     def execute_code(self, code: str) -> str:
-        """Execute Python code and return results"""
+        """Python 코드를 실행하고 결과를 반환합니다."""
         if not self.session_id:
             raise RuntimeError("No active session")
 
@@ -307,7 +307,7 @@ class CodeInterpreterClient:
             arguments={"language": "python", "code": code},
         )
 
-        # Process the event stream response
+        # 이벤트 스트림 응답 처리
         result_text = ""
         for event in response.get("stream", []):
             if "result" in event:
@@ -324,7 +324,7 @@ app = BedrockAgentCoreApp()
 
 
 # ============================================================================
-# SYSTEM PROMPTS
+# SYSTEM PROMPT
 # ============================================================================
 
 CODING_AGENT_SYSTEM_PROMPT = """
@@ -370,25 +370,25 @@ to help the user. You can check task status and retrieve results when user asks 
 """
 
 # ============================================================================
-# S3 UTILITY FUNCTIONS
+# S3 유틸리티 함수
 # ============================================================================
 
 
 def extract_s3_uri_from_text(text: str) -> str:
     """
-    Extract S3 URI from text using regex.
+    정규식을 사용해 텍스트에서 S3 URI를 추출합니다.
 
-    Args:
-        text: Text that may contain an S3 URI
+    인자:
+        text: S3 URI가 포함될 수 있는 텍스트
 
-    Returns:
-        str: S3 URI if found, None otherwise
+    반환:
+        str: 찾은 경우 S3 URI, 그렇지 않으면 None
     """
     if not text:
         return None
 
-    # Match S3 URI: s3://bucket/path/file.ext
-    # Captures bucket name, path, and file with extension
+    # S3 URI 일치: s3://bucket/path/file.ext
+    # 버킷 이름, 경로 및 확장자가 있는 파일 캡처
     pattern = r"s3://[a-zA-Z0-9\-_]+/[a-zA-Z0-9\-_/]+\.[a-zA-Z0-9]+"
     match = re.search(pattern, text)
 
@@ -397,18 +397,18 @@ def extract_s3_uri_from_text(text: str) -> str:
 
 def parse_s3_uri(s3_uri: str) -> tuple:
     """
-    Parse an S3 URI into bucket and key components.
+    S3 URI를 버킷과 키 구성 요소로 파싱합니다.
 
-    Args:
-        s3_uri: S3 URI in format s3://bucket-name/path/to/file
+    인자:
+        s3_uri: s3://bucket-name/path/to/file 형식의 S3 URI
 
-    Returns:
-        tuple: (bucket, key) or (None, None) if invalid
+    반환:
+        tuple: (bucket, key), 유효하지 않으면 (None, None)
     """
     if not s3_uri or not s3_uri.startswith("s3://"):
         return None, None
 
-    s3_path = s3_uri[5:]  # Remove 's3://'
+    s3_path = s3_uri[5:]  # 's3://' 제거
     parts = s3_path.split("/", 1)
 
     if len(parts) < 2:
@@ -422,15 +422,15 @@ def parse_s3_uri(s3_uri: str) -> tuple:
 
 def build_s3_output_uri(s3_input_uri: str, task_id: str) -> str:
     """
-    Build an S3 output URI based on input URI and task ID.
-    Uses the same bucket and directory as input, but changes filename.
+    입력 URI와 작업 ID를 기반으로 S3 출력 URI를 구성합니다.
+    입력과 같은 버킷 및 디렉터리를 사용하되 파일 이름을 변경합니다.
 
-    Args:
-        s3_input_uri: Input S3 URI
-        task_id: Task identifier
+    인자:
+        s3_input_uri: 입력 S3 URI
+        task_id: 작업 식별자
 
-    Returns:
-        str: Output S3 URI with task result filename
+    반환:
+        str: 작업 결과 파일 이름이 포함된 출력 S3 URI
     """
     if not s3_input_uri:
         return None
@@ -442,7 +442,7 @@ def build_s3_output_uri(s3_input_uri: str, task_id: str) -> str:
     safe_task_id = sanitize_task_id(task_id)
     safe_bucket = html.escape(str(bucket))
 
-    # Get the directory path from the input key
+    # 입력 키에서 디렉터리 경로 가져오기
     path_parts = key.rsplit("/", 1)
     if len(path_parts) > 1:
         output_prefix = path_parts[0]
@@ -454,15 +454,15 @@ def build_s3_output_uri(s3_input_uri: str, task_id: str) -> str:
 
 def upload_to_s3(local_file: str, s3_uri: str, task_id: str = None) -> bool:
     """
-    Upload a local file to S3.
+    로컬 파일을 S3에 업로드합니다.
 
-    Args:
-        local_file: Path to local file
-        s3_uri: S3 URI destination
-        task_id: Optional task ID for logging
+    인자:
+        local_file: 로컬 파일 경로
+        s3_uri: 대상 S3 URI
+        task_id: 로깅에 사용할 선택적 작업 ID
 
-    Returns:
-        bool: True if successful, False otherwise
+    반환:
+        bool: 성공하면 True, 그렇지 않으면 False
     """
     try:
         import boto3
@@ -473,7 +473,7 @@ def upload_to_s3(local_file: str, s3_uri: str, task_id: str = None) -> bool:
             logging.warning(f"{log_prefix}Invalid S3 URI format: {s3_uri}")
             return False
 
-        # Validate bucket access before upload
+        # 업로드 전에 버킷 접근 검증
         validate_s3_bucket_access(bucket)
 
         s3_client = boto3.client("s3")
@@ -528,24 +528,24 @@ def async_analysis_task(request: str):
         - Use get_task_results(task_id) to retrieve completed results
     """
 
-    # Extract S3 input URI from request if present
+    # 요청에 S3 입력 URI가 있으면 추출
     s3_input_uri = extract_s3_uri_from_text(request)
     if s3_input_uri:
         logging.info(f"[ASYNC_TASK] Detected S3 input URI: {s3_input_uri}")
 
     logging.info(f"[ASYNC_TASK] Starting async task for request: {request}")
 
-    # Implement proper thread safety with lock
+    # 잠금을 사용해 적절한 스레드 안전성 구현
     with lock:
         task_id = app.add_async_task("async_analysis_task")
         logging.info(f"[ASYNC_TASK] Created task with ID: {task_id}")
 
-    # Build S3 output URI using the same path as input (just change filename)
+    # 입력과 같은 경로를 사용해 S3 출력 URI 구성(파일 이름만 변경)
     s3_output_uri = build_s3_output_uri(s3_input_uri, str(task_id))
     if s3_output_uri:
         logging.info(f"[ASYNC_TASK] Will save results to: {s3_output_uri}")
 
-    # Submit to thread pool instead of creating raw threads
+    # 원시 스레드를 생성하는 대신 스레드 풀에 제출
     try:
         executor.submit(_run_async_analysis_task, request, task_id, s3_input_uri, s3_output_uri)
         logging.info(f"[ASYNC_TASK] Task {task_id} submitted to thread pool")
@@ -560,7 +560,7 @@ def async_analysis_task(request: str):
 
 
 def _extract_text_from_stream(response) -> str:
-    """Helper to extract text content from Code Interpreter streaming response."""
+    """Code Interpreter 스트리밍 응답에서 텍스트 콘텐츠를 추출하는 헬퍼입니다."""
     output_parts = []
     error_parts = []
 
@@ -572,11 +572,11 @@ def _extract_text_from_stream(response) -> str:
                     if content_item.get("type") == "text":
                         output_parts.append(content_item["text"])
 
-        # Also capture error events
+        # 오류 이벤트도 캡처
         if "error" in event:
             error_parts.append(str(event["error"]))
 
-    # Combine output and errors
+    # 출력과 오류 결합
     all_output = "\n".join(output_parts)
     if error_parts:
         all_output += "\n\nERRORS:\n" + "\n".join(error_parts)
@@ -585,13 +585,13 @@ def _extract_text_from_stream(response) -> str:
 
 
 def _has_execution_error(result: str) -> bool:
-    """Check if code execution result contains errors."""
+    """코드 실행 결과에 오류가 포함되어 있는지 확인합니다."""
     error_indicators = ("Traceback", "Error", "Exception")
     return any(indicator in result for indicator in error_indicators)
 
 
 def _has_execution_error(result: str) -> bool:
-    """Check if execution result contains error indicators."""
+    """실행 결과에 오류 표시가 포함되어 있는지 확인합니다."""
     error_indicators = [
         "Traceback",
         "Error:",
@@ -604,7 +604,7 @@ def _has_execution_error(result: str) -> bool:
 
 
 def _build_retry_prompt(request: str, error_context: str) -> str:
-    """Build a detailed retry prompt with error context."""
+    """오류 컨텍스트가 포함된 상세 재시도 prompt를 구성합니다."""
     return (
         f"Your previous code failed with this error:\n\n"
         f"ERROR OUTPUT:\n{error_context}\n\n"
@@ -619,7 +619,7 @@ def _build_retry_prompt(request: str, error_context: str) -> str:
 
 
 def _save_task_result(task_id: str, data: dict, s3_output_uri: str = None) -> str:
-    """Save task result to local file and optionally upload to S3."""
+    """작업 결과를 로컬 파일에 저장하고 선택적으로 S3에 업로드합니다."""
     temp_dir = tempfile.gettempdir()
     safe_task_id = sanitize_task_id(task_id)
     local_file = os.path.join(temp_dir, f"task_{safe_task_id}_result.json")
@@ -635,14 +635,14 @@ def _save_task_result(task_id: str, data: dict, s3_output_uri: str = None) -> st
 
 
 def _download_s3_data(task_id: str, s3_input_uri: str, code_client) -> None:
-    """Download data from S3 and write to Code Interpreter session."""
+    """S3에서 데이터를 다운로드하고 Code Interpreter 세션에 씁니다."""
     logging.info(f"[BACKGROUND] Task {task_id} - Downloading data from S3: {s3_input_uri}")
     bucket, key = parse_s3_uri(s3_input_uri)
 
     if not bucket or not key:
         raise ValueError(f"Invalid S3 URI: {s3_input_uri}")
 
-    # Validate bucket access before download
+    # 다운로드 전에 버킷 접근 검증
     validate_s3_bucket_access(bucket)
 
     s3_client = boto3.client("s3")
@@ -651,7 +651,7 @@ def _download_s3_data(task_id: str, s3_input_uri: str, code_client) -> None:
 
     logging.info(f"[BACKGROUND] Task {task_id} - Writing data to Code Interpreter session")
 
-    # Write the CSV data using code execution
+    # 코드 실행을 사용해 CSV 데이터 쓰기
     write_code = f'''
 import os
 with open("data.csv", "w") as f:
@@ -664,16 +664,16 @@ print("Data file written successfully")
 
 
 def _execute_with_retry(task_id: str, request: str, coding_agent, code_client, max_retries: int = 3):
-    """Execute code generation and execution with retry logic."""
+    """재시도 로직으로 코드 생성 및 실행을 수행합니다."""
     error_context = ""
     region = os.environ.get("AWS_REGION", "us-east-2")
 
-    # First validate the user request with Bedrock Guardrails
+    # 먼저 Amazon Bedrock Guardrails로 사용자 요청 검증
     if not validate_prompt_with_guardrails(request, region):
         raise Exception("Request blocked by security guardrails - potential code injection detected")
 
     for attempt in range(max_retries):
-        # Build prompt based on attempt number
+        # 시도 횟수에 따라 prompt 구성
         if attempt == 0:
             prompt = f"Write Python code to accomplish the following: {request}"
         else:
@@ -681,13 +681,13 @@ def _execute_with_retry(task_id: str, request: str, coding_agent, code_client, m
             safe_prompt = html.escape(str(prompt)[:300])
             logging.info(f"[BACKGROUND] Task {task_id} - Retry prompt preview: {safe_prompt}...")
 
-        # Generate code
+        # 코드 생성
         logging.info(f"[BACKGROUND] Task {task_id} - Attempt {attempt + 1}/{max_retries}: Calling coding agent")
         coding_agent_response = coding_agent(prompt)
         python_code = coding_agent_response.message["content"][0]["text"]
         logging.info(f"[BACKGROUND] Task {task_id} - Code generated, length: {len(python_code)} chars")
 
-        # Validate generated code with Bedrock Guardrails
+        # Amazon Bedrock Guardrails로 생성된 코드 검증
         if not validate_generated_code_with_guardrails(python_code, region):
             error_context = "Generated code blocked by Bedrock Guardrails for security violations"
             logging.warning(f"[BACKGROUND] Task {task_id} - Code blocked by Bedrock Guardrails")
@@ -698,16 +698,16 @@ def _execute_with_retry(task_id: str, request: str, coding_agent, code_client, m
             else:
                 raise Exception("Unable to generate safe code after maximum retries - blocked by Bedrock Guardrails")
 
-        # Execute code if validation passes
+        # 검증을 통과하면 코드 실행
         try:
             logging.info(f"[BACKGROUND] Task {task_id} - Executing code in secure environment")
 
-            # Use the new CodeInterpreter client
+            # 새 CodeInterpreter 클라이언트 사용
             result = code_client.execute_code(python_code)
 
             logging.info(f"[BACKGROUND] Task {task_id} - Execution completed successfully")
 
-            # Check for execution errors
+            # 실행 오류 확인
             if _has_execution_error(result):
                 error_context = f"Execution error: {result}"
                 logging.warning(f"[BACKGROUND] Task {task_id} - Execution failed: {result}")
@@ -736,7 +736,7 @@ def _execute_with_retry(task_id: str, request: str, coding_agent, code_client, m
 
 
 def _mark_task_failed(task_id: str, s3_output_uri: str, error: Exception) -> None:
-    """Mark task as failed and save error details."""
+    """작업을 실패로 표시하고 오류 세부 정보를 저장합니다."""
     import traceback
 
     error_trace = traceback.format_exc()
@@ -752,7 +752,7 @@ def _mark_task_failed(task_id: str, s3_output_uri: str, error: Exception) -> Non
 
     _save_task_result(task_id, error_data, s3_output_uri)
 
-    # Mark task as failed in AgentCore
+    # AgentCore에서 작업을 실패로 표시
     logging.info(f"[BACKGROUND] Task {task_id} - Marking task as failed in AgentCore")
     try:
         app.fail_async_task(task_id)
@@ -763,27 +763,27 @@ def _mark_task_failed(task_id: str, s3_output_uri: str, error: Exception) -> Non
 
 
 def _run_async_analysis_task(request: str, task_id: str, s3_input_uri: str = None, s3_output_uri: str = None):
-    """Execute async analysis task with code generation and execution."""
+    """코드 생성 및 실행을 포함한 비동기 분석 작업을 수행합니다."""
     logging.info(f"[BACKGROUND] Task {task_id} - Starting execution")
     code_client = None
 
     try:
-        # Initialize coding agent
+        # 코딩 Agent 초기화
         logging.info(f"[BACKGROUND] Task {task_id} - Creating coding agent")
         coding_agent = Agent(name="coding_agent", system_prompt=CODING_AGENT_SYSTEM_PROMPT, model=haiku)
 
-        # Initialize Secure Code Interpreter with network isolation
+        # 네트워크 격리를 사용하는 Secure Code Interpreter 초기화
         logging.info(f"[BACKGROUND] Task {task_id} - Initializing Secure Code Interpreter")
         region = os.environ.get("AWS_REGION", "us-west-2")
 
-        # Extract allowed S3 buckets from input URI
+        # 입력 URI에서 허용된 S3 버킷 추출
         allowed_buckets = []
         if s3_input_uri:
             bucket, _ = parse_s3_uri(s3_input_uri)
             if bucket:
                 allowed_buckets.append(bucket)
 
-        # Use direct boto3 CodeInterpreter client
+        # 직접 boto3 CodeInterpreter 클라이언트 사용
         try:
             code_client = CodeInterpreterClient(region=region)
             logging.info(f"[BACKGROUND] Task {task_id} - CodeInterpreter session started: {code_client.session_id}")
@@ -794,14 +794,14 @@ def _run_async_analysis_task(request: str, task_id: str, s3_input_uri: str = Non
                 f"CodeInterpreter service unavailable. This service may be in preview and require AWS support to enable. Error: {e}"
             )
 
-        # Download and write data file if S3 input URI provided
+        # S3 입력 URI가 제공되면 데이터 파일 다운로드 및 쓰기
         if s3_input_uri:
             _download_s3_data(task_id, s3_input_uri, code_client)
 
-        # Execute with retry logic
+        # 재시도 로직으로 실행
         python_code, result = _execute_with_retry(task_id, request, coding_agent, code_client)
 
-        # Store result
+        # 결과 저장
         result_data = {
             "status": "completed",
             "task_id": task_id,
@@ -812,7 +812,7 @@ def _run_async_analysis_task(request: str, task_id: str, s3_input_uri: str = Non
 
         _save_task_result(task_id, result_data, s3_output_uri)
 
-        # Mark task as complete in AgentCore
+        # AgentCore에서 작업을 완료로 표시
         logging.info(f"[BACKGROUND] Task {task_id} - Marking task as complete in AgentCore")
         app.complete_async_task(task_id)
         logging.info(f"[BACKGROUND] Task {task_id} - Successfully completed")
@@ -821,7 +821,7 @@ def _run_async_analysis_task(request: str, task_id: str, s3_input_uri: str = Non
         _mark_task_failed(task_id, s3_output_uri, e)
 
     finally:
-        # Always stop the Code Interpreter session
+        # 항상 Code Interpreter 세션 중지
         if code_client:
             try:
                 code_client.stop()
@@ -878,7 +878,7 @@ def get_task_results(task_id: str):
 @tool(name="get_task_status", description=("Get the status of the running tasks"))
 def get_task_status():
     """Get status of running tasks"""
-    # Get task info
+    # 작업 정보 가져오기
     task_info = app.get_async_task_info()
     logging.debug(task_info)
 
@@ -889,7 +889,7 @@ def get_task_status():
     return tasks_result
 
 
-# Build primary agent
+# 기본 Agent 구성
 primary_agent = Agent(
     name="primary_agent",
     system_prompt=PRIMARY_AGENT_SYSTEM_PROMPT,
@@ -904,6 +904,6 @@ def handler(payload, context):
     return {"result": result.message}
 
 
-# Run the application
+# 애플리케이션 실행
 if __name__ == "__main__":
     app.run()

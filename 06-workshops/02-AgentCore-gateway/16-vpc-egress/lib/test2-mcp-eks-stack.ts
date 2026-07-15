@@ -13,7 +13,7 @@ export interface McpEksStackProps extends cdk.StackProps {
 	kubectlPrivateSubnetIds: string[];
 	vpc: ec2.IVpc;
 	certificateArn: string;
-	/** FQDN covered by the public certificate, e.g. "internal.example.com" */
+	/** Public Certificate가 적용되는 FQDN(예: "internal.example.com") */
 	privateDomain: string;
 }
 
@@ -30,7 +30,7 @@ export class McpEksStack extends cdk.Stack {
 			kubectlLayer: new KubectlV31Layer(this, "KubectlLayer"),
 		});
 
-		// --- Kubernetes resources ---
+		// --- Kubernetes 리소스 ---
 		const namespace = cluster.addManifest("McpNamespace", {
 			apiVersion: "v1",
 			kind: "Namespace",
@@ -95,7 +95,7 @@ export class McpEksStack extends cdk.Stack {
 		});
 		deployment.node.addDependency(namespace);
 
-		// ClusterIP Service — NGINX Ingress routes traffic here via path-based rules
+		// ClusterIP Service - NGINX Ingress가 경로 기반 규칙으로 트래픽을 여기로 라우팅
 		const mcpService = cluster.addManifest("McpService", {
 			apiVersion: "v1",
 			kind: "Service",
@@ -118,7 +118,7 @@ export class McpEksStack extends cdk.Stack {
 		});
 		mcpService.node.addDependency(deployment);
 
-		// --- Stock MCP Server (second MCP server, routed via NGINX Ingress) ---
+		// --- Stock MCP Server(두 번째 MCP Server, NGINX Ingress를 통해 라우팅) ---
 		const stockDeployment = cluster.addManifest("StockMcpDeployment", {
 			apiVersion: "apps/v1",
 			kind: "Deployment",
@@ -193,9 +193,9 @@ export class McpEksStack extends cdk.Stack {
 		});
 		stockMcpService.node.addDependency(stockDeployment);
 
-		// --- NGINX Ingress resource ---
-		// Path-based routing: /mcp-server/* → mcp-server:8000, /stock-mcp/* → stock-mcp-server:8001
-		// The rewrite-target annotation strips the prefix so backends see /mcp (what FastMCP expects)
+		// --- NGINX Ingress 리소스 ---
+		// 경로 기반 라우팅: /mcp-server/* → mcp-server:8000, /stock-mcp/* → stock-mcp-server:8001
+		// rewrite-target annotation이 접두사를 제거하여 백엔드에 FastMCP가 예상하는 /mcp가 표시됨
 		const ingress = cluster.addManifest("McpIngress", {
 			apiVersion: "networking.k8s.io/v1",
 			kind: "Ingress",
@@ -245,9 +245,9 @@ export class McpEksStack extends cdk.Stack {
 		ingress.node.addDependency(mcpService);
 		ingress.node.addDependency(stockMcpService);
 
-		// --- NLB for NGINX Ingress Controller ---
-		// Created here (not in the Helm chart) to use numeric targetPort,
-		// avoiding named-port resolution issues with the AWS LB Controller.
+		// --- NGINX Ingress Controller용 NLB ---
+		// AWS LB Controller의 named-port 확인 문제를 피하고 숫자 targetPort를
+		// 사용하도록 Helm chart가 아닌 여기서 생성함
 		const privateSubnetIds = props.kubectlPrivateSubnetIds.join(",");
 		const nlbService = cluster.addManifest("NginxNlbService", {
 			apiVersion: "v1",
@@ -284,8 +284,8 @@ export class McpEksStack extends cdk.Stack {
 		});
 		nlbService.node.addDependency(ingress);
 
-		// Retain K8s manifests on stack deletion to avoid kubectl Lambda timeout.
-		// These resources are cleaned up when the EKS cluster is destroyed.
+		// kubectl Lambda 제한 시간을 피하도록 스택 삭제 시 K8s manifest를 유지함
+		// 이 리소스는 EKS Cluster가 삭제될 때 정리됨
 		for (const manifest of [
 			namespace,
 			deployment,
@@ -303,11 +303,10 @@ export class McpEksStack extends cdk.Stack {
 		}
 
 		// --- Route 53 Private Hosted Zone ---
-		// Empty zone associated with the VPC. The notebook adds an Alias A
-		// record pointing at the K8s-managed NGINX Ingress NLB once it's
-		// been provisioned (NLB DNS isn't known at deploy time).
-		// AgentCore's Resource Gateway uses Private DNS to resolve this
-		// domain — no routingDomain needed.
+		// VPC에 연결된 빈 Zone입니다. K8s 관리형 NGINX Ingress NLB가
+		// 프로비저닝되면 Notebook에서 이를 가리키는 Alias A 레코드를 추가합니다.
+		// 배포 시점에는 NLB DNS를 알 수 없습니다. AgentCore Resource Gateway는
+		// Private DNS로 이 도메인을 확인하므로 routingDomain이 필요하지 않습니다.
 		const privateZone = new route53.PrivateHostedZone(this, "PrivateZone", {
 			zoneName: props.privateDomain,
 			vpc: props.vpc,

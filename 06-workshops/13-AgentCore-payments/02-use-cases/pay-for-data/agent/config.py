@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared configuration for the Heurist finance agent."""
+"""Heurist finance agent의 공유 configuration입니다."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from dotenv import load_dotenv
 AGENT_DIR = Path(__file__).resolve().parent
 LIVE_CATALOG_CACHE_PATH = AGENT_DIR / "catalog_live_cache.json"
 
-# Accept .env in either the agent dir (Runtime container layout) or the
-# parent use-case dir (host machine layout for sync_registry).
+# Agent directory(Runtime container layout) 또는 상위 use case directory
+# (sync_registry용 host machine layout)의 .env를 허용
 ENV_CANDIDATE_PATHS: tuple[Path, ...] = (
     AGENT_DIR / ".env",
     AGENT_DIR.parent / ".env",
@@ -26,9 +26,9 @@ DEFAULT_HEURIST_AGENT_IDS = (
     "SecEdgarAgent",
 )
 
-# Required environment variables for the agent to run host-side scripts.
-# The Runtime container does NOT need these — payment context comes from
-# the invocation payload at runtime.
+# Agent가 host 측 script를 실행하는 데 필요한 environment variable
+# Runtime container에는 필요하지 않으며 runtime의 invocation payload에서
+# payment context를 가져옴
 _REQUIRED_ENV_VARS: tuple[str, ...] = (
     "PAYMENT_MANAGER_ARN",
     "PAYMENT_SESSION_ID",
@@ -37,7 +37,7 @@ _REQUIRED_ENV_VARS: tuple[str, ...] = (
 
 
 def load_environment() -> None:
-    """Load the local .env file from any of the supported locations."""
+    """지원되는 위치에서 로컬 .env 파일을 load합니다."""
     for candidate in ENV_CANDIDATE_PATHS:
         if candidate.is_file():
             load_dotenv(candidate, override=False)

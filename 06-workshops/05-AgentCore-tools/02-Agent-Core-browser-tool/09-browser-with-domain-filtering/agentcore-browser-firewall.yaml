@@ -68,7 +68,7 @@ Parameters:
 
 Resources:
   #############################################################################
-  # VPC and Internet Gateway
+  # VPC 및 Internet Gateway
   #############################################################################
 
   VPC:
@@ -101,14 +101,14 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
 
   #############################################################################
-  # Subnets
+  # 서브넷
   #############################################################################
 
   PrivateSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: !Select [2, !Cidr [!Ref VpcCidr, 4, 12]]  # Third /20 block
+      CidrBlock: !Select [2, !Cidr [!Ref VpcCidr, 4, 12]]  # 세 번째 /20 블록
       AvailabilityZone: !Ref AvailabilityZone
       MapPublicIpOnLaunch: false
       Tags:
@@ -119,7 +119,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, 4, 12]]  # First /20 block
+      CidrBlock: !Select [0, !Cidr [!Ref VpcCidr, 4, 12]]  # 첫 번째 /20 블록
       AvailabilityZone: !Ref AvailabilityZone
       MapPublicIpOnLaunch: false
       Tags:
@@ -130,7 +130,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: !Select [0, !Cidr [!Select [1, !Cidr [!Ref VpcCidr, 4, 12]], 16, 4]]  # /28 from second /20
+      CidrBlock: !Select [0, !Cidr [!Select [1, !Cidr [!Ref VpcCidr, 4, 12]], 16, 4]]  # 두 번째 /20의 /28
       AvailabilityZone: !Ref AvailabilityZone
       MapPublicIpOnLaunch: false
       Tags:
@@ -161,7 +161,7 @@ Resources:
           Value: !Sub '${AWS::StackName}-nat-gateway'
 
   #############################################################################
-  # Security Group
+  # 보안 그룹
   #############################################################################
 
   BrowserSecurityGroup:
@@ -188,7 +188,7 @@ Resources:
           Value: !Sub '${AWS::StackName}-browser-sg'
 
   #############################################################################
-  # Network Firewall Rule Groups
+  # Network Firewall 규칙 그룹
   #############################################################################
 
   AllowedDomainsRuleGroup:
@@ -232,7 +232,7 @@ Resources:
           Value: !Sub '${AWS::StackName}-denied-domains'
 
   #############################################################################
-  # Network Firewall Policy
+  # Network Firewall 정책
   #############################################################################
 
   FirewallPolicy:
@@ -277,7 +277,7 @@ Resources:
           Value: !Sub '${AWS::StackName}-firewall'
 
   #############################################################################
-  # CloudWatch Log Groups for Firewall
+  # Firewall용 CloudWatch 로그 그룹
   #############################################################################
 
   FirewallAlertLogGroup:
@@ -315,10 +315,10 @@ Resources:
               logGroup: !Ref FirewallFlowLogGroup
 
   #############################################################################
-  # Route Tables
+  # 라우팅 테이블
   #############################################################################
 
-  # Private Subnet Route Table - Routes to NAT Gateway
+  # 프라이빗 서브넷 라우팅 테이블 - NAT Gateway로 라우팅
   PrivateRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -340,7 +340,7 @@ Resources:
       SubnetId: !Ref PrivateSubnet
       RouteTableId: !Ref PrivateRouteTable
 
-  # Public Subnet Route Table - Routes to Firewall Endpoint
+  # 퍼블릭 서브넷 라우팅 테이블 - Firewall 엔드포인트로 라우팅
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -362,7 +362,7 @@ Resources:
       SubnetId: !Ref PublicSubnet
       RouteTableId: !Ref PublicRouteTable
 
-  # Firewall Subnet Route Table - Routes to Internet Gateway
+  # Firewall 서브넷 라우팅 테이블 - Internet Gateway로 라우팅
   FirewallRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -385,7 +385,7 @@ Resources:
       SubnetId: !Ref FirewallSubnet
       RouteTableId: !Ref FirewallRouteTable
 
-  # IGW Ingress Route Table - Routes return traffic through Firewall
+  # IGW 수신 라우팅 테이블 - 반환 트래픽을 Firewall을 통해 라우팅
   IGWIngressRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -408,7 +408,7 @@ Resources:
       RouteTableId: !Ref IGWIngressRouteTable
 
   #############################################################################
-  # IAM Role for Browser Execution
+  # Browser 실행용 IAM 역할
   #############################################################################
 
   BrowserExecutionRole:
@@ -449,7 +449,7 @@ Resources:
           Value: !Sub '${AWS::StackName}-browser-execution-role'
 
   #############################################################################
-  # Custom Browser
+  # 사용자 지정 Browser
   #############################################################################
   BrowserTool:
     Type: AWS::BedrockAgentCore::BrowserCustom
@@ -470,7 +470,7 @@ Resources:
           Prefix: "recordings_browser_tool/"
 
 #############################################################################
-# Outputs
+# 출력
 #############################################################################
 
 Outputs:

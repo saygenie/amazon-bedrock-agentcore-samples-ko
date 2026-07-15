@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CDK app entry point for the Pay for API — Fun Facts seller stack."""
+"""Pay for API - Fun Facts seller stack용 CDK app 진입점입니다."""
 
 import os
 
@@ -9,9 +9,9 @@ from seller_stack import AgentCorePaymentsFunFactsSellerStack
 
 app = cdk.App()
 
-# Region comes from the usual CDK resolution order:
-#   CDK_DEFAULT_REGION → AWS_REGION → AWS CLI profile region.
-# We default to us-west-2 to match the default AgentCore Payments region.
+# Region은 일반적인 CDK 확인 순서를 따릅니다.
+#   CDK_DEFAULT_REGION -> AWS_REGION -> AWS CLI profile region.
+# 기본 AgentCore Payments region과 일치하도록 us-west-2를 기본값으로 사용합니다.
 env = cdk.Environment(
     account=os.environ.get("CDK_DEFAULT_ACCOUNT"),
     region=os.environ.get("CDK_DEFAULT_REGION", os.environ.get("AWS_REGION", "us-west-2")),

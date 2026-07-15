@@ -1,86 +1,86 @@
-# AgentCore Runtime and Gateway MCP Server Toolkit
+# AgentCore Runtime 및 Gateway MCP Server Toolkit
 
-A configurable toolkit for quickly setting up Custom MCP Server in AgentCore runtime and gateway infrastructure.
+AgentCore Runtime 및 Gateway 인프라에 Custom MCP Server를 빠르게 설정할 수 있는 구성형 toolkit입니다.
 
-Built on top of the [bedrock-agentcore-starter-toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit/) to provide a streamlined experience for deploying MCP servers.
+MCP 서버 배포 경험을 간소화하기 위해 [bedrock-agentcore-starter-toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit/)을 기반으로 구축되었습니다.
 
-## Overview
+## 개요
 
-- Do you want to quickly deploy your custom MCP server to AgentCore without writing any code? 
-- Do you want to consolidate your multiple custom MCP servers/tools to one URL that exposes all the tools from various MCP Servers? 
-- Do you want secured access to your MCP Servers? 
+- 코드를 작성하지 않고 custom MCP 서버를 AgentCore에 빠르게 배포하고 싶으신가요?
+- 여러 custom MCP 서버 및 도구를 하나의 URL로 통합하여 다양한 MCP Server의 모든 도구를 노출하고 싶으신가요?
+- MCP Server에 대한 액세스를 보호하고 싶으신가요?
 
-This toolkit helps you to do all these with simple command line arguments. It automates the creation of:
+이 toolkit을 사용하면 간단한 명령줄 인수만으로 이 모든 작업을 수행할 수 있습니다. 다음 리소스의 생성을 자동화합니다.
 
-- Cognito User Pools for authentication
-- AgentCore Runtime environment for each MCP Server
-- AgentCore Gateway with MCP protocol support
-- Gateway MCP Server targets with OAuth2 authentication
+- 인증용 Cognito User Pool
+- 각 MCP Server용 AgentCore Runtime 환경
+- MCP 프로토콜을 지원하는 AgentCore Gateway
+- OAuth2 인증을 사용하는 Gateway MCP Server 대상
 
-The toolkit creates a complete MCP gateway and enables multiple MCP servers (Example: calculator and helloworld) to be accessed through a single gateway endpoint with proper authentication and routing.
+이 toolkit은 완전한 MCP Gateway를 생성하고, 여러 MCP 서버(예: calculator, helloworld)에 적절한 인증과 라우팅을 적용하여 단일 Gateway 엔드포인트를 통해 액세스할 수 있게 합니다.
 
-## Prerequisites
+## 사전 요구 사항
 
-1. AWS credentials configured
-2. Python 3.8+ installed
-3. (Optional) `.env` file for Cognito user configuration
+1. AWS 자격 증명 구성
+2. Python 3.8 이상 설치
+3. Cognito 사용자 구성을 위한 `.env` 파일(선택 사항)
 
-## Installation
+## 설치
 
-### From PyPI (when published)
+### PyPI에서 설치(게시된 경우)
 ```bash
 pip install agentcore-runtime-gw-mcp-toolkit
 ```
 
-### From Source
+### 소스에서 설치
 ```bash
 git clone <repository-url>
 cd agentcore-runtime-gw-mcp-tool-kit
 pip install -e .
 ```
 
-## Configuration
+## 구성
 
-### Environment Variables (Optional)
+### 환경 변수(선택 사항)
 
-You can customize Cognito user credentials by creating a `.env` file in the project directory:
+프로젝트 디렉터리에 `.env` 파일을 생성하여 Cognito 사용자 자격 증명을 사용자 지정할 수 있습니다.
 
 ```bash
-# .env file
+# .env 파일
 COGNITO_USERNAME=your_username
 COGNITO_TEMP_PASSWORD=your_temp_password
 COGNITO_PASSWORD=your_permanent_password
 ```
 
-**Default values** (used if `.env` file is not provided):
+**기본값**(`.env` 파일을 제공하지 않은 경우 사용):
 - `COGNITO_USERNAME`: `testuser`
 - `COGNITO_TEMP_PASSWORD`: `Temp123!`
 - `COGNITO_PASSWORD`: `MyPassword123!`
 
-**Note**: The toolkit automatically creates Cognito users with these credentials for testing purposes.
+**참고**: toolkit은 테스트를 위해 이 자격 증명으로 Cognito 사용자를 자동 생성합니다.
 
-## Usage
+## 사용법
 
-### Getting Started
+### 시작하기
 
-1. **Clone the Repository**
+1. **리포지토리 복제**
    ```bash
    git clone <repository-url>
    cd agentcore-runtime-gw-mcp-tool-kit
    ```
 
-2. **Install the Package**
+2. **패키지 설치**
    ```bash
    pip install -e .
    ```
 
-3. **Prepare Your MCP Server Code**
-   - Your MCP server files can be located anywhere on your system
-   - Ensure each server has its own `server.py` and `requirements.txt`
-   - Note the full paths to these files for the runtime configuration
+3. **MCP Server 코드 준비**
+   - MCP 서버 파일은 시스템의 어느 위치에나 둘 수 있습니다.
+   - 각 서버에 자체 `server.py`와 `requirements.txt`가 있는지 확인합니다.
+   - Runtime 구성에 사용할 수 있도록 이 파일들의 전체 경로를 기록합니다.
 
    
-   **Example structure (can be anywhere):**
+   **구조 예시(어느 위치에나 배치 가능):**
    ```
    /path/to/my-servers/
    ├── calculator/
@@ -94,7 +94,7 @@ COGNITO_PASSWORD=your_permanent_password
        └── requirements.txt
    ```
 
-4. **Deploy with Command Line Arguments**
+4. **명령줄 인수로 배포**
    ```bash
    agentcore-mcp-toolkit \
      --gateway-name "my-gateway" \
@@ -107,18 +107,17 @@ COGNITO_PASSWORD=your_permanent_password
        }
      ]'
    ```
-   **Note:** The agentcore-mcp-toolkit has to be invoked from the MCP Server project root. Example: The utility has 
-   to be invoked from /path/to for the above example.
+   **참고:** agentcore-mcp-toolkit은 MCP Server 프로젝트 루트에서 호출해야 합니다. 위 예시에서는 /path/to에서 유틸리티를 호출해야 합니다.
 
-### Basic Usage
+### 기본 사용법
 
 ```bash
-# Deploy with minimal arguments
+# 최소 인수로 배포
 agentcore-mcp-toolkit \
   --gateway-name "my-gateway" \
   --runtime-configs '[{"name":"runtime1","description":"My Runtime","entrypoint":"/path/to/myserver/server.py","requirements_file":"/path/to/myserver/requirements.txt"}]'
 
-# Deploy with all options
+# 모든 옵션을 사용하여 배포
 agentcore-mcp-toolkit \
   --region us-east-1 \
   --gateway-name "my-gateway-mcp-server" \
@@ -133,16 +132,16 @@ agentcore-mcp-toolkit \
   ]'
 ```
 
-### Command Line Options
+### 명령줄 옵션
 
-- `--region`: AWS region (default: us-east-1)
-- `--gateway-name`: Gateway name (required)
-- `--gateway-description`: Gateway description (optional)
-- `--runtime-configs`: JSON array of runtime configurations (required)
+- `--region`: AWS 리전(기본값: us-east-1)
+- `--gateway-name`: Gateway 이름(필수)
+- `--gateway-description`: Gateway 설명(선택 사항)
+- `--runtime-configs`: Runtime 구성의 JSON 배열(필수)
 
-### Runtime Configuration Format
+### Runtime 구성 형식
 
-Each runtime configuration in the `--runtime-configs` JSON array should include:
+`--runtime-configs` JSON 배열의 각 Runtime 구성에는 다음 항목이 포함되어야 합니다.
 
 ```json
 {
@@ -155,56 +154,56 @@ Each runtime configuration in the `--runtime-configs` JSON array should include:
 }
 ```
 
-**Required fields:**
-- `name`: Unique runtime name
-- `entrypoint`: Full path to MCP server Python file
-- `requirements_file`: Full path to requirements.txt file
+**필수 필드:**
+- `name`: 고유한 Runtime 이름
+- `entrypoint`: MCP 서버 Python 파일의 전체 경로
+- `requirements_file`: requirements.txt 파일의 전체 경로
 
-**Optional fields:**
-- `description`: Runtime description
-- `auto_create_execution_role`: Auto-create IAM role (default: true)
-- `auto_create_ecr`: Auto-create ECR repository (default: true)
+**선택 필드:**
+- `description`: Runtime 설명
+- `auto_create_execution_role`: IAM 역할 자동 생성(기본값: true)
+- `auto_create_ecr`: ECR 리포지토리 자동 생성(기본값: true)
 
-### Auto-Derived Names
+### 자동으로 파생되는 이름
 
-The toolkit automatically derives resource names from the `gateway-name` and runtime `name` fields:
+toolkit은 `gateway-name`과 Runtime `name` 필드에서 리소스 이름을 자동으로 파생합니다.
 
-**Gateway Resources** (from `--gateway-name`):
-- IAM Role: `{gateway-name}-role`
+**Gateway 리소스**(`--gateway-name`에서 파생):
+- IAM 역할: `{gateway-name}-role`
 - User Pool: `{gateway-name}-pool`
 - Resource Server ID: `{gateway-name}-id`
-- Resource Server Name: `{gateway-name}-name`
-- Client Name: `{gateway-name}-client`
+- Resource Server 이름: `{gateway-name}-name`
+- Client 이름: `{gateway-name}-client`
 
-**Runtime Resources** (from runtime `name`):
+**Runtime 리소스**(Runtime `name`에서 파생):
 - User Pool: `{runtime-name}-pool`
 - Resource Server ID: `{runtime-name}-id`
-- Resource Server Name: `{runtime-name}-name`
-- Client Name: `{runtime-name}-client`
-- Agent Name: `{runtime-name}` (with dashes converted to underscores)
+- Resource Server 이름: `{runtime-name}-name`
+- Client 이름: `{runtime-name}-client`
+- Agent 이름: `{runtime-name}`(하이픈은 밑줄로 변환)
 
-**Target Resources** (auto-generated):
-- Target Name: `{runtime-name}-target`
+**대상 리소스**(자동 생성):
+- 대상 이름: `{runtime-name}-target`
 - Identity Provider: `{runtime-name}-identity`
 
-## Testing the Gateway
+## Gateway 테스트
 
-Once deployed, the toolkit automatically provides all the connection information needed to test and use your MCP gateway.
+배포가 완료되면 toolkit은 MCP Gateway를 테스트하고 사용하는 데 필요한 모든 연결 정보를 자동으로 제공합니다.
 
-### Gateway Connection Information
+### Gateway 연결 정보
 
-The toolkit automatically displays connection details and **securely saves credentials to a file** after successful deployment:
+배포가 성공하면 toolkit은 연결 세부 정보를 자동으로 표시하고 **자격 증명을 파일에 안전하게 저장**합니다.
 
-#### **Secure Credential Storage**
+#### **안전한 자격 증명 저장**
 
-For security, sensitive credentials are saved to a secure file instead of being displayed in console logs:
+보안을 위해 민감한 자격 증명은 콘솔 로그에 표시되지 않고 안전한 파일에 저장됩니다.
 
-- **File Location**: `.agentcore-credentials-{gateway-name}.json`
-- **File Permissions**: Owner-only access (600)
-- **Console Output**: Shows `<redacted>` for sensitive values
-- **Access Method**: Use `cat .agentcore-credentials-{gateway-name}.json`
+- **파일 위치**: `.agentcore-credentials-{gateway-name}.json`
+- **파일 권한**: 소유자만 액세스 가능(600)
+- **콘솔 출력**: 민감한 값을 `<redacted>`로 표시
+- **액세스 방법**: `cat .agentcore-credentials-{gateway-name}.json` 사용
 
-**Example Output:**
+**출력 예시:**
 ```
 ============================================================
 GATEWAY CONNECTION INFORMATION
@@ -224,157 +223,157 @@ Gateway ID: my-gateway-mcp-server-123456789
 Runtime 1 Agent ARN: arn:aws:bedrock-agentcore:us-east-1:123456789:runtime/my_calculator_runtime-123456789
 ```
 
-### Configuring QDev Plugin with Access Token
+### Access Token으로 QDev Plugin 구성
 
-To use the MCP gateway in QDev plugin, configure it as shown below:
+QDev plugin에서 MCP Gateway를 사용하려면 다음과 같이 구성합니다.
 
-![QDev MCP Configuration](images/qdev_mcp_config.png)
+![QDev MCP 구성](images/qdev_mcp_config.png)
 
-**Steps to configure QDev:**
-1. **Get credentials** from the secure file:
+**QDev 구성 단계:**
+1. 안전한 파일에서 **자격 증명을 가져옵니다**.
    ```bash
    cat .agentcore-credentials-{gateway-name}.json
    ```
-2. Copy the **access_token** value from the JSON file
-3. In QDev plugin settings, add a new MCP server with:
-   - **Server URL**: Use the `gateway_url` from the credentials file
+2. JSON 파일에서 **access_token** 값을 복사합니다.
+3. QDev plugin 설정에 다음 정보로 새 MCP 서버를 추가합니다.
+   - **Server URL**: 자격 증명 파일의 `gateway_url` 사용
    - **Authentication**: Bearer Token
-   - **Token**: Paste the access token from step 2
-4. Save the configuration and test the connection
+   - **Token**: 2단계에서 복사한 액세스 토큰 붙여넣기
+4. 구성을 저장하고 연결을 테스트합니다.
 
-**Security Note**: Never share or commit the credentials file to version control.
+**보안 참고 사항**: 자격 증명 파일을 공유하거나 버전 관리에 커밋하지 마세요.
 
-### Live Demo Examples
+### 실시간 데모 예시
 
-Once configured, you can use the MCP tools directly in QDev:
+구성이 완료되면 QDev에서 MCP 도구를 직접 사용할 수 있습니다.
 
-**Calculator MCP Server Demo:**
-![Calculator Add Demo](images/calculator_add_demo.png)
+**Calculator MCP Server 데모:**
+![Calculator 덧셈 데모](images/calculator_add_demo.png)
 
-**Hello World MCP Server Demo:**
-![Greet Hello World Demo](images/greet_hello_world.png)
+**Hello World MCP Server 데모:**
+![Hello World 인사 데모](images/greet_hello_world.png)
 
-## Architecture
+## 아키텍처
 
-![Architecture ](images/architecture.png)
+![아키텍처](images/architecture.png)
 
-### Architecture Components
+### 아키텍처 구성 요소
 
-The toolkit creates:
-1. **Single Gateway**: One AgentCore Gateway with multiple MCP Server targets that routes requests
-2. **Multiple Runtimes**: Each MCP server runs in its own AgentCore Runtime
-3. **Authentication**: Separate Cognito resources for gateway and each runtime
-4. **Targets**: Gateway MCP Server targets that connect the gateway to each runtime
+toolkit은 다음 항목을 생성합니다.
+1. **단일 Gateway**: 요청을 라우팅하는 여러 MCP Server 대상이 연결된 하나의 AgentCore Gateway
+2. **여러 Runtime**: 각 MCP 서버가 자체 AgentCore Runtime에서 실행
+3. **인증**: Gateway와 각 Runtime에 별도의 Cognito 리소스 사용
+4. **대상**: Gateway를 각 Runtime에 연결하는 Gateway MCP Server 대상
 
-### Authentication Flow
+### 인증 흐름
 
-**Inbound Authorization (Client → Gateway):**
-- MCP Client (QDev) sends requests with Bearer token
-- Gateway JWT Authorizer validates token against Gateway Cognito User Pool
-- Authorized requests are routed to appropriate targets
+**Inbound Authorization(Client → Gateway):**
+- MCP Client(QDev)가 Bearer token과 함께 요청을 전송합니다.
+- Gateway JWT Authorizer가 Gateway Cognito User Pool을 기준으로 토큰을 검증합니다.
+- 권한이 부여된 요청을 적절한 대상으로 라우팅합니다.
 
-**Outbound Authorization (Gateway → Runtime):**
-- Each target has its own OAuth2 credential provider
-- Gateway obtains OAuth tokens from respective Runtime Cognito User Pools
-- Authenticated requests are sent to individual MCP server runtimes
+**Outbound Authorization(Gateway → Runtime):**
+- 각 대상에는 자체 OAuth2 credential provider가 있습니다.
+- Gateway는 각 Runtime Cognito User Pool에서 OAuth 토큰을 가져옵니다.
+- 인증된 요청을 개별 MCP 서버 Runtime으로 전송합니다.
 
-## Authorization Support
+## 권한 부여 지원
 
-### Current Implementation
-This toolkit currently supports **Amazon Cognito OAuth2** for both inbound and outbound authorization:
-- **Inbound Authorization**: Gateway uses Cognito JWT tokens for client authentication
-- **Outbound Authorization**: Gateway authenticates to runtime using Cognito OAuth2 credentials
+### 현재 구현
+이 toolkit은 현재 인바운드 및 아웃바운드 권한 부여 모두에 **Amazon Cognito OAuth2**를 지원합니다.
+- **Inbound Authorization**: Gateway는 클라이언트 인증에 Cognito JWT 토큰을 사용합니다.
+- **Outbound Authorization**: Gateway는 Cognito OAuth2 자격 증명을 사용하여 Runtime에 인증합니다.
 
-### Roadmap
-- **IAM Role-based Authorization**: Support for IAM roles and policies for both inbound and outbound authentication (TO DO - planned for next release)
+### 로드맵
+- **IAM Role 기반 권한 부여**: 인바운드 및 아웃바운드 인증 모두에 IAM 역할과 정책 지원(할 일 - 다음 릴리스에 계획)
 
-## Security Features
+## 보안 기능
 
-### **Secure Credential Management**
-- **File-based storage**: Credentials saved to secure files with restricted permissions
-- **Console masking**: Sensitive values shown as `<redacted>` in logs
-- **File permissions**: Automatic setting of owner-only access (600)
-- **Fallback protection**: Graceful handling if file operations fail
+### **안전한 자격 증명 관리**
+- **파일 기반 저장**: 제한된 권한이 적용된 안전한 파일에 자격 증명 저장
+- **콘솔 마스킹**: 로그에서 민감한 값을 `<redacted>`로 표시
+- **파일 권한**: 소유자만 액세스할 수 있도록 자동 설정(600)
+- **Fallback 보호**: 파일 작업 실패 시 정상적으로 처리
 
-### **Input Validation**
-- **Path traversal protection**: Prevents `..` in file paths
-- **File extension validation**: Ensures `.py` and `.txt` extensions
-- **JSON structure validation**: Validates runtime configuration format
-- **Required field checks**: Ensures all mandatory fields are present
+### **입력 검증**
+- **Path traversal 보호**: 파일 경로에 `..` 사용 방지
+- **파일 확장자 검증**: `.py` 및 `.txt` 확장자 확인
+- **JSON 구조 검증**: Runtime 구성 형식 검증
+- **필수 필드 확인**: 모든 필수 필드가 있는지 확인
 
-### **Error Handling**
-- **Specific exception handling**: Uses appropriate exception types
-- **Sanitized error messages**: Prevents information disclosure
-- **Graceful degradation**: Continues operation when possible
-- **Proper exit codes**: Returns appropriate status for automation
+### **오류 처리**
+- **구체적인 예외 처리**: 적절한 예외 유형 사용
+- **정제된 오류 메시지**: 정보 노출 방지
+- **Graceful degradation**: 가능한 경우 작업 계속
+- **올바른 종료 코드**: 자동화에 적절한 상태 반환
 
-## Cleanup
+## 정리
 
-### Removing Resources
+### 리소스 제거
 
-To clean up all resources created by the toolkit, use the cleanup script:
+toolkit이 생성한 모든 리소스를 정리하려면 cleanup 스크립트를 사용합니다.
 
 ```bash
-# Clean up specific gateway and runtimes
+# 특정 Gateway 및 Runtime 정리
 python -m cleanup \
   --gateway-name "my-gateway" \
   --runtime-names '["runtime1", "runtime2"]' \
   --region us-east-1
 
-# Skip confirmation prompt
+# 확인 메시지 건너뛰기
 python -m cleanup \
   --gateway-name "my-gateway" \
   --runtime-names '["runtime1", "runtime2"]' \
   --confirm
 ```
 
-### Cleanup Options
+### 정리 옵션
 
-- `--gateway-name`: Name of the gateway to clean up (required)
-- `--runtime-names`: JSON array of runtime names to clean up (required)
-- `--region`: AWS region (default: us-east-1)
-- `--confirm`: Skip confirmation prompt
+- `--gateway-name`: 정리할 Gateway 이름(필수)
+- `--runtime-names`: 정리할 Runtime 이름의 JSON 배열(필수)
+- `--region`: AWS 리전(기본값: us-east-1)
+- `--confirm`: 확인 메시지 건너뛰기
 
-### Resources Cleaned Up
+### 정리되는 리소스
 
-The cleanup script removes:
-- AgentCore Gateway and all targets
-- AgentCore Runtime instances
-- Cognito User Pools and domains
-- IAM roles and policies
-- OAuth2 credential providers
+cleanup 스크립트는 다음을 제거합니다.
+- AgentCore Gateway 및 모든 대상
+- AgentCore Runtime 인스턴스
+- Cognito User Pool 및 도메인
+- IAM 역할 및 정책
+- OAuth2 credential provider
 
-**Note**: The cleanup script does not remove local credential files. To remove them:
+**참고**: cleanup 스크립트는 로컬 자격 증명 파일을 제거하지 않습니다. 제거하려면 다음 명령을 실행합니다.
 ```bash
-# Remove credential files manually
+# 자격 증명 파일 수동 제거
 rm .agentcore-credentials-*.json
 ```
 
-**Warning**: This action cannot be undone. Always confirm the resources before proceeding.
+**경고**: 이 작업은 실행 취소할 수 없습니다. 계속하기 전에 항상 리소스를 확인하세요.
 
-## Troubleshooting
+## 문제 해결
 
-1. Ensure AWS credentials are properly configured
-2. Verify required MCP server files exist in their respective directories
-3. Check AWS region permissions
-4. Review CloudWatch logs for detailed error information
-5. Ensure gateway URL is correctly formatted when testing
-6. Verify Cognito user pools and clients are created successfully
-7. **Access Token Issues**: If the access token expires, re-run the toolkit to get a fresh token
-8. **QDev Connection Issues**: Ensure the gateway URL ends with `/mcp` and the bearer token is correctly copied
-9. **Tool Discovery**: Use different query terms if tools are not found (try "calculator", "greet", or "tools")
-10. **Authorization Issues**: Currently only Cognito OAuth2 is supported - ensure all authentication uses Cognito tokens
-11. **Cognito User Issues**: If you encounter user creation errors, check your `.env` file configuration or use the default credentials
-12. **Cleanup Issues**: If cleanup fails, manually verify resources in AWS console and retry with specific resource names
-13. **Credential File Issues**: If credentials file cannot be created, check directory permissions and disk space
-14. **File Permission Issues**: On Windows, file permissions may not be set correctly - manually secure the credentials file
-15. **Path Validation Errors**: Ensure file paths don't contain `..` and have correct extensions (`.py`, `.txt`)
-16. **JSON Validation Errors**: Verify runtime-configs is a valid JSON array with required fields
+1. AWS 자격 증명이 올바르게 구성되었는지 확인합니다.
+2. 필요한 MCP 서버 파일이 각각의 디렉터리에 있는지 확인합니다.
+3. AWS 리전 권한을 확인합니다.
+4. 자세한 오류 정보는 CloudWatch 로그에서 확인합니다.
+5. 테스트할 때 Gateway URL 형식이 올바른지 확인합니다.
+6. Cognito User Pool과 Client가 정상적으로 생성되었는지 확인합니다.
+7. **Access Token 문제**: 액세스 토큰이 만료되면 toolkit을 다시 실행하여 새 토큰을 받습니다.
+8. **QDev 연결 문제**: Gateway URL이 `/mcp`로 끝나고 bearer token이 올바르게 복사되었는지 확인합니다.
+9. **도구 탐색**: 도구를 찾지 못하면 다른 쿼리 용어를 사용합니다("calculator", "greet" 또는 "tools" 시도).
+10. **권한 부여 문제**: 현재는 Cognito OAuth2만 지원하므로 모든 인증에 Cognito 토큰을 사용하는지 확인합니다.
+11. **Cognito 사용자 문제**: 사용자 생성 오류가 발생하면 `.env` 파일 구성을 확인하거나 기본 자격 증명을 사용합니다.
+12. **정리 문제**: 정리에 실패하면 AWS 콘솔에서 리소스를 직접 확인하고 구체적인 리소스 이름으로 다시 시도합니다.
+13. **자격 증명 파일 문제**: 자격 증명 파일을 생성할 수 없다면 디렉터리 권한과 디스크 공간을 확인합니다.
+14. **파일 권한 문제**: Windows에서는 파일 권한이 올바르게 설정되지 않을 수 있으므로 자격 증명 파일을 수동으로 보호합니다.
+15. **경로 검증 오류**: 파일 경로에 `..`가 없고 올바른 확장자(`.py`, `.txt`)를 사용하는지 확인합니다.
+16. **JSON 검증 오류**: runtime-configs가 필수 필드를 포함한 유효한 JSON 배열인지 확인합니다.
 
-## Example MCP Servers
+## MCP Server 예시
 
-The toolkit includes example MCP servers:
-- **Calculator**: Provides add and multiply functions
-- **HelloWorld**: Provides greeting functionality
+toolkit에는 다음 MCP 서버 예시가 포함되어 있습니다.
+- **Calculator**: 덧셈 및 곱셈 함수 제공
+- **HelloWorld**: 인사 기능 제공
 
-Both servers demonstrate the MCP protocol implementation and can be used as templates for creating custom MCP servers.
+두 서버 모두 MCP 프로토콜 구현 방식을 보여주며 custom MCP 서버를 생성하기 위한 템플릿으로 사용할 수 있습니다.

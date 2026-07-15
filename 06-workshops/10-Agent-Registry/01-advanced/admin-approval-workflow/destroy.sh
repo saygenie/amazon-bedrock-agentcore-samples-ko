@@ -33,17 +33,17 @@ done
 
 [[ -z "${STACK_NAME}" || -z "${PREFIX}" || -z "${AWS_REGION}" ]] && usage
 
-# --- Resolve S3 bucket name ---
+# --- S3 bucket 이름 확인 ---
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text --region "${AWS_REGION}")"
 S3_BUCKET="${PREFIX}-deploy-artifacts-${ACCOUNT_ID}-${AWS_REGION}"
 
-# --- Delete CloudFormation stack ---
+# --- CloudFormation stack 삭제 ---
 echo "Deleting CloudFormation stack: ${STACK_NAME}..."
 aws cloudformation delete-stack --stack-name "${STACK_NAME}" --region "${AWS_REGION}"
 aws cloudformation wait stack-delete-complete --stack-name "${STACK_NAME}" --region "${AWS_REGION}"
 echo "Stack deleted."
 
-# --- Empty and delete S3 bucket ---
+# --- S3 bucket 비우기 및 삭제 ---
 if [[ -n "${S3_BUCKET}" ]]; then
   if aws s3api head-bucket --bucket "${S3_BUCKET}" --region "${AWS_REGION}" 2>/dev/null; then
     echo "Emptying S3 bucket: ${S3_BUCKET}..."

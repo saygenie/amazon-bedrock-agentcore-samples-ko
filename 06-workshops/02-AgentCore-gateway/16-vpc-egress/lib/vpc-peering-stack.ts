@@ -6,17 +6,17 @@ import { NagSuppressions } from "cdk-nag";
 import { Construct } from "constructs";
 
 export interface VpcPeeringStackProps extends cdk.StackProps {
-  /** Local VPC (requester side) */
+  /** 로컬 VPC(요청자 측) */
   vpc: ec2.IVpc;
   /** Peer VPC ID */
   peerVpcId: string;
-  /** Peer region (e.g. 'us-east-1') */
+  /** Peer 리전(예: 'us-east-1') */
   peerRegion: string;
-  /** Peer VPC CIDR (for routes in local VPC) */
+  /** Peer VPC CIDR(로컬 VPC의 Route용) */
   peerVpcCidr: string;
-  /** Local VPC CIDR (for routes in peer VPC) */
+  /** 로컬 VPC CIDR(Peer VPC의 Route용) */
   localVpcCidr: string;
-  /** Route table IDs of peer VPC private subnets (for adding return routes) */
+  /** Peer VPC Private Subnet의 Route Table ID(반환 Route 추가용) */
   peerPrivateRouteTableIds: string[];
 }
 
@@ -26,7 +26,7 @@ export class VpcPeeringStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: VpcPeeringStackProps) {
     super(scope, id, props);
 
-    // 1. Create VPC peering connection (requester side)
+    // 1. VPC Peering Connection 생성(요청자 측)
     const peering = new ec2.CfnVPCPeeringConnection(this, "VpcPeering", {
       vpcId: props.vpc.vpcId,
       peerVpcId: props.peerVpcId,
@@ -35,7 +35,7 @@ export class VpcPeeringStack extends cdk.Stack {
     });
     this.peeringConnectionId = peering.ref;
 
-    // 2. Accept peering in peer region (cross-region requires explicit acceptance)
+    // 2. Peer 리전에서 Peering 수락(Cross-region은 명시적 수락 필요)
     const acceptPeering = new cr.AwsCustomResource(this, "AcceptPeering", {
       onCreate: {
         service: "EC2",
@@ -53,7 +53,7 @@ export class VpcPeeringStack extends cdk.Stack {
     });
     acceptPeering.node.addDependency(peering);
 
-    // 3. Add routes in local VPC private subnets -> peer VPC CIDR via peering
+    // 3. 로컬 VPC Private Subnet에 Peering을 통해 Peer VPC CIDR로 가는 Route 추가
     props.vpc.privateSubnets.forEach((subnet, i) => {
       const route = new ec2.CfnRoute(this, `RouteLocal${i}`, {
         routeTableId: subnet.routeTable.routeTableId,
@@ -63,8 +63,8 @@ export class VpcPeeringStack extends cdk.Stack {
       route.addDependency(peering);
     });
 
-    // 4. Add routes in peer VPC private subnets -> local VPC CIDR via peering
-    //    Uses AwsCustomResource because the route tables are in a different region
+    // 4. Peer VPC Private Subnet에 Peering을 통해 로컬 VPC CIDR로 가는 Route 추가
+    //    Route Table이 다른 리전에 있으므로 AwsCustomResource 사용
     props.peerPrivateRouteTableIds.forEach((rtId, i) => {
       const peerRoute = new cr.AwsCustomResource(this, `RoutePeer${i}`, {
         onCreate: {

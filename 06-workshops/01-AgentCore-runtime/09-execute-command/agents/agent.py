@@ -1,36 +1,36 @@
-# Import required libraries for Bedrock AgentCore
+# Bedrock AgentCore에 필요한 library import
 from bedrock_agentcore import BedrockAgentCoreApp
 from strands import Agent
 
-# Initialize the AgentCore application
+# AgentCore application 초기화
 app = BedrockAgentCoreApp()
 
-# Create the AI agent instance
+# AI agent instance 생성
 agent = Agent()
 
 
 @app.entrypoint
 def invoke(payload, context):
     """
-    Main entry point for the agent.
+    Agent의 기본 entry point입니다.
 
-    Args:
-        payload: Dictionary containing the 'prompt' key with user input
-        context: Runtime context information
+    인수:
+        payload: 사용자 입력이 담긴 'prompt' key를 포함하는 dictionary
+        context: Runtime context 정보
 
-    Returns:
-        Dictionary with the agent's response message
+    반환:
+        Agent의 응답 message가 포함된 dictionary
     """
-    # Extract the user prompt from the payload
+    # Payload에서 user prompt 추출
     user_message = payload.get("prompt", "Hello!")
 
-    # Process the message with the agent
+    # Agent로 message 처리
     result = agent(user_message)
 
-    # Return the response in the expected format
+    # 예상 형식으로 응답 반환
     return {"result": result.message}
 
 
 if __name__ == "__main__":
-    # Run the agent application
+    # Agent application 실행
     app.run()

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Fetch the live Heurist catalog and refresh the local cache.
+"""Live Heurist catalog를 가져와 로컬 cache를 갱신합니다.
 
-Run this on the host machine (NOT inside the container) before each
-`agentcore deploy` so the catalog cache bundled into the image is fresh.
+Image에 포함되는 catalog cache를 최신 상태로 유지하도록 각
+`agentcore deploy` 전에 container 내부가 아닌 host machine에서 실행합니다.
 
-Usage (from pay-for-data/):
+사용법(pay-for-data/에서 실행):
     python agent/sync_registry.py
 """
 
@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Make sibling modules importable when running as a script
+# Script로 실행할 때 sibling module을 import할 수 있도록 설정
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from catalog import fetch_live_catalog, get_tools_for_agents  # noqa: E402

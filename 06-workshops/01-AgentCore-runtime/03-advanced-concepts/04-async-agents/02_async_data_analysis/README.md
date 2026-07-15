@@ -1,38 +1,38 @@
-# Asynchronous Data Analysis Agent with Amazon Bedrock AgentCore
+# Amazon Bedrock AgentCore를 사용하는 비동기 데이터 분석 에이전트
 
-## Overview
+## 개요
 
-In this tutorial we will learn how to build an asynchronous data analysis agent that can perform long-running analysis tasks in the background while maintaining a responsive conversation with the user. This demonstrates how to leverage Amazon Bedrock AgentCore's asynchronous capabilities with Strands to create agents that handle time-consuming operations gracefully.
+이 자습서에서는 사용자와 원활한 대화를 유지하면서 백그라운드에서 장시간 분석 작업을 수행하는 비동기 데이터 분석 에이전트를 구축하는 방법을 학습합니다. Amazon Bedrock AgentCore의 비동기 기능과 Strands를 활용하여 시간이 오래 걸리는 작업을 원활하게 처리하는 에이전트를 만드는 방법을 보여 줍니다.
 
-In this example we'll create:
+이 예제에서는 다음 구성 요소를 생성합니다.
 
-1. A primary agent that orchestrates user interactions and delegates analysis tasks
-2. A coding agent that generates Python code for data analysis tasks
-3. An async task system that executes code in Code Interpreter while keeping the agent responsive
+1. 사용자 상호 작용을 오케스트레이션하고 분석 작업을 위임하는 기본 에이전트
+2. 데이터 분석 작업을 위한 Python 코드를 생성하는 coding agent
+3. 에이전트 응답성을 유지하면서 Code Interpreter에서 코드를 실행하는 비동기 작업 시스템
 
-Putting these components together you get an asynchronous agent configuration that can handle compute-intensive data analysis operations while maintaining a responsive conversation with users.
+이러한 구성 요소를 결합하면 사용자와 원활한 대화를 유지하면서 계산 집약적인 데이터 분석 작업을 처리하는 비동기 에이전트 구성이 완성됩니다.
 
-This tutorial leverages [**Amazon Bedrock AgentCore Runtime**](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agents-tools-runtime.html) for hosting and managing agents with built-in support for asynchronous operations, and [**Amazon Bedrock Code Interpreter**](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/code-interpreter-tool.html) for secure execution of dynamically generated Python code in isolated environments. AgentCore Runtime provides scalable infrastructure for deploying conversational AI agents, while Code Interpreter enables agents to write and execute code safely for data analysis tasks. [Learn more about Amazon Bedrock AgentCore](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-agentcore.html).
+이 자습서에서는 비동기 작업을 기본 지원하며 에이전트를 호스팅하고 관리하는 [**Amazon Bedrock AgentCore Runtime**](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agents-tools-runtime.html)과 격리된 환경에서 동적으로 생성된 Python 코드를 안전하게 실행하는 [**Amazon Bedrock Code Interpreter**](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/code-interpreter-tool.html)를 활용합니다. AgentCore Runtime은 대화형 AI 에이전트 배포를 위한 확장 가능한 인프라를 제공하고, Code Interpreter는 에이전트가 데이터 분석 작업용 코드를 안전하게 작성하고 실행할 수 있도록 합니다. [Amazon Bedrock AgentCore 자세히 알아보기](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-agentcore.html)
 
-## Tutorial Details
+## 자습서 세부 정보
 
-| Information         | Details                                                               |
+| 정보                | 세부 정보                                                             |
 | :------------------ | :-------------------------------------------------------------------- |
-| Tutorial type       | Conversational                                                        |
-| Agent type          | Multi-Agent (Orchestrator Agent with Code Generation Agent as a tool) |
-| Agentic Framework   | Strands Agents                                                        |
-| LLM models          | Anthropic Claude Sonnet 4 (primary agent) & Haiku 4.5 (coding agent)  |
-| Tutorial components | AgentCore Runtime, Async Tasks, Code Interpreter, S3 Integration      |
-| Tutorial vertical   | Data Analytics                                                        |
-| Example complexity  | Intermediate                                                          |
-| SDK used            | Amazon BedrockAgentCore Python SDK and boto3                          |
+| 자습서 유형         | 대화형                                                                  |
+| 에이전트 유형       | 멀티 에이전트(Code Generation Agent를 도구로 사용하는 Orchestrator Agent) |
+| 에이전틱 프레임워크 | Strands Agents                                                          |
+| LLM 모델            | Anthropic Claude Sonnet 4(기본 에이전트) 및 Haiku 4.5(coding agent)     |
+| 자습서 구성 요소    | AgentCore Runtime, 비동기 작업, Code Interpreter, S3 통합               |
+| 자습서 분야         | 데이터 분석                                                              |
+| 예제 난이도         | 중급                                                                     |
+| 사용 SDK            | Amazon BedrockAgentCore Python SDK 및 boto3                             |
 
-## Tutorial Architecture
+## 자습서 아키텍처
 
 <div style="text-align:left">
     <img src="architecture.png" width="100%"/>
 </div>
 
-## Getting Started
+## 시작하기
 
-Follow the instructions on this notebook [async_data_analysis_tutorial.ipynb](async_data_analysis_tutorial.ipynb)
+[async_data_analysis_tutorial.ipynb](async_data_analysis_tutorial.ipynb) Notebook의 지침을 따르세요.

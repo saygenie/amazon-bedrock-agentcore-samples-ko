@@ -1,4 +1,4 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-"""Routers package."""
+"""라우터 패키지."""

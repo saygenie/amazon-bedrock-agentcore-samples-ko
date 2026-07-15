@@ -1,22 +1,22 @@
 """
-Payment-enabled Strands Agent for AgentCore Runtime.
+AgentCore Runtime을 위한 payment-enabled Strands Agent입니다.
 
-This agent uses the AgentCorePaymentsPlugin to automatically handle
-x402 payments. When deployed to AgentCore Runtime, it runs under the
-ProcessPaymentRole execution role — it can only process payments within
-the budget set by the application backend.
+이 agent는 AgentCorePaymentsPlugin을 사용하여 x402 payment를 자동으로
+처리합니다. AgentCore Runtime에 배포되면 ProcessPaymentRole execution role로
+실행되며 application backend에서 설정한 budget 내에서만 payment를
+처리할 수 있습니다.
 
-The app backend passes ALL payment context via the invocation payload:
+App backend는 invocation payload를 통해 모든 payment context를 전달합니다.
   - payment_manager_arn
-  - payment_session_id (fresh session with payment limits)
+  - payment_session_id (payment limit이 있는 새 session)
   - payment_instrument_id
   - user_id
 
-The agent does not read payment config from environment variables.
-This keeps the agent stateless and enforces that the app backend
-controls what the agent can access.
+Agent는 environment variable에서 payment config를 읽지 않습니다.
+따라서 agent가 stateless 상태로 유지되고 app backend에서 agent의
+access 대상을 제어하도록 강제합니다.
 
-Deployment:
+배포:
     agentcore create --name PaymentAgent --defaults
     agentcore deploy
 """
@@ -34,12 +34,12 @@ from strands import Agent
 from strands.models import BedrockModel
 from strands_tools import http_request
 
-# Load .env for local testing — in Runtime, values come from the payload
+# 로컬 테스트를 위해 .env load — Runtime에서는 payload에서 값을 가져옴
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"), override=True)
 
 app = BedrockAgentCoreApp()
 
-# Only non-payment config comes from env — model and region
+# Payment 외 config인 model과 region만 env에서 가져옴
 REGION = os.environ.get("AWS_REGION", "us-west-2")
 MODEL_ID = os.environ.get("MODEL_ID", "us.anthropic.claude-sonnet-4-6")
 
@@ -51,22 +51,22 @@ Always report what you found and how much it cost."""
 
 @app.entrypoint
 def handle_request(payload, context=None):
-    """Handle an invocation from the app backend.
+    """App backend의 invocation을 처리합니다.
 
-    Args:
-        payload: JSON dict from the invoker. Must include:
-            - prompt: The user's request
-            - payment_manager_arn: ARN of the Payment Manager
-            - user_id: User identifier for payment isolation
-            - payment_session_id: Session with budget (created by app backend)
-            - payment_instrument_id: Wallet to pay from (created by app backend)
-        context: AgentCore Runtime context (provides session_id, etc.)
+    인수:
+        payload: Invoker의 JSON dict. 다음 항목을 포함해야 합니다.
+            - prompt: 사용자 request
+            - payment_manager_arn: Payment Manager의 ARN
+            - user_id: Payment 격리를 위한 user identifier
+            - payment_session_id: Budget이 있는 Session(app backend에서 생성)
+            - payment_instrument_id: 결제에 사용할 Wallet(app backend에서 생성)
+        context: AgentCore Runtime context(session_id 등 제공)
 
-    The app backend creates the session and passes all payment context.
-    The agent runs under ProcessPaymentRole and can only spend within
-    the session budget. It cannot create sessions or instruments.
+    App backend가 session을 생성하고 모든 payment context를 전달합니다.
+    Agent는 ProcessPaymentRole로 실행되며 session budget 내에서만 지출할
+    수 있습니다. Session 또는 Instrument는 생성할 수 없습니다.
     """
-    # agentcore invoke wraps the JSON arg as {"prompt": "<json-string>"}
+    # agentcore invoke는 JSON arg를 {"prompt": "<json-string>"}으로 래핑
     raw_prompt = payload.get("prompt", "")
     if isinstance(raw_prompt, str) and raw_prompt.strip().startswith("{"):
         try:
@@ -82,7 +82,7 @@ def handle_request(payload, context=None):
     session_id = payload.get("payment_session_id")
     instrument_id = payload.get("payment_instrument_id")
 
-    # Validate — all payment fields must come from the app backend
+    # 모든 payment field가 app backend에서 전달되었는지 검증
     missing = []
     if not payment_manager_arn:
         missing.append("payment_manager_arn")
@@ -95,7 +95,7 @@ def handle_request(payload, context=None):
     if missing:
         return {"error": f"Missing required fields in payload: {', '.join(missing)}"}
 
-    # Create plugin per-request with the context from the app backend
+    # App backend의 context로 request별 plugin 생성
     payment_plugin = AgentCorePaymentsPlugin(
         config=AgentCorePaymentsPluginConfig(
             payment_manager_arn=payment_manager_arn,

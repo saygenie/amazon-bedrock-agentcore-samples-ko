@@ -1,6 +1,6 @@
 """
-Dynamic Research Agent with Bedrock-AgentCore Code Interpreter
-With simplified architecture and robust error handling
+Bedrock-AgentCore Code Interpreter를 사용하는 동적 리서치 에이전트
+간소화된 아키텍처와 견고한 오류 처리 적용
 """
 
 import asyncio
@@ -19,11 +19,11 @@ from rich.syntax import Syntax
 console = Console()
 
 
-# Define the agent state
+# 에이전트 상태 정의
 class AgentState(TypedDict):
-    """State for the research agent with proper annotations"""
+    """적절한 애너테이션을 적용한 리서치 에이전트 상태"""
 
-    messages: Annotated[List, "append"]  # Annotated to handle append operations
+    messages: Annotated[List, "append"]  # 추가 작업을 처리하도록 애너테이션 적용
     research_query: str
     code_session_id: Optional[str]
     research_data: Dict[str, any]
@@ -32,7 +32,7 @@ class AgentState(TypedDict):
 
 
 class ResearchAgent:
-    """Streamlined research agent"""
+    """간소화된 리서치 에이전트"""
 
     def __init__(
         self,
@@ -45,12 +45,12 @@ class ResearchAgent:
 
         console.print("[cyan]Initializing Bedrock-AgentCore Tools...[/cyan]")
 
-        # Initialize Code Interpreter session
+        # Code Interpreter 세션 초기화
         self.code_client = CodeInterpreter(region)
         self.code_session_id = self.code_client.start()
         console.print(f"✅ Code Interpreter session: {self.code_session_id}")
 
-        # Set up working environment
+        # 작업 환경 설정
         self._setup_working_environment()
 
     def __enter__(self):
@@ -65,7 +65,7 @@ class ResearchAgent:
             self.code_client.stop()
 
     def _setup_working_environment(self):
-        """Set up the working environment in the code interpreter with detailed feedback"""
+        """Code Interpreter에 상세한 피드백을 제공하는 작업 환경을 설정한다."""
         setup_code = """
 import os
 import sys
@@ -112,12 +112,12 @@ for root, dirs, files in os.walk('.'):
         console.print(self._extract_output(result))
 
     def _refresh_file_list(self):
-        """Get updated list of files in the sandbox"""
+        """샌드박스의 최신 파일 목록을 가져온다."""
         result = self.code_client.invoke("listFiles", {"path": ""})
         return self._extract_output(result).strip().split("\n") if self._extract_output(result).strip() else []
 
     def _extract_output(self, result: Dict) -> str:
-        """Extract output from code execution result"""
+        """코드 실행 결과에서 출력을 추출한다."""
         if "structuredContent" in result:
             stdout = result["structuredContent"].get("stdout", "")
             stderr = result["structuredContent"].get("stderr", "")
@@ -131,28 +131,28 @@ for root, dirs, files in os.walk('.'):
         return "\n".join(output_parts)
 
     def _extract_code_block(self, text: str) -> str:
-        """Extract code from text that might contain markdown code blocks"""
+        """Markdown 코드 블록이 포함될 수 있는 텍스트에서 코드를 추출한다."""
         if "```python" in text:
-            # Extract the code block
+            # 코드 블록 추출
             start_idx = text.find("```python") + 9
             end_idx = text.find("```", start_idx)
             if end_idx != -1:
                 return text[start_idx:end_idx].strip()
         elif "```" in text:
-            # Extract the code block without language specification
+            # 언어가 지정되지 않은 코드 블록 추출
             start_idx = text.find("```") + 3
             end_idx = text.find("```", start_idx)
             if end_idx != -1:
                 return text[start_idx:end_idx].strip()
 
-        # If no code block is found, return the whole text
+        # 코드 블록이 없으면 전체 텍스트 반환
         return text.strip()
 
     def execute_llm_generated_code(self, task_description: str, context: Dict = None) -> Dict[str, Any]:
-        """Have LLM generate and execute code for the task"""
+        """LLM이 작업용 코드를 생성하고 실행하게 한다."""
         console.print(f"\n[bold blue]🤖 LLM generating code for:[/bold blue] {task_description}")
 
-        # Build prompt with context
+        # 컨텍스트를 포함한 프롬프트 구성
         prompt = f"""You are working in a Python code interpreter sandbox. 
 Task: {task_description}
 
@@ -171,47 +171,47 @@ Generate Python code to accomplish this task. Be specific and include:
 
 Return ONLY the Python code, no explanations."""
 
-        # Get code from LLM
+        # LLM에서 코드 가져오기
         response = self.llm.invoke([HumanMessage(content=prompt)])
         generated_code = self._extract_code_block(response.content)
 
-        # Display the code preview
+        # 코드 미리보기 표시
         code_preview = generated_code[:300] + "..." if len(generated_code) > 300 else generated_code
         console.print(Syntax(code_preview, "python"))
 
-        # Execute the code
+        # 코드 실행
         result = self.code_client.invoke(
             "executeCode",
             {"code": generated_code, "language": "python", "clearContext": False},
         )
 
-        # Extract output
+        # 출력 추출
         output = self._extract_output(result)
 
-        # Check for error
+        # 오류 확인
         has_error = result.get("isError", False)
         if has_error:
             console.print(f"[red]Execution error:[/red]\n{output}")
         else:
             console.print("[green]✅ Code executed successfully[/green]")
 
-        # Get updated file list
+        # 최신 파일 목록 가져오기
         files = self._refresh_file_list()
 
         return {"output": output, "error": has_error, "files": files}
 
     def create_workflow(self) -> StateGraph:
-        """Create a simple linear workflow that attempts all steps"""
+        """모든 단계를 시도하는 단순한 선형 워크플로를 생성한다."""
         workflow = StateGraph(AgentState)
 
-        # Add nodes
+        # 노드 추가
         workflow.add_node("understand_query", self.understand_query)
         workflow.add_node("collect_data", self.collect_data)
         workflow.add_node("process_data", self.process_data)
         workflow.add_node("analyze_data", self.analyze_data)
         workflow.add_node("generate_insights", self.generate_insights)
 
-        # Set linear flow - attempt all steps
+        # 모든 단계를 시도하는 선형 흐름 설정
         workflow.set_entry_point("understand_query")
         workflow.add_edge("understand_query", "collect_data")
         workflow.add_edge("collect_data", "process_data")
@@ -222,10 +222,10 @@ Return ONLY the Python code, no explanations."""
         return workflow.compile()
 
     def understand_query(self, state: AgentState) -> AgentState:
-        """Understand what the user wants to research"""
+        """사용자가 조사하려는 내용을 파악한다."""
         console.print(f"\n[bold magenta]🎯 Understanding research query:[/bold magenta] {state['research_query']}")
 
-        # Have LLM break down the query
+        # LLM이 쿼리를 분석하도록 요청
         prompt = f"""Analyze this research query: '{state["research_query"]}'
         
 Break it down into:
@@ -246,14 +246,14 @@ Respond in JSON format with the following structure:
         understanding = response.content
 
         try:
-            # Try to parse as JSON
+            # JSON으로 파싱 시도
             json_understanding = json.loads(understanding)
             console.print("[green]Query analysis completed as structured JSON[/green]")
         except json.JSONDecodeError:
             console.print("[yellow]Could not parse response as JSON. Using raw text.[/yellow]")
             json_understanding = {"raw_analysis": understanding}
 
-        # Display a summary of the understanding
+        # 파악한 내용의 요약 표시
         console.print("[cyan]Query Understanding:[/cyan]")
         for key, value in json_understanding.items():
             if isinstance(value, list) and value:
@@ -270,10 +270,10 @@ Respond in JSON format with the following structure:
         }
 
     def collect_data(self, state: AgentState) -> AgentState:
-        """Collect data based on the research query"""
+        """리서치 쿼리를 바탕으로 데이터를 수집한다."""
         console.print("\n[bold magenta]📊 Collecting data...[/bold magenta]")
 
-        # Always create synthetic data directly
+        # 항상 합성 데이터를 직접 생성
         synthetic_data_code = """
 import pandas as pd
 import numpy as np
@@ -357,7 +357,7 @@ print("\\nSummary statistics:")
 print(df.describe())
 """
 
-        # Execute the data creation code directly
+        # 데이터 생성 코드를 직접 실행
         result = self.code_client.invoke(
             "executeCode",
             {"code": synthetic_data_code, "language": "python", "clearContext": False},
@@ -366,7 +366,7 @@ print(df.describe())
         output = self._extract_output(result)
         console.print(output)
 
-        # Check if we have errors
+        # 오류 발생 여부 확인
         errors = state["errors"]
         if result.get("isError", False):
             errors.append("Error generating synthetic data")
@@ -382,10 +382,10 @@ print(df.describe())
         }
 
     def process_data(self, state: AgentState) -> AgentState:
-        """Process and clean the collected data"""
+        """수집된 데이터를 처리하고 정제한다."""
         console.print("\n[bold magenta]🔧 Processing data...[/bold magenta]")
 
-        # LLM generates data processing code
+        # LLM이 데이터 처리 코드 생성
         result = self.execute_llm_generated_code(
             "Load data/research_data.csv and perform thorough data processing: "
             "1. Handle missing values "
@@ -398,7 +398,7 @@ print(df.describe())
             context=state["research_data"],
         )
 
-        # Check if we have errors
+        # 오류 발생 여부 확인
         errors = state["errors"]
         if result["error"]:
             errors.append("Error processing data")
@@ -415,19 +415,19 @@ print(df.describe())
         }
 
     def analyze_data(self, state: AgentState) -> AgentState:
-        """Perform analysis on the processed data"""
+        """처리된 데이터를 분석한다."""
         console.print("\n[bold magenta]📈 Analyzing data...[/bold magenta]")
 
-        # Find the best data file to use
+        # 사용할 최적의 데이터 파일 찾기
         available_files = state["research_data"].get("available_files", [])
         data_file = (
             "data/processed_data.csv" if "data/processed_data.csv" in available_files else "data/research_data.csv"
         )
 
-        # Get understanding to guide analysis
+        # 분석 방향을 정할 파악 정보 가져오기
         understanding = state["research_data"].get("query_understanding", {})
 
-        # LLM generates analysis code based on the research query
+        # LLM이 리서치 쿼리를 바탕으로 분석 코드 생성
         result = self.execute_llm_generated_code(
             f"Load {data_file} and perform comprehensive analysis for: {state['research_query']}. "
             "Your analysis should include: "
@@ -444,7 +444,7 @@ print(df.describe())
             },
         )
 
-        # Check if we have errors
+        # 오류 발생 여부 확인
         errors = state["errors"]
         if result["error"]:
             errors.append("Error analyzing data")
@@ -461,19 +461,19 @@ print(df.describe())
         }
 
     def generate_insights(self, state: AgentState) -> AgentState:
-        """Generate final report with insights regardless of previous step success"""
+        """이전 단계의 성공 여부와 관계없이 인사이트가 담긴 최종 보고서를 생성한다."""
         console.print("\n[bold magenta]💡 Generating insights and report...[/bold magenta]")
 
-        # Get list of available files
+        # 사용 가능한 파일 목록 가져오기
         available_files = state["research_data"].get("available_files", [])
         if not available_files:
             available_files = self._refresh_file_list()
 
-        # Filter for specific file types
+        # 특정 파일 형식만 필터링
         data_files = [f for f in available_files if f.endswith(".csv") or f.endswith(".json")]
         viz_files = [f for f in available_files if f.endswith((".png", ".jpg", ".jpeg", ".svg"))]
 
-        # Load analysis results if available
+        # 분석 결과가 있으면 로드
         analysis_data = {}
         if "data/analysis_results.json" in available_files:
             try:
@@ -483,7 +483,7 @@ print(df.describe())
             except Exception:
                 console.print("[yellow]Could not load analysis results[/yellow]")
 
-        # Generate report directly with LLM
+        # LLM으로 보고서를 직접 생성
         prompt = f"""Create a comprehensive markdown research report for: {state["research_query"]}
 
 Available data files: {data_files}
@@ -506,7 +506,7 @@ Format as a complete professional markdown document with proper headings, bullet
         response = self.llm.invoke([HumanMessage(content=prompt)])
         report_content = response.content
 
-        # Save the report directly
+        # 보고서를 직접 저장
         try:
             save_result = self.code_client.invoke(
                 "executeCode",
@@ -519,7 +519,7 @@ Format as a complete professional markdown document with proper headings, bullet
         except Exception as e:
             console.print(f"[yellow]Could not save report file: {e}[/yellow]")
 
-        # Display the report
+        # 보고서 표시
         console.print("\n[bold green]📄 Final Report:[/bold green]")
         console.print("=" * 60)
 
@@ -527,12 +527,12 @@ Format as a complete professional markdown document with proper headings, bullet
             md = Markdown(report_content[:5000] + ("..." if len(report_content) > 5000 else ""))
             console.print(md)
         except Exception:
-            # Fallback to plain text if Markdown rendering fails
+            # Markdown 렌더링에 실패하면 일반 텍스트로 대체
             console.print(report_content[:2000] + "..." if len(report_content) > 2000 else report_content)
 
         console.print("=" * 60)
 
-        # Return updated state with the report
+        # 보고서가 포함된 최신 상태 반환
         return {
             **state,
             "messages": state["messages"] + [AIMessage(content=report_content)],
@@ -542,7 +542,7 @@ Format as a complete professional markdown document with proper headings, bullet
 
 
 async def run_research(query: str):
-    """Run research with dynamic LLM-generated code"""
+    """LLM이 동적으로 생성한 코드로 리서치를 실행한다."""
     console.print(
         Panel(
             f"[bold cyan]🚀 Dynamic Research Agent[/bold cyan]\n\n"
@@ -566,7 +566,7 @@ async def run_research(query: str):
 
         final_state = await workflow.ainvoke(initial_state)
 
-        # List all files created
+        # 생성된 모든 파일 나열
         console.print("\n[bold]Files created during research:[/bold]")
         files = agent._refresh_file_list()
         for file in files:
@@ -595,7 +595,7 @@ async def run_research(query: str):
 if __name__ == "__main__":
     import sys
 
-    # Get query from command line or use default
+    # 명령줄에서 쿼리를 가져오거나 기본값 사용
     query = (
         " ".join(sys.argv[1:])
         if len(sys.argv) > 1

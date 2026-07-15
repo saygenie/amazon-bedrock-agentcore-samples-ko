@@ -1,10 +1,10 @@
-"""Utility helpers for Agent Registry polling operations."""
+"""Agent Registry 폴링 작업을 위한 유틸리티 헬퍼입니다."""
 
 import time
 
 
 def wait_for_registry_ready(cp_client, registry_id, poll_interval=10):
-    """Poll until the registry reaches READY status."""
+    """레지스트리가 READY 상태가 될 때까지 폴링합니다."""
     status = "Checking"
     while status.lower() != "ready":
         resp = cp_client.get_registry(registryId=registry_id)
@@ -17,7 +17,7 @@ def wait_for_registry_ready(cp_client, registry_id, poll_interval=10):
 
 
 def wait_for_record_draft(cp_client, registry_id, record_id, poll_interval=2):
-    """Poll until the registry record reaches DRAFT status."""
+    """레지스트리 레코드가 DRAFT 상태가 될 때까지 폴링합니다."""
     status = "Checking"
     while status.lower() != "draft":
         resp = cp_client.get_registry_record(registryId=registry_id, recordId=record_id)

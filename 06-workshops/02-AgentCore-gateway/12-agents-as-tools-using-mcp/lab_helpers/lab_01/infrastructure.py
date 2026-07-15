@@ -1,5 +1,5 @@
 """
-Infrastructure verification functions for Lab 01
+Lab 01용 인프라 검증 함수
 """
 
 import boto3
@@ -9,15 +9,15 @@ from botocore.exceptions import ClientError
 
 def verify_ec2_instances(resources: Dict[str, str], region_name: str, profile_name: str = None) -> bool:
     """
-    Verify EC2 instances are running
+    EC2 인스턴스가 실행 중인지 확인합니다.
 
-    Args:
-        resources: Dictionary of resource identifiers
-        region_name: AWS region
-        profile_name: AWS profile name (optional)
+    인자:
+        resources: 리소스 식별자 딕셔너리
+        region_name: AWS 리전
+        profile_name: AWS profile 이름(선택 사항)
 
-    Returns:
-        Boolean indicating success/failure
+    반환:
+        성공/실패 여부
     """
     try:
         print("1. Verifying EC2 Instances...")
@@ -58,15 +58,15 @@ def verify_ec2_instances(resources: Dict[str, str], region_name: str, profile_na
 
 def verify_dynamodb_tables(resources: Dict[str, str], region_name: str, profile_name: str = None) -> bool:
     """
-    Verify DynamoDB tables exist and are accessible
+    DynamoDB 테이블이 존재하고 접근 가능한지 확인합니다.
 
-    Args:
-        resources: Dictionary of resource identifiers
-        region_name: AWS region
-        profile_name: AWS profile name (optional)
+    인자:
+        resources: 리소스 식별자 딕셔너리
+        region_name: AWS 리전
+        profile_name: AWS profile 이름(선택 사항)
 
-    Returns:
-        Boolean indicating success/failure
+    반환:
+        성공/실패 여부
     """
     try:
         print("\n2. Verifying DynamoDB Tables...")
@@ -114,15 +114,15 @@ def verify_dynamodb_tables(resources: Dict[str, str], region_name: str, profile_
 
 def verify_alb_health(resources: Dict[str, str], region_name: str, profile_name: str = None) -> bool:
     """
-    Verify ALB target health
+    ALB 대상 상태를 확인합니다.
 
-    Args:
-        resources: Dictionary of resource identifiers
-        region_name: AWS region
-        profile_name: AWS profile name (optional)
+    인자:
+        resources: 리소스 식별자 딕셔너리
+        region_name: AWS 리전
+        profile_name: AWS profile 이름(선택 사항)
 
-    Returns:
-        Boolean indicating success/failure
+    반환:
+        성공/실패 여부
     """
     try:
         print("\n3. Verifying ALB Target Health...")
@@ -133,7 +133,7 @@ def verify_alb_health(resources: Dict[str, str], region_name: str, profile_name:
         else:
             elbv2 = boto3.client("elbv2", region_name=region_name)
 
-        # Get all load balancers
+        # 모든 Load Balancer 가져오기
         albs = elbv2.describe_load_balancers()
 
         sre_albs = [alb for alb in albs["LoadBalancers"] if "sre-workshop" in alb["LoadBalancerName"]]
@@ -146,14 +146,14 @@ def verify_alb_health(resources: Dict[str, str], region_name: str, profile_name:
         for alb in sre_albs:
             alb_name = alb["LoadBalancerName"]  # noqa: F841
 
-            # Get target groups for this ALB
+            # 이 ALB의 Target Group 가져오기
             target_groups = elbv2.describe_target_groups(LoadBalancerArn=alb["LoadBalancerArn"])
 
             for tg in target_groups["TargetGroups"]:
                 tg_name = tg["TargetGroupName"]
                 tg_arn = tg["TargetGroupArn"]
 
-                # Get target health
+                # 대상 상태 가져오기
                 health_response = elbv2.describe_target_health(TargetGroupArn=tg_arn)
 
                 for target_health in health_response["TargetHealthDescriptions"]:
@@ -178,14 +178,14 @@ def verify_alb_health(resources: Dict[str, str], region_name: str, profile_name:
 
 def verify_cloudwatch_logs(region_name: str, profile_name: str = None) -> bool:
     """
-    Verify CloudWatch log groups exist
+    CloudWatch Log Group이 존재하는지 확인합니다.
 
-    Args:
-        region_name: AWS region
-        profile_name: AWS profile name (optional)
+    인자:
+        region_name: AWS 리전
+        profile_name: AWS profile 이름(선택 사항)
 
-    Returns:
-        Boolean indicating success/failure
+    반환:
+        성공/실패 여부
     """
     try:
         print("\n4. Verifying CloudWatch Log Groups...")
@@ -228,7 +228,7 @@ def get_app_url():
     cfn = boto3.client("cloudformation")
     elbv2 = boto3.client("elbv2")
 
-    # Get all resources in a stack
+    # 스택의 모든 리소스 가져오기
     response = cfn.list_stack_resources(StackName="sre-agent-workshop")
 
     for resource in response["StackResourceSummaries"]:

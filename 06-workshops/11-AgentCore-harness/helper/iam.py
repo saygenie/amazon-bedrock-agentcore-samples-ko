@@ -1,4 +1,4 @@
-"""IAM helpers for AgentCore Harness — creates the execution role and permissions."""
+"""AgentCore Harness용 IAM 도우미로, 실행 역할과 권한을 생성한다."""
 
 import json
 import boto3
@@ -96,9 +96,9 @@ def get_account_id() -> str:
 
 
 def create_harness_role(role_name: str = ROLE_NAME) -> Optional[str]:
-    """Create the IAM execution role required by AgentCore Harness. Returns the role ARN.
+    """AgentCore Harness에 필요한 IAM 실행 역할을 생성하고 역할 ARN을 반환한다.
 
-    Idempotent — if the role already exists, returns its ARN.
+    멱등성을 보장하며, 역할이 이미 있으면 해당 ARN을 반환한다.
     """
     iam = boto3.client("iam")
 
@@ -129,7 +129,7 @@ def create_harness_role(role_name: str = ROLE_NAME) -> Optional[str]:
 
 
 def delete_harness_role(role_name: str = ROLE_NAME) -> None:
-    """Delete the Harness execution role and its inline policy."""
+    """Harness 실행 역할과 인라인 정책을 삭제한다."""
     iam = boto3.client("iam")
     try:
         iam.delete_role_policy(RoleName=role_name, PolicyName=POLICY_NAME)

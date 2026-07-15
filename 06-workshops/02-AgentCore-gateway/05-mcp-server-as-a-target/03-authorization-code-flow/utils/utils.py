@@ -16,7 +16,7 @@ def get_or_create_user_pool(cognito, USER_POOL_NAME):
             user_pool_id = pool["Id"]
             response = cognito.describe_user_pool(UserPoolId=user_pool_id)
 
-            # Get the domain from user pool description
+    # user pool 설명에서 도메인 가져오기
             user_pool = response.get("UserPool", {})
             domain = user_pool.get("Domain")
 
@@ -71,7 +71,7 @@ def get_or_create_m2m_client(
             return client["ClientId"], describe["UserPoolClient"]["ClientSecret"]
     print("creating new m2m client")
 
-    # Default scopes if not provided (for backward compatibility)
+    # 제공되지 않은 경우 기본 scope 사용(하위 호환성)
     if SCOPES is None:
         SCOPES = [
             f"{RESOURCE_SERVER_ID}/gateway:read",
@@ -241,19 +241,19 @@ def get_current_role_arn():
 
 
 def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
-    # Normalize current_arn
+    # current_arn 정규화
     if isinstance(current_arn, (list, set, tuple)):
         current_arn = list(current_arn)[0]
     current_arn = str(current_arn)
 
-    # AWS clients
+    # AWS 클라이언트
     boto_session = Session()
     region = boto_session.region_name
     iam_client = boto3.client("iam", region_name=region)
     sts_client = boto3.client("sts")
     account_id = sts_client.get_caller_identity()["Account"]
 
-    # --- Trust policy (AssumeRolePolicyDocument) ---
+    # --- 신뢰 정책(AssumeRolePolicyDocument) ---
     assume_role_policy_document = {
         "Version": "2012-10-17",
         "Statement": [
@@ -276,7 +276,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
     }
     assume_role_policy_json = json.dumps(assume_role_policy_document)
 
-    # ---  Inline role policy (Bedrock gateway invoke) ---
+    # --- 인라인 역할 정책(Bedrock gateway 호출) ---
     role_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -289,7 +289,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
     }
     role_policy_json = json.dumps(role_policy)
 
-    # --- Create or update IAM role ---
+    # --- IAM role 생성 또는 업데이트 ---
     try:
         agentcoregw_iam_role = iam_client.create_role(
             RoleName=role_name, AssumeRolePolicyDocument=assume_role_policy_json
@@ -307,7 +307,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
             iam_client.delete_role_policy(RoleName=role_name, PolicyName=policy_name)
         agentcoregw_iam_role = iam_client.get_role(RoleName=role_name)
 
-    # Attach inline role policy (gateway invoke)
+    # 인라인 역할 정책 연결(gateway 호출)
     iam_client.put_role_policy(
         RoleName=role_name,
         PolicyName="AgentCorePolicy",
@@ -316,7 +316,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
 
     role_arn = agentcoregw_iam_role["Role"]["Arn"]
 
-    # ---  Ensure current_arn can assume role (with retry) ---
+    # --- current_arn이 role을 수임할 수 있는지 확인(재시도 포함) ---
     arn_parts = current_arn.split(":")
     resource_type, resource_name = arn_parts[5].split("/", 1)
 
@@ -327,7 +327,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
         ],
     }
 
-    # Attach assume-role policy if user/role
+    # user/role인 경우 assume-role 정책 연결
     try:
         if resource_type == "user":
             iam_client.put_user_policy(
@@ -347,7 +347,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
             "Make sure the caller has iam:PutUserPolicy or iam:PutRolePolicy permission."
         )
 
-    # Retry loop for eventual consistency
+    # eventual consistency를 위한 재시도 루프
     max_retries = 5
     for i in range(max_retries):
         try:
@@ -382,7 +382,7 @@ def start_callback_and_open_auth(
     import webbrowser
     import time
 
-    # Kill any existing callback server on port 8080
+    # 포트 8080에서 실행 중인 기존 콜백 서버 종료
     existing_pids = subprocess.run(
         ["lsof", "-ti:8080"], capture_output=True, text=True
     ).stdout.strip()
@@ -391,7 +391,7 @@ def start_callback_and_open_auth(
             subprocess.run(["kill", "-9", pid], capture_output=True)
         time.sleep(1)
 
-    # Start callback server
+    # 콜백 서버 시작
     server_process = subprocess.Popen(
         [
             "python",
@@ -407,7 +407,7 @@ def start_callback_and_open_auth(
     time.sleep(2)
     print("Callback server started on http://localhost:8080/callback")
 
-    # Open authorization URL in browser
+    # 브라우저에서 authorization URL 열기
     webbrowser.open(auth_url)
     print("Opened authorization URL in browser")
     input("Press Enter after completing authorization in the browser...")

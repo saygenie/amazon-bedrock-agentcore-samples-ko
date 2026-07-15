@@ -1,19 +1,19 @@
-# Integrate Your Agent with Coinbase Bazaar via AgentCore Gateway
+# AgentCore Gateway를 통해 에이전트를 Coinbase Bazaar와 통합
 
-## Overview
+## 개요
 
-The Coinbase x402 Bazaar is an MCP marketplace exposing 10,000+ pay-per-use x402 endpoints. Agents discover tools via semantic search and pay per call using x402. This tutorial connects a Strands agent to the Bazaar through AgentCore Gateway, combining endpoint discoverability with automatic payment handling.
+Coinbase x402 Bazaar는 10,000개 이상의 사용량 기반 x402 엔드포인트를 제공하는 MCP marketplace입니다. 에이전트는 semantic search로 도구를 검색하고 x402를 사용하여 호출당 비용을 결제합니다. 이 자습서는 Strands 에이전트를 AgentCore Gateway를 통해 Bazaar에 연결하여 엔드포인트 검색과 자동 결제 처리를 결합합니다.
 
-### What you'll learn
+### 학습 내용
 
-| AgentCore payments feature | What this tutorial demonstrates |
+| AgentCore payments 기능 | 자습서 주요 내용 |
 |---------------------------|-------------------------------|
-| Endpoint discoverability | Discover paid MCP tools on Coinbase x402 Bazaar through AgentCore Gateway |
-| Payment processing | Agent calls discovered tools, `AgentCorePaymentsPlugin` handles 402 automatically |
-| Payment limits | Session budget tracks cumulative spend across multiple Bazaar tool calls |
-| Wallet integration | Same code works with Coinbase CDP or Stripe (Privy) — only `.env` values differ |
+| 엔드포인트 검색 | AgentCore Gateway를 통해 Coinbase x402 Bazaar의 유료 MCP 도구 검색 |
+| 결제 처리 | 에이전트가 검색된 도구를 호출하고 `AgentCorePaymentsPlugin`이 402를 자동 처리 |
+| 결제 한도 | Session 예산에서 여러 Bazaar 도구 호출의 누적 지출 추적 |
+| Wallet 통합 | 동일한 코드가 Coinbase CDP 또는 Stripe(Privy)에서 작동하며 `.env` 값만 다름 |
 
-### Architecture
+### 아키텍처
 
 ```
 ┌─────────────────────────────────┐
@@ -45,40 +45,40 @@ The Coinbase x402 Bazaar is an MCP marketplace exposing 10,000+ pay-per-use x402
                                       └──────────────────┘
 ```
 
-### Tutorial Details
+### 자습서 세부 정보
 
-| Information         | Details                                                         |
+| 정보                | 세부 정보                                                       |
 |:--------------------|:----------------------------------------------------------------|
-| Tutorial type       | Task-based                                                      |
-| Agent type          | Single                                                          |
-| Agentic Framework   | Strands Agents                                                  |
-| LLM model           | Anthropic Claude Sonnet                                         |
-| Tutorial components | AgentCore Gateway, Coinbase Bazaar MCP, AgentCorePaymentsPlugin |
-| Example complexity  | Intermediate                                                    |
-| SDK used            | AgentCore CLI (`@aws/agentcore`), bedrock-agentcore SDK, Strands Agents SDK |
+| 자습서 유형         | 작업 기반                                                       |
+| 에이전트 유형       | 단일                                                            |
+| 에이전틱 프레임워크 | Strands Agents                                                  |
+| LLM 모델            | Anthropic Claude Sonnet                                         |
+| 자습서 구성 요소    | AgentCore Gateway, Coinbase Bazaar MCP, AgentCorePaymentsPlugin |
+| 예제 난이도         | 중급                                                            |
+| 사용 SDK            | AgentCore CLI(`@aws/agentcore`), bedrock-agentcore SDK, Strands Agents SDK |
 
-## Prerequisites
+## 사전 요구 사항
 
-* Tutorial 00 completed (`.env` exists)
-* Wallet funded with testnet USDC from https://faucet.circle.com/
-* AgentCore CLI: `npm install -g @aws/agentcore` (requires Node.js 20+)
-* AWS CLI configured (`aws configure`)
+* 자습서 00 완료(`.env`가 있음)
+* https://faucet.circle.com/ 에서 받은 testnet USDC로 wallet 자금 충전
+* AgentCore CLI: `npm install -g @aws/agentcore`(Node.js 20+ 필요)
+* AWS CLI 구성(`aws configure`)
 
-This tutorial works with either wallet provider you configured in Tutorial 00 (Coinbase CDP or Stripe/Privy). The agent code is the same regardless of your choice.
+이 자습서는 자습서 00에서 구성한 두 wallet 제공업체(Coinbase CDP 또는 Stripe/Privy) 중 어느 쪽에서도 작동합니다. 무엇을 선택하든 에이전트 코드는 같습니다.
 
-> **Testnet only.** All code uses Base Sepolia (Ethereum) with free USDC from [faucet.circle.com](https://faucet.circle.com/). Testnet USDC has no real-world value.
+> **Testnet 전용.** 모든 코드는 [faucet.circle.com](https://faucet.circle.com/)에서 무료로 받은 USDC와 함께 Base Sepolia(Ethereum)를 사용합니다. Testnet USDC는 실제 가치가 없습니다.
 
-## Gateway Setup
+## Gateway 설정
 
-### Option A: AgentCore Console (recommended)
+### 옵션 A: AgentCore Console(권장)
 
-1. Open the [Amazon Bedrock AgentCore console](https://console.aws.amazon.com/bedrock-agentcore/)
-2. Navigate to Gateway → Create Gateway → Add Target
+1. [Amazon Bedrock AgentCore console](https://console.aws.amazon.com/bedrock-agentcore/) 열기
+2. Gateway → Create Gateway → Add Target으로 이동
 3. Target type: **Integrations**
-4. Select **Coinbase x402 Bazaar**
-5. No outbound auth needed (No Authorization is the default)
+4. **Coinbase x402 Bazaar** 선택
+5. Outbound 인증은 필요하지 않음(No Authorization이 기본값)
 
-### Option B: AgentCore CLI
+### 옵션 B: AgentCore CLI
 
 ```bash
 agentcore create --name BazaarAgent --defaults
@@ -92,20 +92,20 @@ agentcore deploy -y
 agentcore fetch access --name BazaarGateway --type gateway
 ```
 
-Add the `GATEWAY_URL` from the output to your `.env` file.
+출력의 `GATEWAY_URL`을 `.env` 파일에 추가합니다.
 
-## Cleanup
+## 정리
 
-> **Cost notice:** AgentCore Gateway incurs AWS charges for requests and data transfer. Run cleanup when finished to avoid ongoing costs.
+> **비용 알림:** AgentCore Gateway의 요청 및 데이터 전송에는 AWS 비용이 발생합니다. 작업을 마친 후 정리를 실행하여 지속적인 비용을 방지하세요.
 
-Remove the Gateway when done:
+작업을 마치면 Gateway를 제거합니다.
 
 ```bash
 agentcore remove gateway --name BazaarGateway -y
 ```
 
-Payment sessions expire automatically. Payment resources are managed via Tutorial 00's cleanup.
+Payment session은 자동으로 만료됩니다. Payment 리소스는 자습서 00의 정리 작업을 통해 관리합니다.
 
-## Conclusion
+## 결론
 
-This tutorial integrates an agent with Coinbase Bazaar through AgentCore Gateway, combining MCP-based tool discoverability with automatic x402 payment handling. The Gateway pattern provides centralized management of paid MCP tools while the AgentCorePaymentsPlugin handles payment logic automatically.
+이 자습서는 AgentCore Gateway를 통해 에이전트를 Coinbase Bazaar와 통합하여 MCP 기반 도구 검색과 자동 x402 결제 처리를 결합합니다. Gateway 패턴은 유료 MCP 도구를 중앙에서 관리하고 AgentCorePaymentsPlugin은 결제 로직을 자동으로 처리합니다.

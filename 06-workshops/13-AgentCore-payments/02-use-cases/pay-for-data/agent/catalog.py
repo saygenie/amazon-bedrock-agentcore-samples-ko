@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Load the Heurist tool catalog and format it for the agent system prompt."""
+"""Heurist tool catalog를 load하고 agent system prompt용으로 format합니다."""
 
 from __future__ import annotations
 
@@ -15,23 +15,23 @@ import requests
 
 from config import LIVE_CATALOG_CACHE_PATH, get_config
 
-# --- Safety limits ---------------------------------------------------------
-# These caps are intentionally generous for a sample but prevent accidental
-# memory blow-ups from a misconfigured endpoint or disk corruption.
-MAX_CATALOG_BYTES = 5 * 1024 * 1024  # 5 MiB on-disk cache
-MAX_CATALOG_RESPONSE_BYTES = 10 * 1024 * 1024  # 10 MiB network payload
-MAX_PROMPT_FIELD_LEN = 500  # per-field cap when rendered into the system prompt
+# --- 안전 limit ------------------------------------------------------------
+# Sample에서는 의도적으로 여유 있게 설정하지만 잘못 구성된 endpoint나 disk 손상으로
+# memory가 과도하게 사용되는 것을 방지함
+MAX_CATALOG_BYTES = 5 * 1024 * 1024  # 5 MiB disk cache 제한
+MAX_CATALOG_RESPONSE_BYTES = 10 * 1024 * 1024  # 10 MiB network payload 제한
+MAX_PROMPT_FIELD_LEN = 500  # System prompt로 rendering할 때 field별 상한
 
 _UNSAFE_FIELD_PLACEHOLDER = "(unavailable)"
 _UNSAFE_PROMPT_CHARS = re.compile(r"[\x00-\x1f\x7f`|\[\]]")
 
 
 def _sanitize_prompt_text(value: Any, max_len: int = MAX_PROMPT_FIELD_LEN) -> str:
-    """Return a markdown-safe single-line string derived from ``value``.
+    """``value``에서 생성한 Markdown-safe 단일 line string을 반환합니다.
 
-    External catalog data is interpolated into the agent's system prompt.
-    Without sanitization a malicious registry entry could inject links,
-    code fences, or table pipes that alter the prompt structure.
+    외부 catalog data는 agent system prompt에 interpolate됩니다. Sanitize하지
+    않으면 악성 registry entry가 link, code fence, table pipe를 삽입하여
+    prompt 구조를 변경할 수 있습니다.
     """
     if value is None:
         return ""
@@ -44,7 +44,7 @@ def _sanitize_prompt_text(value: Any, max_len: int = MAX_PROMPT_FIELD_LEN) -> st
 
 
 def _sanitize_url(value: Any) -> str:
-    """Only accept http(s) URLs; otherwise return a placeholder."""
+    """http(s) URL만 허용하며 그 외에는 placeholder를 반환합니다."""
     text = _sanitize_prompt_text(value, max_len=MAX_PROMPT_FIELD_LEN)
     if not text:
         return _UNSAFE_FIELD_PLACEHOLDER
@@ -54,7 +54,7 @@ def _sanitize_url(value: Any) -> str:
 
 
 def _coerce_price(raw: Any) -> float:
-    """Convert a raw price value into a finite, non-negative float."""
+    """Raw price 값을 유한한 음이 아닌 float로 변환합니다."""
     try:
         price = float(raw)
     except (TypeError, ValueError) as exc:
@@ -65,7 +65,7 @@ def _coerce_price(raw: Any) -> float:
 
 
 def _atomic_write_text(path: Path, content: str) -> None:
-    """Write ``content`` to ``path`` atomically via a same-directory temp file."""
+    """동일 directory의 임시 파일을 통해 ``content``를 ``path``에 atomic하게 기록합니다."""
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
     try:
@@ -83,7 +83,7 @@ def _atomic_write_text(path: Path, content: str) -> None:
 
 
 def fetch_live_catalog(session: requests.Session | None = None) -> dict[str, Any]:
-    """Fetch the live Heurist mesh registry and cache it locally."""
+    """Live Heurist mesh registry를 가져와 로컬에 cache합니다."""
     cfg = get_config()
     http = session or requests.Session()
     response = http.get(cfg.heurist_catalog_url, timeout=30, stream=True)
@@ -129,7 +129,7 @@ def get_tools_for_agents(
     refresh: bool = False,
     session: requests.Session | None = None,
 ) -> list[dict[str, Any]]:
-    """Return normalized tool definitions for the selected Heurist agents."""
+    """선택한 Heurist agent의 정규화된 tool definition을 반환합니다."""
     import logging
 
     logger = logging.getLogger(__name__)
@@ -174,7 +174,7 @@ def get_tools_for_agents(
 
 
 def format_catalog_for_prompt(tools: list[dict[str, Any]]) -> str:
-    """Format the tool catalog as a reference table for the agent system prompt."""
+    """Tool catalog를 agent system prompt용 reference table로 format합니다."""
     lines = ["## Available Paid Endpoints (Heurist x402)", ""]
     lines.append("| Agent | Tool | URL | Method | Price | Description |")
     lines.append("|-------|------|-----|--------|-------|-------------|")

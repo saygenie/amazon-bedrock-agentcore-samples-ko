@@ -1,4 +1,4 @@
-"""Client for querying observability data from CloudWatch Logs."""
+"""CloudWatch Logs의 관찰성 데이터를 쿼리하는 클라이언트입니다."""
 
 import logging
 import time
@@ -10,18 +10,18 @@ from .models import RuntimeLog, Span, TraceData
 
 
 class CloudWatchQueryBuilder:
-    """Builder for CloudWatch Logs Insights queries."""
+    """CloudWatch Logs Insights 쿼리 빌더입니다."""
 
     @staticmethod
     def build_spans_by_session_query(session_id: str, agent_id: str = None) -> str:
-        """Build query to get all spans for a session from aws/spans log group.
+        """aws/spans 로그 그룹에서 세션의 모든 span을 가져오는 쿼리를 생성합니다.
 
-        Args:
-            session_id: The session ID to filter by
-            agent_id: Optional agent ID to filter by
+        인수:
+            session_id: 필터링 기준이 되는 세션 ID
+            agent_id: 필터링 기준이 되는 선택적 에이전트 ID
 
-        Returns:
-            CloudWatch Logs Insights query string
+        반환값:
+            CloudWatch Logs Insights 쿼리 문자열
         """
         base_filter = f"attributes.session.id = '{session_id}'"
 
@@ -54,13 +54,13 @@ class CloudWatchQueryBuilder:
 
     @staticmethod
     def build_runtime_logs_by_traces_batch(trace_ids: List[str]) -> str:
-        """Build optimized query to get runtime logs for multiple traces in one query.
+        """여러 trace의 Runtime 로그를 한 번에 가져오는 최적화된 쿼리를 생성합니다.
 
-        Args:
-            trace_ids: List of trace IDs to filter by
+        인수:
+            trace_ids: 필터링 기준이 되는 trace ID 목록
 
-        Returns:
-            CloudWatch Logs Insights query string
+        반환값:
+            CloudWatch Logs Insights 쿼리 문자열
         """
         if not trace_ids:
             return ""
@@ -73,13 +73,13 @@ class CloudWatchQueryBuilder:
 
     @staticmethod
     def build_runtime_logs_by_trace_direct(trace_id: str) -> str:
-        """Build query to get runtime logs for a trace.
+        """trace의 Runtime 로그를 가져오는 쿼리를 생성합니다.
 
-        Args:
-            trace_id: The trace ID to filter by
+        인수:
+            trace_id: 필터링 기준이 되는 trace ID
 
-        Returns:
-            CloudWatch Logs Insights query string
+        반환값:
+            CloudWatch Logs Insights 쿼리 문자열
         """
         return f"""fields @timestamp, @message, spanId, traceId, @logStream
         | filter traceId = '{trace_id}'
@@ -87,7 +87,7 @@ class CloudWatchQueryBuilder:
 
 
 class ObservabilityClient:
-    """Client for querying spans and runtime logs from CloudWatch Logs."""
+    """CloudWatch Logs에서 span과 Runtime 로그를 쿼리하는 클라이언트입니다."""
 
     SPANS_LOG_GROUP = "aws/spans"
     QUERY_TIMEOUT_SECONDS = 60
@@ -99,12 +99,12 @@ class ObservabilityClient:
         agent_id: str,
         runtime_suffix: str = "DEFAULT",
     ):
-        """Initialize the ObservabilityClient.
+        """ObservabilityClient를 초기화합니다.
 
-        Args:
-            region_name: AWS region name
-            agent_id: Agent ID for querying agent-specific logs
-            runtime_suffix: Runtime suffix for log group (default: DEFAULT)
+        인수:
+            region_name: AWS 리전 이름
+            agent_id: agent별 로그를 쿼리하는 데 사용할 Agent ID
+            runtime_suffix: 로그 그룹의 Runtime 접미사(기본값: DEFAULT)
         """
         self.region = region_name
         self.agent_id = agent_id
@@ -128,15 +128,15 @@ class ObservabilityClient:
         start_time_ms: int,
         end_time_ms: int,
     ) -> List[Span]:
-        """Query all spans for a session from aws/spans log group.
+        """aws/spans 로그 그룹에서 세션의 모든 span을 쿼리합니다.
 
-        Args:
-            session_id: The session ID to query
-            start_time_ms: Start time in milliseconds since epoch
-            end_time_ms: End time in milliseconds since epoch
+        인수:
+            session_id: 쿼리할 세션 ID
+            start_time_ms: epoch 이후 밀리초 단위의 시작 시간
+            end_time_ms: epoch 이후 밀리초 단위의 종료 시간
 
-        Returns:
-            List of Span objects
+        반환값:
+            Span 객체 목록
         """
         self.logger.info("Querying spans for session: %s (agent: %s)", session_id, self.agent_id)
 
@@ -160,15 +160,15 @@ class ObservabilityClient:
         start_time_ms: int,
         end_time_ms: int,
     ) -> List[RuntimeLog]:
-        """Query runtime logs for multiple traces from agent-specific log group.
+        """에이전트별 로그 그룹에서 여러 trace의 Runtime 로그를 쿼리합니다.
 
-        Args:
-            trace_ids: List of trace IDs to query
-            start_time_ms: Start time in milliseconds since epoch
-            end_time_ms: End time in milliseconds since epoch
+        인수:
+            trace_ids: 쿼리할 trace ID 목록
+            start_time_ms: epoch 이후 밀리초 단위의 시작 시간
+            end_time_ms: epoch 이후 밀리초 단위의 종료 시간
 
-        Returns:
-            List of RuntimeLog objects
+        반환값:
+            RuntimeLog 객체 목록
         """
         if not trace_ids:
             return []
@@ -200,16 +200,16 @@ class ObservabilityClient:
         end_time_ms: int,
         include_runtime_logs: bool = True,
     ) -> TraceData:
-        """Get complete session data including spans and optionally runtime logs.
+        """span과 선택적 Runtime 로그를 포함한 전체 세션 데이터를 가져옵니다.
 
-        Args:
-            session_id: The session ID to query
-            start_time_ms: Start time in milliseconds since epoch
-            end_time_ms: End time in milliseconds since epoch
-            include_runtime_logs: Whether to fetch runtime logs (default: True)
+        인수:
+            session_id: 쿼리할 세션 ID
+            start_time_ms: epoch 이후 밀리초 단위의 시작 시간
+            end_time_ms: epoch 이후 밀리초 단위의 종료 시간
+            include_runtime_logs: Runtime 로그를 가져올지 여부(기본값: True)
 
-        Returns:
-            TraceData object with spans and runtime logs
+        반환값:
+            span과 Runtime 로그가 포함된 TraceData 객체
         """
         self.logger.info("Fetching session data for: %s", session_id)
 
@@ -242,20 +242,20 @@ class ObservabilityClient:
         start_time: int,
         end_time: int,
     ) -> list:
-        """Execute a CloudWatch Logs Insights query and wait for results.
+        """CloudWatch Logs Insights 쿼리를 실행하고 결과를 기다립니다.
 
-        Args:
-            query_string: The CloudWatch Logs Insights query
-            log_group_name: The log group to query
-            start_time: Start time in milliseconds since epoch
-            end_time: End time in milliseconds since epoch
+        인수:
+            query_string: CloudWatch Logs Insights 쿼리
+            log_group_name: 쿼리할 로그 그룹
+            start_time: epoch 이후 밀리초 단위의 시작 시간
+            end_time: epoch 이후 밀리초 단위의 종료 시간
 
-        Returns:
-            List of result dictionaries
+        반환값:
+            결과 딕셔너리 목록
 
-        Raises:
-            TimeoutError: If query doesn't complete within timeout
-            Exception: If query fails
+        예외:
+            TimeoutError: 제한 시간 안에 쿼리가 완료되지 않는 경우
+            Exception: 쿼리가 실패하는 경우
         """
         self.logger.debug("Starting CloudWatch query on log group: %s", log_group_name)
 

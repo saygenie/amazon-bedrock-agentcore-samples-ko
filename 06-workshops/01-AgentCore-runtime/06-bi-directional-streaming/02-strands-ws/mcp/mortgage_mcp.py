@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Mortgage MCP Server
+Mortgage MCP 서버
 
-Provides mortgage services tools via Model Context Protocol.
-All tools return static JSON responses for demonstration purposes.
+Model Context Protocol을 통해 Mortgage 서비스 도구를 제공합니다.
+모든 도구는 데모를 위해 정적 JSON 응답을 반환합니다.
 """
 
 import asyncio
@@ -16,12 +16,12 @@ from mcp.types import Tool, TextContent
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create MCP server
+# MCP Server 생성
 server = Server("mortgage-tools")
 
 
 # ============================================================================
-# Tool Functions
+# 도구 함수
 # ============================================================================
 
 
@@ -98,7 +98,7 @@ def calculate_mortgage_payment(
     monthly_rate = interest_rate / 100 / 12
     num_payments = loan_term_years * 12
 
-    # Calculate monthly payment using mortgage formula
+    # Mortgage 공식으로 월 납부액 계산
     if monthly_rate > 0:
         monthly_payment = (
             principal * (monthly_rate * (1 + monthly_rate) ** num_payments) / ((1 + monthly_rate) ** num_payments - 1)
@@ -159,12 +159,12 @@ def check_mortgage_eligibility(customer_id: str, annual_income: float, monthly_d
     monthly_income = annual_income / 12
     debt_to_income = (monthly_debts / monthly_income * 100) if monthly_income > 0 else 100
 
-    # Determine eligibility
+    # 자격 여부 결정
     eligible = credit_score >= 620 and debt_to_income <= 43
 
-    # Calculate max loan amount (rough estimate)
-    max_monthly_payment = monthly_income * 0.28  # 28% front-end ratio
-    max_loan_amount = max_monthly_payment * 12 * 30 / 0.07  # Rough estimate at 7% rate
+    # 최대 대출 금액 계산(대략적인 추정치)
+    max_monthly_payment = monthly_income * 0.28  # 28% front-end 비율
+    max_loan_amount = max_monthly_payment * 12 * 30 / 0.07  # 7% 금리 기준 대략적인 추정치
 
     response = {
         "status": "success",
@@ -262,7 +262,7 @@ def get_mortgage_application_status(application_id: str) -> str:
 
 
 # ============================================================================
-# MCP Server Configuration
+# MCP Server 구성
 # ============================================================================
 
 TOOLS = [
@@ -372,7 +372,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 
 async def main():
-    """Run the MCP server"""
+    """MCP Server를 실행합니다."""
     logger.info("Starting Mortgage Tools MCP Server")
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())

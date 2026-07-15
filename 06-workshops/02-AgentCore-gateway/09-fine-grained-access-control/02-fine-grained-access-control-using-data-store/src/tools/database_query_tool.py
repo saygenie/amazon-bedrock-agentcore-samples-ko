@@ -1,14 +1,14 @@
 """
-Database Query Tool - Mock database query functionality for Gateway
+Database Query Tool - Gateway용 모의 database query 기능입니다.
 
-This tool simulates database query operations.
+이 도구는 database query 작업을 시뮬레이션합니다.
 """
 
 import json
 from datetime import datetime
 
 
-# Mock database of users
+# 모의 사용자 database
 MOCK_DATABASE = {
     "users": [
         {
@@ -89,9 +89,9 @@ MOCK_DATABASE = {
 
 def lambda_handler(event, context):
     """
-    Lambda handler for database query tool.
+    database query tool용 Lambda 핸들러입니다.
 
-    Expected input:
+    예상 입력:
     {
         "table": "users" | "products",
         "filter": {
@@ -101,17 +101,17 @@ def lambda_handler(event, context):
         "limit": 10 (optional)
     }
 
-    Returns mock query results.
+    모의 query 결과를 반환합니다.
     """
     print(f"Database query tool received event: {json.dumps(event)}")
 
-    # Parse input
+        # 입력 파싱
     body = event if isinstance(event, dict) else json.loads(event)
     table = body.get("table", "users")
     filter_criteria = body.get("filter", {})
     limit = body.get("limit", 100)
 
-    # Validate table
+        # table 검증
     if table not in MOCK_DATABASE:
         return {
             "statusCode": 400,
@@ -124,10 +124,10 @@ def lambda_handler(event, context):
             ),
         }
 
-    # Get data from mock database
+        # 모의 database에서 데이터 가져오기
     data = MOCK_DATABASE[table]
 
-    # Apply filter if provided
+        # 제공된 경우 filter 적용
     if filter_criteria:
         field = filter_criteria.get("field")
         value = filter_criteria.get("value")
@@ -135,7 +135,7 @@ def lambda_handler(event, context):
         if field:
             data = [item for item in data if item.get(field) == value]
 
-    # Apply limit
+        # limit 적용
     data = data[:limit]
 
     query_result = {
@@ -155,7 +155,7 @@ def lambda_handler(event, context):
     return response
 
 
-# MCP Tool Definition for Gateway registration
+# Gateway 등록용 MCP Tool Definition
 TOOL_DEFINITION = {
     "name": "database_query_tool",
     "description": "Query a database table with optional filtering. Available tables: users, products. Returns matching records.",
@@ -188,7 +188,7 @@ TOOL_DEFINITION = {
 
 
 if __name__ == "__main__":
-    # Test the tool locally
+# 로컬에서 도구 테스트
     test_cases = [
         {"table": "users"},
         {"table": "users", "filter": {"field": "role", "value": "admin"}},

@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Request and response models."""
+"""요청 및 응답 모델."""
 
 from pydantic import BaseModel, Field
 

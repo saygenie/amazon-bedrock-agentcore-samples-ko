@@ -8,9 +8,9 @@ import { Construct } from "constructs";
 
 export interface PrivateApigwStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
-  /** Optional: CIDR of a peered VPC to allow inbound HTTPS on the VPCE security group */
+  /** 선택 사항: VPCE Security Group의 인바운드 HTTPS를 허용할 Peered VPC CIDR */
   peerVpcCidr?: string;
-  /** Whether to enable private DNS on the VPCE (default: true). Set to false for peering. */
+  /** VPCE에서 Private DNS를 활성화할지 여부(기본값: true). Peering에서는 false로 설정합니다. */
   privateDnsEnabled?: boolean;
 }
 
@@ -111,7 +111,7 @@ export class PrivateApigwStack extends cdk.Stack {
     usagePlan.addApiKey(apiKey);
     usagePlan.addApiStage({ stage: this.api.deploymentStage });
 
-    // GET /health — returns {"status": "ok"}
+    // GET /health - {"status": "ok"} 반환
     const healthResource = this.api.root.addResource("health");
     healthResource.addMethod(
       "GET",
@@ -134,7 +134,7 @@ export class PrivateApigwStack extends cdk.Stack {
       },
     );
 
-    // GET /items — returns a static list of items
+    // GET /items - 정적 항목 목록 반환
     const itemsResource = this.api.root.addResource("items");
     itemsResource.addMethod(
       "GET",
@@ -160,7 +160,7 @@ export class PrivateApigwStack extends cdk.Stack {
       },
     );
 
-    // POST /items — echoes back the request body
+    // POST /items - 요청 본문을 그대로 반환
     itemsResource.addMethod(
       "POST",
       new apigw.MockIntegration({
@@ -182,7 +182,7 @@ export class PrivateApigwStack extends cdk.Stack {
       },
     );
 
-    // --- Outputs ---
+    // --- 출력 ---
     new cdk.CfnOutput(this, "ApiId", {
       value: this.api.restApiId,
     });

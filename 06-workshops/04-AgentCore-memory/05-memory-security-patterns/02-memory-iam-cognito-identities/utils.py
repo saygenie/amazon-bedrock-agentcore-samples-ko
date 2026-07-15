@@ -6,15 +6,15 @@ from jwt import PyJWKClient
 
 
 def setup_cognito_user_pool(region, memory_id):
-    # Initialize Cognito client
+    # Cognito 클라이언트 초기화
     cognito_client = boto3.client("cognito-idp", region_name=region)
     try:
-        # Create User Pool
+        # User Pool 생성
         user_pool_response = cognito_client.create_user_pool(
             PoolName="MCPServerPool", Policies={"PasswordPolicy": {"MinimumLength": 8}}
         )
         pool_id = user_pool_response["UserPool"]["Id"]
-        # Create App Client
+        # App Client 생성
         app_client_response = cognito_client.create_user_pool_client(
             UserPoolId=pool_id,
             ClientName="MCPServerPoolClient",
@@ -23,14 +23,14 @@ def setup_cognito_user_pool(region, memory_id):
         )
         client_id = app_client_response["UserPoolClient"]["ClientId"]
 
-        # Create User 1
+        # 사용자 1 생성
         cognito_client.admin_create_user(
             UserPoolId=pool_id,
             Username="testuser1",
             TemporaryPassword="Temp123!",  # pragma: allowlist secret
             MessageAction="SUPPRESS",
         )
-        # Set Permanent Password for User 1
+        # 사용자 1의 영구 암호 설정
         cognito_client.admin_set_user_password(
             UserPoolId=pool_id,
             Username="testuser1",
@@ -38,14 +38,14 @@ def setup_cognito_user_pool(region, memory_id):
             Permanent=True,
         )
 
-        # Create User 2
+        # 사용자 2 생성
         cognito_client.admin_create_user(
             UserPoolId=pool_id,
             Username="testuser2",
             TemporaryPassword="Temp123!",  # pragma: allowlist secret
             MessageAction="SUPPRESS",
         )
-        # Set Permanent Password for User 2
+        # 사용자 2의 영구 암호 설정
         cognito_client.admin_set_user_password(
             UserPoolId=pool_id,
             Username="testuser2",
@@ -53,7 +53,7 @@ def setup_cognito_user_pool(region, memory_id):
             Permanent=True,
         )
 
-        # Authenticate User 1 and get Access Token
+        # 사용자 1을 인증하고 Access Token 가져오기
         auth_response1 = cognito_client.initiate_auth(
             ClientId=client_id,
             AuthFlow="USER_PASSWORD_AUTH",
@@ -62,7 +62,7 @@ def setup_cognito_user_pool(region, memory_id):
         bearer_token1 = auth_response1["AuthenticationResult"]["AccessToken"]
         id_token1 = auth_response1["AuthenticationResult"]["IdToken"]
 
-        # Authenticate User 2 and get Access Token
+        # 사용자 2를 인증하고 Access Token 가져오기
         auth_response2 = cognito_client.initiate_auth(
             ClientId=client_id,
             AuthFlow="USER_PASSWORD_AUTH",
@@ -71,10 +71,10 @@ def setup_cognito_user_pool(region, memory_id):
         bearer_token2 = auth_response2["AuthenticationResult"]["AccessToken"]
         id_token2 = auth_response2["AuthenticationResult"]["IdToken"]
 
-        # Create Identity Pool federated with User Pool
+        # User Pool과 연동된 Identity Pool 생성
         identity_pool_info = create_cognito_identity_pool(pool_id, client_id, region, memory_id)
 
-        # Output the required values
+        # 필요한 값 출력
         print(f"Pool id: {pool_id}")
         print(f"Discovery URL: https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/openid-configuration")
         print(f"Client ID: {client_id}")
@@ -84,7 +84,7 @@ def setup_cognito_user_pool(region, memory_id):
         print(f"User 1 Id Token: {id_token1}")
         print(f"User 2 Id Token: {id_token2}")
 
-        # Return values for further processing
+        # 후속 처리에 사용할 값 반환
         return {
             "pool_id": pool_id,
             "client_id": client_id,
@@ -101,27 +101,27 @@ def setup_cognito_user_pool(region, memory_id):
 
 def reauthenticate_users(client_id, region, users=None):
     """
-    Reauthenticate one or more Cognito users and get their access and ID tokens.
+    한 명 이상의 Cognito 사용자를 다시 인증하고 Access Token과 ID Token을 가져옵니다.
 
-    Parameters:
-    - client_id: The Cognito app client ID
-    - region: AWS region
-    - users: Dictionary of username-password pairs to authenticate. If None, defaults to testuser1 and testuser2.
+    매개변수:
+    - client_id: Cognito App Client ID
+    - region: AWS 리전
+    - users: 인증할 사용자 이름과 암호 쌍의 딕셔너리입니다. None이면 testuser1과 testuser2를 기본값으로 사용합니다.
 
-    Returns:
-    - Dictionary with access_tokens and id_tokens for each user
+    반환값:
+    - 각 사용자의 access_tokens와 id_tokens를 담은 딕셔너리
     """
-    # Default users if not specified
+    # 지정하지 않은 경우 기본 사용자 사용
     if users is None:
         users = {"testuser1": "MyPassword123!", "testuser2": "MyPassword456!"}
 
-    # Initialize Cognito client
+    # Cognito 클라이언트 초기화
     cognito_client = boto3.client("cognito-idp", region_name=region)
 
-    # Store tokens for each user
+    # 각 사용자의 토큰 저장
     result = {"access_tokens": {}, "id_tokens": {}}
 
-    # Authenticate each user and get their tokens
+    # 각 사용자를 인증하고 토큰 가져오기
     for username, password in users.items():
         try:
             auth_response = cognito_client.initiate_auth(
@@ -142,13 +142,13 @@ def reauthenticate_users(client_id, region, users=None):
 
 def get_user_sub(access_token: str, region: str, user_pool_id: str) -> str:
     """
-    Verifies a Cognito access token against JWKS and returns the user's sub (unique ID).
+    JWKS를 사용하여 Cognito Access Token을 검증하고 사용자의 sub(고유 ID)를 반환합니다.
 
-    :param access_token: The JWT access token string
-    :param region: AWS region of the Cognito User Pool
-    :param user_pool_id: The Cognito User Pool ID
-    :return: The user's 'sub' claim if the token is valid
-    :raises jwt.InvalidTokenError: If verification fails
+    :param access_token: JWT Access Token 문자열
+    :param region: Cognito User Pool의 AWS 리전
+    :param user_pool_id: Cognito User Pool ID
+    :return: 토큰이 유효한 경우 사용자의 'sub' 클레임
+    :raises jwt.InvalidTokenError: 검증에 실패한 경우
     """
     jwks_url = f"https://cognito-idp.{region}.amazonaws.com/{user_pool_id}/.well-known/jwks.json"
     jwks_client = PyJWKClient(jwks_url)
@@ -289,14 +289,14 @@ def create_agentcore_role(agent_name, region):
 
     assume_role_policy_document_json = json.dumps(assume_role_policy_document)
     role_policy_document = json.dumps(role_policy)
-    # Create IAM Role for the AgentCore Runtime
+    # AgentCore Runtime용 IAM Role 생성
     try:
         agentcore_iam_role = iam_client.create_role(
             RoleName=agentcore_role_name,
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-        # Pause to make sure role is created
+        # Role이 생성될 때까지 잠시 대기
         time.sleep(10)
     except iam_client.exceptions.EntityAlreadyExistsException:
         print("Role already exists -- deleting and creating it again")
@@ -312,7 +312,7 @@ def create_agentcore_role(agent_name, region):
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-    # Attach the AgentCore policy
+    # AgentCore 정책 연결
     print(f"attaching role policy {agentcore_role_name}")
     try:
         iam_client.put_role_policy(
@@ -328,20 +328,20 @@ def create_agentcore_role(agent_name, region):
 
 def create_cognito_identity_pool(user_pool_id, client_id, region, memory_id="*"):
     """
-    Create a Cognito Identity Pool federated with a User Pool
+    User Pool과 연동된 Cognito Identity Pool을 생성합니다.
 
-    Args:
+    인수:
         user_pool_id: Cognito User Pool ID
         client_id: Cognito User Pool Client ID
-        region: AWS region
-        memory_id: Optional - Specific memory ID to restrict access to (default is "*" for all memories)
+        region: AWS 리전
+        memory_id: 선택 사항 - 액세스를 제한할 특정 Memory ID(기본값 "*"는 모든 Memory)
     """
     identity_client = boto3.client("cognito-identity", region_name=region)
 
-    # Get AWS account ID
+    # AWS 계정 ID 가져오기
     account_id = boto3.client("sts").get_caller_identity()["Account"]
 
-    # Create the Identity Pool with User Pool as auth provider
+    # User Pool을 인증 공급자로 사용하는 Identity Pool 생성
     response = identity_client.create_identity_pool(
         IdentityPoolName="MemoryAgentIdentityPool",
         AllowUnauthenticatedIdentities=False,
@@ -356,12 +356,12 @@ def create_cognito_identity_pool(user_pool_id, client_id, region, memory_id="*")
 
     identity_pool_id = response["IdentityPoolId"]
 
-    # Create a shorter, unique role name using just the last part of the identity pool ID
-    # This ensures we stay under the 64 character limit
-    short_id = identity_pool_id.split(":")[-1][-12:].replace("-", "")  # Last 12 chars without dashes
+    # Identity Pool ID의 마지막 부분만 사용하여 짧고 고유한 Role 이름 생성
+    # 64자 제한을 넘지 않도록 함
+    short_id = identity_pool_id.split(":")[-1][-12:].replace("-", "")  # 하이픈을 제외한 마지막 12자
     authenticated_role_name = f"cognito_auth_{short_id}"
 
-    # Create roles for authenticated users
+    # 인증된 사용자용 Role 생성
     iam_client = boto3.client("iam")
 
     authenticated_policy_document = {
@@ -408,7 +408,7 @@ def create_cognito_identity_pool(user_pool_id, client_id, region, memory_id="*")
         ],
     }
 
-    # Create authenticated role
+    # 인증된 사용자용 Role 생성
     try:
         auth_role = iam_client.create_role(
             RoleName=authenticated_role_name,
@@ -416,7 +416,7 @@ def create_cognito_identity_pool(user_pool_id, client_id, region, memory_id="*")
             Description=f"Role for Identity Pool {identity_pool_id}",
         )
 
-        # Create shorter policy name too
+        # 정책 이름도 짧게 생성
         auth_policy_name = f"AuthPolicy_{short_id}"
         auth_policy = iam_client.create_policy(
             PolicyName=auth_policy_name,
@@ -425,11 +425,11 @@ def create_cognito_identity_pool(user_pool_id, client_id, region, memory_id="*")
 
         iam_client.attach_role_policy(RoleName=authenticated_role_name, PolicyArn=auth_policy["Policy"]["Arn"])
     except iam_client.exceptions.EntityAlreadyExistsException:
-        # Role already exists, get its ARN
+        # Role이 이미 있으면 해당 ARN 가져오기
         response = iam_client.get_role(RoleName=authenticated_role_name)
         auth_role = response
 
-    # Set identity pool roles
+    # Identity Pool Role 설정
     identity_client.set_identity_pool_roles(
         IdentityPoolId=identity_pool_id,
         Roles={"authenticated": auth_role["Role"]["Arn"]},
@@ -443,33 +443,33 @@ def create_cognito_identity_pool(user_pool_id, client_id, region, memory_id="*")
 
 def get_aws_credentials_for_identity(identity_pool_id, id_token, region, user_pool_id):
     """
-    Get temporary AWS credentials for a Cognito identity using a User Pool ID token
+    User Pool ID Token을 사용하여 Cognito Identity의 임시 AWS 자격 증명을 가져옵니다.
 
-    Args:
+    인수:
         identity_pool_id: Cognito Identity Pool ID
-        id_token: ID token from Cognito User Pool authentication
-        region: AWS region
+        id_token: Cognito User Pool 인증에서 발급된 ID Token
+        region: AWS 리전
         user_pool_id: Cognito User Pool ID
 
-    Returns:
-        Dictionary with AWS credentials
+    반환값:
+        AWS 자격 증명을 담은 딕셔너리
     """
     identity_client = boto3.client("cognito-identity", region_name=region)
 
-    # Get ID from identity pool
+    # Identity Pool에서 ID 가져오기
     get_id_response = identity_client.get_id(
         IdentityPoolId=identity_pool_id,
         Logins={f"cognito-idp.{region}.amazonaws.com/{user_pool_id}": id_token},
     )
     identity_id = get_id_response["IdentityId"]
 
-    # Get credentials for the identity
+    # Identity의 자격 증명 가져오기
     get_credentials_response = identity_client.get_credentials_for_identity(
         IdentityId=identity_id,
         Logins={f"cognito-idp.{region}.amazonaws.com/{user_pool_id}": id_token},
     )
 
-    # Return the temporary credentials
+    # 임시 자격 증명 반환
     credentials = get_credentials_response["Credentials"]
     return {
         "access_key_id": credentials["AccessKeyId"],

@@ -1,8 +1,8 @@
-# Claude Code on AgentCore Runtime with EFS
+# EFS를 사용하는 AgentCore Runtime의 Claude Code
 
-Deploys Claude Code as an HTTP agent on AWS Bedrock AgentCore Runtime, with an EFS file system mounted at `/mnt/efs` for persistent storage shared across sessions.
+Claude Code를 AWS Bedrock AgentCore Runtime에 HTTP 에이전트로 배포하고, 세션 간 공유 영구 저장소를 위해 `/mnt/efs`에 EFS 파일 시스템을 mount합니다.
 
-## Architecture
+## 아키텍처
 
 ```
   ┌─────────────────────────┐         ┌─────────────────────────┐
@@ -25,21 +25,21 @@ Deploys Claude Code as an HTTP agent on AWS Bedrock AgentCore Runtime, with an E
                     └──────────────────────────────────────────────────┘
 ```
 
-Multiple runtime sessions mount the same EFS file system, enabling agents to share skills, results, and data across independent invocations.
+여러 Runtime 세션이 동일한 EFS 파일 시스템을 mount하므로 에이전트는 독립적인 호출 간에 skill, 결과, 데이터를 공유할 수 있습니다.
 
 ```
-CloudFormation stack (cfn-vpc.yaml):
-  VPC, subnets, NAT Gateway, Security Group
-  EFS file system, access point, mount targets
+CloudFormation 스택(cfn-vpc.yaml):
+  VPC, subnet, NAT Gateway, Security Group
+  EFS 파일 시스템, access point, mount target
 
-deploy.py creates:
-  IAM execution role
-  AgentCore Runtime (container from ECR, EFS mounted at /mnt/efs)
+deploy.py 생성 항목:
+  IAM 실행 역할
+  AgentCore Runtime(ECR의 컨테이너, /mnt/efs에 EFS mount)
 ```
 
-## Prerequisites
+## 사전 요구 사항
 
-### Python environment
+### Python 환경
 
 ```bash
 uv venv --python 3.13 .venv
@@ -47,75 +47,75 @@ source .venv/bin/activate
 uv pip install boto3 awscli --force-reinstall --no-cache-dir
 ```
 
-## Step-by-step guide
+## 단계별 가이드
 
-### Step 1 — Infrastructure setup (CloudFormation)
+### 1단계 - 인프라 설정(CloudFormation)
 
-Run the setup script to deploy the CloudFormation stack (VPC, subnets, NAT Gateway, Security Group, EFS), build the arm64 Docker image, and push it to ECR.
+설정 스크립트를 실행하여 CloudFormation stack(VPC, subnet, NAT Gateway, Security Group, EFS)을 배포한 다음 arm64 Docker 이미지를 빌드하여 ECR에 push합니다.
 
 ```bash
 ./setup.sh us-west-2
 ```
 
-All outputs are saved to `envvars.config` and used automatically by the next steps.
+모든 출력은 `envvars.config`에 저장되며 다음 단계에서 자동으로 사용됩니다.
 
-### Step 2 — Deploy the agent
+### 2단계 - 에이전트 배포
 
-Create the IAM execution role and the AgentCore Runtime:
+IAM 실행 역할과 AgentCore Runtime을 생성합니다.
 
 ```bash
 python deploy.py
 ```
 
-The script waits until the runtime status is `READY` and saves the runtime config to `runtime_config.json`.
+스크립트는 Runtime 상태가 `READY`가 될 때까지 기다린 다음 Runtime 구성을 `runtime_config.json`에 저장합니다.
 
-If you need to update an existing runtime (e.g. after rebuilding the Docker image), run:
+Docker 이미지를 다시 빌드한 후처럼 기존 Runtime을 업데이트해야 하는 경우 다음을 실행합니다.
 
 ```bash
 python update.py
 ```
 
-### Step 3 — Invoke the agent
+### 3단계 - 에이전트 호출
 
-Send a prompt to the deployed agent. The first call creates a new session; subsequent calls can reuse the session ID for conversation continuity.
+배포된 에이전트에 prompt를 보냅니다. 첫 호출은 새 세션을 생성하며 이후 호출은 대화 연속성을 위해 세션 ID를 재사용할 수 있습니다.
 
-**Session A** — create a shared skill on the persistent filesystem:
+**세션 A** - 영구 파일 시스템에 공유 skill 생성:
 
 ```bash
 python invoke.py "can u create a new skill, to review python code? This skill should be created into /mnt/efs/skills/"
 ```
 
-Continue the conversation within the same session:
+동일한 세션에서 대화를 계속합니다.
 
 ```bash
 python invoke.py --session <session-a-id> "now add unit tests for that skill"
 ```
 
-**Session B** — a completely new session accesses the same filesystem and uses the skill created by Session A:
+**세션 B** - 완전히 새로운 세션이 동일한 파일 시스템에 액세스하고 세션 A가 생성한 skill을 사용:
 
 ```bash
 python invoke.py "list the skills available in /mnt/efs/skills/ and use the python review skill to review this code: def add(a,b): return a+b"
 ```
 
-Both sessions share `/mnt/efs`, so anything written by one session is immediately available to others.
+두 세션이 `/mnt/efs`를 공유하므로 한 세션에서 기록한 모든 내용을 다른 세션에서 즉시 사용할 수 있습니다.
 
-### Step 4 — Execute a command on the running session
+### 4단계 - 실행 중인 세션에서 명령 실행
 
-Run a shell command directly on the container using the session ID from the previous step:
+이전 단계의 세션 ID를 사용하여 컨테이너에서 shell 명령을 직접 실행합니다.
 
 ```bash
 python exec_cmd.py --session <session-id> "ls -l /mnt/efs"
 ```
 
-### Step 5 — Cleanup
+### 5단계 - 정리
 
-Delete all AgentCore resources (runtime, IAM role) and the CloudFormation stack.
+모든 AgentCore 리소스(Runtime, IAM 역할)와 CloudFormation stack을 삭제합니다.
 
 ```bash
 python cleanup.py
 ```
 
-Or use the shell wrapper:
+또는 shell wrapper를 사용합니다.
 
 ```bash
 ./cleanup.sh

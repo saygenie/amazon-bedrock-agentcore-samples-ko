@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Lab 3: Strands Remediation Agent with FastMCP - AgentCore Runtime Deployment
-Uses FastMCP to implement MCP protocol for Gateway-to-Runtime communication
+Lab 3: FastMCP를 사용하는 Strands Remediation Agent - AgentCore Runtime 배포
+Gateway-to-Runtime 통신용 MCP 프로토콜을 FastMCP로 구현합니다.
 
-Focuses on:
-- MCP protocol implementation with FastMCP
-- Secure remediation workflows with approval gates
-- Infrastructure automation using Code Interpreter
-- Two-step process: Planning → Approval → Execution
-- Risk assessment and impact analysis
+주요 내용:
+- FastMCP를 사용한 MCP 프로토콜 구현
+- 승인 단계를 포함한 안전한 수정 워크플로
+- Code Interpreter를 사용한 인프라 자동화
+- 2단계 프로세스: 계획 → 승인 → 실행
+- 위험 평가 및 영향 분석
 
-Deployed to AgentCore Runtime for serverless execution
+서버리스 실행을 위해 AgentCore Runtime에 배포됩니다.
 """
 
 import os
@@ -20,31 +20,31 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, Literal
 
-# Official MCP package for AgentCore Runtime compatibility
+# AgentCore Runtime 호환성을 위한 공식 MCP 패키지
 from mcp.server.fastmcp import FastMCP
 
-# Strands framework
+# Strands 프레임워크
 from strands import Agent
 from strands.models import BedrockModel
 from strands.tools import tool
 
-# Bypass tool consent for AgentCore deployment
+# AgentCore 배포 시 도구 동의 우회
 os.environ["BYPASS_TOOL_CONSENT"] = "true"
 
-# Configure logging
+# 로깅 구성
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("bedrock_agentcore.app")
 
 
-# Auto-detect AWS region
+# AWS 리전 자동 감지
 def get_aws_region():
-    """Auto-detect AWS region from environment or boto3 session"""
-    # Try environment variable first
+    """환경 또는 boto3 세션에서 AWS 리전을 자동 감지합니다."""
+    # 먼저 환경 변수 확인
     region = os.environ.get("AWS_REGION")
     if region:
         return region
 
-    # Try boto3 session default region
+    # boto3 세션 기본 리전 확인
     try:
         session = boto3.Session()
         region = session.region_name
@@ -53,35 +53,35 @@ def get_aws_region():
     except Exception:
         pass
 
-    # Fallback to us-east-1
+    # 대체값으로 us-east-1 사용
     return "us-west-2"
 
 
-# Environment variables (set by AgentCore Runtime)
+# 환경 변수(AgentCore Runtime에서 설정)
 AWS_REGION = get_aws_region()
 logger.info(f"🌍 Using AWS Region: {AWS_REGION}")
 MODEL_ID = os.environ.get("MODEL_ID", "us.anthropic.claude-sonnet-4-20250514-v1:0")
 AWS_ACCESS_KEY_ID = "none"
 AWS_SECRET_ACCESS_KEY = "none"  # pragma: allowlist secret
 
-# Treat 'none' string as None for IAM role usage
+# IAM 역할 사용 시 'none' 문자열을 None으로 처리
 if AWS_ACCESS_KEY_ID.lower() == "none":
     AWS_ACCESS_KEY_ID = None
 if AWS_SECRET_ACCESS_KEY.lower() == "none":
     AWS_SECRET_ACCESS_KEY = None
 
-# Initialize FastMCP server for AgentCore Runtime
-# host="0.0.0.0" - Listens on all interfaces as required by AgentCore
-# stateless_http=True - Enables session isolation for enterprise security
+# AgentCore Runtime용 FastMCP 서버 초기화
+# host="0.0.0.0" - AgentCore 요구 사항에 따라 모든 인터페이스에서 수신
+# stateless_http=True - 엔터프라이즈 보안을 위한 세션 격리 활성화
 mcp = FastMCP("SRE Remediation Agent", host="0.0.0.0", stateless_http=True)  # nosec B104
 
-# Global variables for Code Interpreter
+# Code Interpreter용 전역 변수
 agentcore_code_interpreter = None
 CODE_INTERPRETER_AVAILABLE = False
 
 
 def get_boto3_client(service_name: str, region: str = None):
-    """Create boto3 client with credentials from environment variables"""
+    """환경 변수의 자격 증명으로 boto3 클라이언트를 생성합니다."""
     # region = region or AWS_REGION
     region = get_aws_region()
 
@@ -97,7 +97,7 @@ def get_boto3_client(service_name: str, region: str = None):
 
 
 def get_boto3_session():
-    """Create boto3 session with credentials from environment variables"""
+    """환경 변수의 자격 증명으로 boto3 세션을 생성합니다."""
     if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
         return boto3.Session(
             aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -109,7 +109,7 @@ def get_boto3_session():
 
 
 def get_code_interpreter_from_ssm():
-    """Retrieve code interpreter details from SSM Parameter Store"""
+    """SSM Parameter Store에서 Code Interpreter 세부 정보를 조회합니다."""
     ssm = get_boto3_client("ssm")
     WORKSHOP_NAME = "aiml301_sre_agentcore"
 
@@ -123,12 +123,12 @@ def get_code_interpreter_from_ssm():
         raise
 
 
-# Get code interpreter from SSM
+# SSM에서 Code Interpreter 조회
 CUSTOM_INTERPRETER_ID, CUSTOM_INTERPRETER_ARN = get_code_interpreter_from_ssm()
 
 
 def get_sre_remediation_s3_bucket():
-    # Store in SSM Parameter Store
+    # SSM Parameter Store에 저장
     parameter_name = "/aiml301_sre_workshop/remediation_s3_bucket"
     # ssm = get_boto3_client('ssm')
     ssm = boto3.client("ssm", region_name="us-west-2")
@@ -138,12 +138,12 @@ def get_sre_remediation_s3_bucket():
     return retrieved_bucket_name
 
 
-# Get s3 details from SSM
+# SSM에서 S3 세부 정보 조회
 retrieved_bucket_name = get_sre_remediation_s3_bucket()
 
 
 def initialize_code_interpreter_client():
-    """Initialize AgentCore Code Interpreter client"""
+    """AgentCore Code Interpreter 클라이언트를 초기화합니다."""
     global agentcore_code_interpreter, CODE_INTERPRETER_AVAILABLE
 
     try:
@@ -158,15 +158,15 @@ def initialize_code_interpreter_client():
 
 
 def start_code_interpreter_session():
-    """Start a Code Interpreter session using custom interpreter"""
+    """사용자 지정 Interpreter로 Code Interpreter 세션을 시작합니다."""
     if not CODE_INTERPRETER_AVAILABLE:
         return None
 
     try:
         session_response = agentcore_code_interpreter.start_code_interpreter_session(
-            codeInterpreterIdentifier=CUSTOM_INTERPRETER_ID,  # Use custom interpreter
+            codeInterpreterIdentifier=CUSTOM_INTERPRETER_ID,  # 사용자 지정 Interpreter 사용
             name=f"remediation-session-{uuid.uuid4()}",
-            sessionTimeoutSeconds=1800,  # 30 minutes
+            sessionTimeoutSeconds=1800,  # 30분
         )
 
         session_id = session_response.get("sessionId")
@@ -179,13 +179,13 @@ def start_code_interpreter_session():
 
 
 def stop_code_interpreter_session(session_id: str):
-    """Stop the Code Interpreter session"""
+    """Code Interpreter 세션을 중지합니다."""
     if not session_id or not CODE_INTERPRETER_AVAILABLE:
         return
 
     try:
         agentcore_code_interpreter.stop_code_interpreter_session(
-            codeInterpreterIdentifier=CUSTOM_INTERPRETER_ID,  # Use custom interpreter
+            codeInterpreterIdentifier=CUSTOM_INTERPRETER_ID,  # 사용자 지정 Interpreter 사용
             sessionId=session_id,
         )
         logger.info(f"✅ Code Interpreter session stopped: {session_id}")
@@ -194,7 +194,7 @@ def stop_code_interpreter_session(session_id: str):
 
 
 def execute_remediation_code(session_id: str, code: str) -> Dict:
-    """Execute remediation code using custom AgentCore Code Interpreter"""
+    """사용자 지정 AgentCore Code Interpreter로 수정 코드를 실행합니다."""
     if not session_id:
         return {"error": "No Code Interpreter session available"}
 
@@ -202,13 +202,13 @@ def execute_remediation_code(session_id: str, code: str) -> Dict:
         logger.info(f"🔧 Executing remediation code: {code}")
 
         execute_response = agentcore_code_interpreter.invoke_code_interpreter(
-            codeInterpreterIdentifier=CUSTOM_INTERPRETER_ID,  # Use custom interpreter
+            codeInterpreterIdentifier=CUSTOM_INTERPRETER_ID,  # 사용자 지정 Interpreter 사용
             sessionId=session_id,
             name="executeCode",
             arguments={"language": "python", "code": code},
         )
 
-        # Process the streaming response
+        # 스트리밍 응답 처리
         output_text = ""
         execution_status = "success"
 
@@ -234,7 +234,7 @@ def execute_remediation_code(session_id: str, code: str) -> Dict:
         return {"error": f"Code execution failed: {str(e)}"}
 
 
-# Define FastMCP Tools
+# FastMCP 도구 정의
 
 
 @tool
@@ -255,7 +255,7 @@ def execute_remediation_step(remediation_code: str) -> str:
 
         logger.info(f"✅ Code interpreter session started: {session_id}")
 
-        # Prepend region detection to all remediation code
+        # 모든 수정 코드 앞에 리전 감지 코드 추가
         region_detection = """import requests
 import os
 
@@ -326,18 +326,18 @@ def validate_remediation_environment() -> str:
         }
 
         try:
-            # Test code interpreter initialization
+            # Code Interpreter 초기화 테스트
             logger.info("Testing code interpreter initialization...")
             if initialize_code_interpreter_client():
                 validation_results["code_interpreter_available"] = True
                 logger.info("✅ Code interpreter available")
 
-                # Test session creation
+                # 세션 생성 테스트
                 logger.info("Testing session creation...")
                 session_id = start_code_interpreter_session()
                 if session_id:
                     validation_results["session_creation"] = True
-                    validation_results["aws_access"] = True  # Simplified for demo
+                    validation_results["aws_access"] = True  # 데모를 위해 단순화
                     logger.info(f"✅ Session created: {session_id}")
                     stop_code_interpreter_session(session_id)
                 else:
@@ -359,7 +359,7 @@ def validate_remediation_environment() -> str:
                 exc_info=True,
             )
 
-        # Format response
+        # 응답 서식 지정
         response = "# Remediation Environment Validation\n\n"
         response += f"**Validation Date**: {datetime.now(timezone.utc).isoformat()}\n\n"
 
@@ -406,10 +406,10 @@ def persist_remediation_scripts_to_s3(file_key: str, content: str) -> dict:
     try:
         s3_client = get_boto3_client("s3")
 
-        # Write to S3
+        # S3에 쓰기
         s3_client.put_object(Bucket=bucket_name, Key=file_key, Body=content.encode("utf-8"))
 
-        # Generate S3 URL
+        # S3 URL 생성
         s3_url = f"s3://{bucket_name}/{file_key}"
         https_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{file_key}"
 
@@ -450,7 +450,7 @@ def read_remediation_scripts_from_s3(prefix: str = "") -> dict:
 
         s3_client = get_boto3_client("s3")
 
-        # List objects
+        # 객체 나열
         list_params = {"Bucket": bucket_name, "MaxKeys": max_files}
         if prefix:
             list_params["Prefix"] = prefix
@@ -458,7 +458,7 @@ def read_remediation_scripts_from_s3(prefix: str = "") -> dict:
         logger.info(f"📋 Listing objects with params: {list_params}")
         response = s3_client.list_objects_v2(**list_params)
 
-        # FIX: Changed 'in' to 'not in' - return early only when NO files found
+        # 수정: 파일이 없을 때만 일찍 반환하도록 'in'을 'not in'으로 변경
         if "Contents" not in response:
             logger.warning(f"⚠️ No files found in s3://{bucket_name}/{prefix}")
             return {
@@ -481,18 +481,18 @@ def read_remediation_scripts_from_s3(prefix: str = "") -> dict:
         files_data = []
         total_size = 0
 
-        # Read each file
+        # 각 파일 읽기
         for obj in response["Contents"]:
             file_key = obj["Key"]
 
-            # Skip directories (keys ending with /)
+            # 디렉터리 건너뛰기(/로 끝나는 키)
             if file_key.endswith("/"):
                 logger.info(f"⏭️ Skipping directory: {file_key}")
                 continue
 
             logger.info(f"📄 Reading file: {file_key}")
             try:
-                # Read file content
+                # 파일 내용 읽기
                 file_response = s3_client.get_object(Bucket=bucket_name, Key=file_key)
                 content = file_response["Body"].read().decode("utf-8")
 
@@ -507,7 +507,7 @@ def read_remediation_scripts_from_s3(prefix: str = "") -> dict:
                 total_size += obj["Size"]
                 logger.info(f"✅ Read file: {file_key} ({obj['Size']} bytes)")
             except Exception as file_error:
-                # If a file can't be read, include error info but continue
+                # 파일을 읽을 수 없으면 오류 정보를 포함하고 계속 진행
                 logger.error(f"❌ Failed to read {file_key}: {type(file_error).__name__}: {str(file_error)}")
                 files_data.append(
                     {
@@ -561,16 +561,16 @@ def convert_timezone(time_str: str, from_tz: str, to_tz: str) -> str:
     from datetime import datetime
     from zoneinfo import ZoneInfo
 
-    # Parse input time
+    # 입력 시간 파싱
     dt = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
 
-    # Convert from source timezone
+    # 원본 시간대에서 변환
     if from_tz.upper() == "UTC":
         dt = dt.replace(tzinfo=ZoneInfo("UTC"))
     else:
         dt = dt.replace(tzinfo=ZoneInfo(from_tz))
 
-    # Convert to target timezone
+    # 대상 시간대로 변환
     if to_tz.upper() == "UTC":
         dt = dt.astimezone(ZoneInfo("UTC"))
     else:
@@ -834,7 +834,7 @@ After all the remediation and troubleshooting steps are completed, provide the b
         return f"Error: {type(e).__name__}: {str(e)}"
 
 
-# Add tool registration verification AFTER function definition
+# 함수 정의 후 도구 등록 확인 추가
 logger.info("✅ remediation_agent tool defined")
 # logger.info(f"🔍 Tool function callable: {callable(remediation_agent)}")
 
@@ -843,7 +843,7 @@ logger.info("✅ remediation_agent tool defined")
 # else:
 #    logger.warning("⚠️ Tool registration failed - this will cause MCP requests to fail!")
 
-# Initialize at module level
+# 모듈 수준에서 초기화
 logger.info("🚀 Initializing SRE Remediation Agent with FastMCP")
 initialize_code_interpreter_client()
 

@@ -2,7 +2,7 @@
 # Pre Token Generation Lambda
 # =============================================================================
 
-# --- IAM Role ---
+# --- IAM 역할 ---
 resource "aws_iam_role" "pre_token_lambda" {
   name = "PreTokenLambdaRole-${local.suffix}"
 
@@ -21,14 +21,14 @@ resource "aws_iam_role_policy_attachment" "pre_token_lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# --- Lambda Package ---
+# --- Lambda 패키지 ---
 data "archive_file" "pre_token_generation" {
   type        = "zip"
   source_dir  = "${path.module}/lambda_src/pre_token_generation"
   output_path = "${path.module}/.build/pre_token_generation.zip"
 }
 
-# --- Lambda Function ---
+# --- Lambda 함수 ---
 resource "aws_lambda_function" "pre_token_generation" {
   function_name    = "pre-token-generation-${local.suffix}"
   description      = "Pre Token Generation Lambda for Cognito User Pool"
@@ -39,7 +39,7 @@ resource "aws_lambda_function" "pre_token_generation" {
   source_code_hash = data.archive_file.pre_token_generation.output_base64sha256
 }
 
-# --- Cognito Permission to Invoke ---
+# --- Cognito 호출 권한 ---
 resource "aws_lambda_permission" "cognito_pre_token" {
   statement_id  = "cognito-trigger-permission"
   action        = "lambda:InvokeFunction"
@@ -52,7 +52,7 @@ resource "aws_lambda_permission" "cognito_pre_token" {
 # Gateway Interceptor Lambda
 # =============================================================================
 
-# --- IAM Role ---
+# --- IAM 역할 ---
 resource "aws_iam_role" "interceptor_lambda" {
   name = "InterceptorLambdaRole-${local.suffix}"
 
@@ -71,14 +71,14 @@ resource "aws_iam_role_policy_attachment" "interceptor_lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# --- Lambda Package ---
+# --- Lambda 패키지 ---
 data "archive_file" "gateway_interceptor" {
   type        = "zip"
   source_dir  = "${path.module}/lambda_src/gateway_interceptor"
   output_path = "${path.module}/.build/gateway_interceptor.zip"
 }
 
-# --- Lambda Function ---
+# --- Lambda 함수 ---
 resource "aws_lambda_function" "gateway_interceptor" {
   function_name    = "gateway-interceptor-${local.suffix}"
   description      = "Gateway Interceptor for AgentCore Gateway"

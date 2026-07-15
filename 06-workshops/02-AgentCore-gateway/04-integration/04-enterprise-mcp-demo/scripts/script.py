@@ -33,7 +33,7 @@ for el in output.split("\n"):
         config[key.strip().replace("EnterpriseMcpInfraStack.", "")] = value.strip()
 
 
-# Users to create - using email as username for Cognito
+# 생성할 사용자 - Cognito 사용자 이름으로 이메일 사용
 users = [
     {
         "COGNITO_USERNAME": "vscode-admin@example.com",
@@ -48,12 +48,12 @@ users = [
 cognito = boto3.client("cognito-idp")
 user_pool_id = config["UserPoolId"]
 
-# Create users with email as username
+        # 이메일을 사용자 이름으로 사용하여 사용자 생성
 for user in users:
     COGNITO_USERNAME = user["COGNITO_USERNAME"]
     COGNITO_PASSWORD = user["COGNITO_PASSWORD"]
     try:
-        # Create user with email as username
+                # 이메일을 사용자 이름으로 사용하여 사용자 생성
         cognito.admin_create_user(
             UserPoolId=user_pool_id,
             Username=COGNITO_USERNAME,

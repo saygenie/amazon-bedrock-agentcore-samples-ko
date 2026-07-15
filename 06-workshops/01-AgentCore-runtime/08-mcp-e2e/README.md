@@ -1,27 +1,27 @@
-# Stateful MCP Examples
+# Stateful MCP 예제
 
-End-to-end tutorials demonstrating MCP (Model Context Protocol) server and client features on Amazon Bedrock AgentCore Runtime.
+Amazon Bedrock AgentCore Runtime에서 MCP(Model Context Protocol) 서버 및 클라이언트 기능을 보여 주는 end-to-end 자습서입니다.
 
-## MCP Feature Support in AgentCore Runtime
+## AgentCore Runtime의 MCP 기능 지원
 
 <table>
   <thead>
     <tr>
-      <th>Category</th>
-      <th>Feature</th>
-      <th>Spec Methods</th>
+      <th>카테고리</th>
+      <th>기능</th>
+      <th>사양 Method</th>
       <th align="center">Runtime</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td rowspan="4"><strong>MCP Server Features</strong></td>
+      <td rowspan="4"><strong>MCP 서버 기능</strong></td>
       <td>Tools</td>
       <td><code>tools/list</code>, <code>tools/call</code></td>
       <td align="center">✅</td>
     </tr>
     <tr>
-      <td>Tools (output schema)</td>
+      <td>Tools(output schema)</td>
       <td><code>output schema</code></td>
       <td align="center">✅</td>
     </tr>
@@ -36,7 +36,7 @@ End-to-end tutorials demonstrating MCP (Model Context Protocol) server and clien
       <td align="center">✅</td>
     </tr>
     <tr>
-      <td rowspan="3"><strong>MCP Client Features</strong></td>
+      <td rowspan="3"><strong>MCP 클라이언트 기능</strong></td>
       <td>Sampling</td>
       <td><code>sampling/createMessage</code></td>
       <td align="center">✅</td>
@@ -52,24 +52,24 @@ End-to-end tutorials demonstrating MCP (Model Context Protocol) server and clien
       <td align="center">✅</td>
     </tr>
     <tr>
-      <td rowspan="2"><strong>MCP Base Protocol</strong></td>
-      <td>Lifecycle</td>
+      <td rowspan="2"><strong>MCP 기본 프로토콜</strong></td>
+      <td>수명 주기</td>
       <td><code>initialize</code>, <code>initialized</code>, <code>ping</code></td>
       <td align="center">✅</td>
     </tr>
     <tr>
-      <td>Transports</td>
+      <td>전송</td>
       <td><code>response streaming</code></td>
       <td align="center">✅</td>
     </tr>
     <tr>
-      <td rowspan="4"><strong>MCP Utilities</strong></td>
-      <td>Progress</td>
+      <td rowspan="4"><strong>MCP 유틸리티</strong></td>
+      <td>진행률</td>
       <td><code>notifications/progress</code></td>
       <td align="center">✅</td>
     </tr>
     <tr>
-      <td>Cancellation</td>
+      <td>취소</td>
       <td><code>notifications/cancelled</code></td>
       <td align="center">TBD</td>
     </tr>
@@ -79,74 +79,74 @@ End-to-end tutorials demonstrating MCP (Model Context Protocol) server and clien
       <td align="center">✅</td>
     </tr>
     <tr>
-      <td>Tasks</td>
+      <td>작업</td>
       <td><code>tasks/list</code>, <code>tasks/cancel</code></td>
       <td align="center">✅</td>
     </tr>
   </tbody>
 </table>
 
-> **Legend:** ✅ Supported &nbsp;|&nbsp; TBD To Be Determined
+> **범례:** ✅ 지원 &nbsp;|&nbsp; TBD 결정 예정
 
-## Project Structure
+## 프로젝트 구조
 
 ```
 Stateful/
-├── 1-server-e2e/          # MCP Server features (Tools, Resources, Prompts)
-├── 2-client-e2e/          # MCP Client features (Elicitation, Sampling, Roots)
-├── 3-utilities-e2e/       # MCP Utilities (Progress Notifications)
-└── helpers/               # Shared utilities for AWS services and deployment
+├── 1-server-e2e/          # MCP 서버 기능(Tools, Resources, Prompts)
+├── 2-client-e2e/          # MCP 클라이언트 기능(Elicitation, Sampling, Roots)
+├── 3-utilities-e2e/       # MCP 유틸리티(Progress Notifications)
+└── helpers/               # AWS 서비스 및 배포용 공유 유틸리티
 ```
 
-### 1. MCP Server Features (`1-server-e2e/`)
+### 1. MCP 서버 기능(`1-server-e2e/`)
 
-Complete tutorial demonstrating how to build and deploy an MCP server with all three core capabilities:
+세 가지 핵심 기능을 모두 갖춘 MCP 서버를 구축하고 배포하는 방법을 보여 주는 전체 자습서입니다.
 
-- **Tools**: Executable functions for expense tracking (add, list, get transactions)
-- **Resources**: Dynamic expense reports exposed as readable resources
-- **Prompts**: Pre-defined templates for expense analysis and categorization
+- **Tools**: 지출 추적용 실행 함수(transaction 추가, 목록 조회, 상세 조회)
+- **Resources**: 읽을 수 있는 resource로 제공되는 동적 지출 보고서
+- **Prompts**: 지출 분석 및 분류를 위한 미리 정의된 template
 
-**Tutorial:** [📓 mcp_server_features_e2e.ipynb](./01-server-e2e/mcp_server_features_e2e.ipynb)
+**자습서:** [📓 mcp_server_features_e2e.ipynb](./01-server-e2e/mcp_server_features_e2e.ipynb)
 
-**Includes:**
-- Deployment to AgentCore Runtime
-- DynamoDB integration for persistent storage
-- Cognito authentication setup
-- Real-world expense tracking example
+**포함 내용:**
+- AgentCore Runtime에 배포
+- 영구 저장을 위한 DynamoDB 통합
+- Cognito 인증 설정
+- 실제 지출 추적 예제
 
-### 2. MCP Client Features (`2-client-e2e/`)
+### 2. MCP 클라이언트 기능(`2-client-e2e/`)
 
-Demonstrates client-side MCP capabilities for advanced stateful interactions:
+고급 stateful 상호 작용을 위한 클라이언트 측 MCP 기능을 보여 줍니다.
 
-- **Elicitation**: Multi-turn interactive user input collection (e.g., guided expense entry)
-- **Sampling**: Server delegates LLM inference to client for AI-powered analysis
-- **Roots**: Client exposes file system roots to server (limited Runtime support)
+- **Elicitation**: 여러 턴에 걸친 대화형 사용자 입력 수집(예: 안내형 지출 입력)
+- **Sampling**: AI 기반 분석을 위해 서버가 LLM 추론을 클라이언트에 위임
+- **Roots**: 클라이언트가 파일 시스템 root를 서버에 노출(Runtime 지원 제한)
 
-**Tutorial:** [📓 mcp_client_features_e2e.ipynb](./02-client-e2e/mcp_client_features_e2e.ipynb)
+**자습서:** [📓 mcp_client_features_e2e.ipynb](./02-client-e2e/mcp_client_features_e2e.ipynb)
 
 
-### 3. MCP Utilities (`3-utilities-e2e/`)
+### 3. MCP 유틸리티(`3-utilities-e2e/`)
 
-Tutorials for MCP utility features that enhance user experience:
+사용자 경험을 개선하는 MCP 유틸리티 기능 자습서입니다.
 
-- **Progress Notifications**: Real-time execution updates during long-running operations
+- **Progress Notifications**: 장시간 작업 중 실시간 실행 업데이트
 
-**Tutorial:** [📓 01_progress.ipynb](./03-utilities-e2e/01_progress.ipynb)
+**자습서:** [📓 01_progress.ipynb](./03-utilities-e2e/01_progress.ipynb)
 
-**Demonstrates:**
-- Fire-and-forget progress updates (vs request/response like elicitation/sampling)
-- 5-step monthly financial report with live progress bar
-- `ctx.report_progress()` for streaming execution status
-- Custom `progress_handler` callback in client
+**주요 내용:**
+- Fire-and-forget 방식 진행률 업데이트(elicitation/sampling 같은 요청/응답 방식과 비교)
+- 실시간 progress bar를 사용하는 5단계 월간 재무 보고서
+- 실행 상태 스트리밍을 위한 `ctx.report_progress()`
+- 클라이언트의 사용자 지정 `progress_handler` callback
 
-### 4. Shared Utilities (`helpers/`)
+### 4. 공유 유틸리티(`helpers/`)
 
-Common utilities used across tutorials:
+자습서 전반에서 사용하는 공통 유틸리티입니다.
 
-- `utils.py`: AWS service helpers (Cognito, IAM, DynamoDB)
-- `dynamo_utils.py`: DynamoDB operations for finance tracking
+- `utils.py`: AWS 서비스 helper(Cognito, IAM, DynamoDB)
+- `dynamo_utils.py`: 재무 추적용 DynamoDB 작업
 
-**Usage in notebooks:**
+**Notebook 사용 예:**
 ```python
 import sys
 from pathlib import Path
@@ -156,21 +156,21 @@ from helpers.utils import get_or_create_cognito_pool
 from helpers.dynamo_utils import FinanceDB
 ```
 
-## Prerequisites
+## 사전 요구 사항
 
-- AWS CLI configured with appropriate permissions
-- Python 3.12+ (3.13 recommended for Runtime deployments)
-- Jupyter Notebook environment
-- Access to Amazon Bedrock AgentCore Runtime
-- AWS services: DynamoDB, Cognito, IAM
+- 적절한 권한으로 구성된 AWS CLI
+- Python 3.12+(Runtime 배포에는 3.13 권장)
+- Jupyter Notebook 환경
+- Amazon Bedrock AgentCore Runtime 액세스
+- AWS 서비스: DynamoDB, Cognito, IAM
 
 
 **AgentCore Runtime:**
-- Full authentication with Cognito
-- Managed infrastructure and scaling
+- Cognito를 통한 전체 인증
+- 관리형 인프라 및 확장
 
 
-## Resources
+## 리소스
 
-- [MCP Specification](https://modelcontextprotocol.io/specification/2025-11-25/server)
-- [AWS Bedrock AgentCore Documentation](https://docs.aws.amazon.com/bedrock-agentcore/)
+- [MCP 사양](https://modelcontextprotocol.io/specification/2025-11-25/server)
+- [AWS Bedrock AgentCore 문서](https://docs.aws.amazon.com/bedrock-agentcore/)

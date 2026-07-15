@@ -13,7 +13,7 @@ export interface ApiEksStackProps extends cdk.StackProps {
 	kubectlPrivateSubnetIds: string[];
 	vpc: ec2.IVpc;
 	certificateArn: string;
-	/** FQDN covered by the public certificate, e.g. "internal.example.com" */
+	/** Public Certificate가 적용되는 FQDN(예: "internal.example.com") */
 	privateDomain: string;
 }
 
@@ -30,7 +30,7 @@ export class ApiEksStack extends cdk.Stack {
 			kubectlLayer: new KubectlV31Layer(this, "KubectlLayer"),
 		});
 
-		// --- Kubernetes resources ---
+		// --- Kubernetes 리소스 ---
 		const namespace = cluster.addManifest("ApiNamespace", {
 			apiVersion: "v1",
 			kind: "Namespace",
@@ -84,7 +84,7 @@ export class ApiEksStack extends cdk.Stack {
 		});
 		deployment.node.addDependency(namespace);
 
-		// NLB created via Kubernetes Service type LoadBalancer with AWS annotations
+		// AWS annotation이 포함된 Kubernetes LoadBalancer 유형 Service를 통해 NLB 생성
 		const privateSubnetIds = props.kubectlPrivateSubnetIds.join(",");
 		const nlbService = cluster.addManifest("ApiNlbService", {
 			apiVersion: "v1",
@@ -118,9 +118,9 @@ export class ApiEksStack extends cdk.Stack {
 		});
 		nlbService.node.addDependency(deployment);
 
-		// Retain K8s manifests on stack deletion to avoid kubectl Lambda timeout.
-		// The NLB deprovisioning can exceed Lambda's 15-min limit, causing cdk destroy to hang.
-		// These resources are cleaned up when the EKS cluster is destroyed.
+		// kubectl Lambda 제한 시간을 피하도록 스택 삭제 시 K8s manifest를 유지함
+		// NLB 프로비저닝 해제에 Lambda의 15분 제한을 초과해 cdk destroy가 중단될 수 있음
+		// 이 리소스는 EKS Cluster가 삭제될 때 정리됨
 		for (const manifest of [namespace, deployment, nlbService]) {
 			manifest.node.findAll().forEach((child) => {
 				if (child instanceof cdk.CfnResource) {
@@ -130,10 +130,10 @@ export class ApiEksStack extends cdk.Stack {
 		}
 
 		// --- Route 53 Private Hosted Zone ---
-		// Empty zone associated with the VPC. The notebook adds an Alias A
-		// record pointing at the K8s-managed NLB once it's been provisioned
-		// (NLB DNS isn't known at deploy time). AgentCore's Resource Gateway
-		// uses Private DNS to resolve this domain — no routingDomain needed.
+		// VPC에 연결된 빈 Zone입니다. K8s 관리형 NLB가 프로비저닝되면
+		// Notebook에서 이를 가리키는 Alias A 레코드를 추가합니다.
+		// 배포 시점에는 NLB DNS를 알 수 없습니다. AgentCore Resource Gateway는
+		// Private DNS로 이 도메인을 확인하므로 routingDomain이 필요하지 않습니다.
 		const privateZone = new route53.PrivateHostedZone(this, "PrivateZone", {
 			zoneName: props.privateDomain,
 			vpc: props.vpc,

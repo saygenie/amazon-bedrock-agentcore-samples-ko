@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""PingFederate IdP stack — ECS Fargate, internal ALB, ECR, EFS."""
+"""ECS Fargate, 내부 ALB, ECR, EFS로 구성된 PingFederate IdP 스택입니다."""
 
 from aws_cdk import CfnOutput, CustomResource, Duration, RemovalPolicy, Stack
 from aws_cdk import aws_certificatemanager as acm
@@ -25,18 +25,18 @@ PING_FEDERATE_ADMIN_PORT = 9999
 
 
 class PingFederateStack(Stack):
-    """Deploy a self-hosted PingFederate IdP on ECS Fargate behind an internal ALB."""
+    """내부 ALB 뒤의 ECS Fargate에 자체 호스팅 PingFederate IdP를 배포합니다."""
 
     def __init__(self, scope: Construct, id: str, vpc: ec2.IVpc, config: CdkConfig, **kwargs):
-        """Initialize PingFederate stack."""
+        """PingFederate 스택을 초기화합니다."""
         super().__init__(scope, id, **kwargs)
 
         self.vpc = vpc
         self.ping_domain = config.ping_domain
 
-        # --- Public ACM Certificate (user-provided) ---
-        # AgentCore Identity requires a publicly trusted TLS certificate to connect
-        # to the private IdP via VPC Lattice. The ALB remains internal (not internet-facing).
+        # --- 퍼블릭 ACM 인증서(사용자 제공) ---
+        # AgentCore Identity가 VPC Lattice를 통해 프라이빗 IdP에 연결하려면
+        # 공개적으로 신뢰할 수 있는 TLS 인증서가 필요하며, ALB는 내부용으로 유지됨
         certificate = acm.Certificate.from_certificate_arn(self, "AlbCertificate", config.certificate_arn)
 
         # --- Secrets Manager ---
@@ -90,7 +90,7 @@ class PingFederateStack(Stack):
             dest=DockerImageName(f"{ecr_repo.repository_uri}:latest"),
         )
 
-        # --- ECS Cluster + Task Definition ---
+        # --- ECS 클러스터 + 태스크 정의 ---
         cluster = ecs.Cluster(
             self,
             "Cluster",
@@ -152,7 +152,7 @@ class PingFederateStack(Stack):
             ecs.PortMapping(container_port=PING_FEDERATE_ADMIN_PORT),
         )
 
-        # EFS volume
+        # EFS 볼륨
         task_def.add_volume(
             name="pingfederate-data",
             efs_volume_configuration=ecs.EfsVolumeConfiguration(
@@ -175,7 +175,7 @@ class PingFederateStack(Stack):
         file_system.grant_read_write(task_def.task_role)
         ping_secret.grant_read(execution_role)
 
-        # --- ECS Service ---
+        # --- ECS 서비스 ---
         service = ecs.FargateService(
             self,
             "Service",
@@ -189,7 +189,7 @@ class PingFederateStack(Stack):
 
         file_system.connections.allow_default_port_from(service)
 
-        # --- Internal ALB ---
+        # --- 내부 ALB ---
         alb_sg = ec2.SecurityGroup(
             self,
             "AlbSg",
@@ -238,7 +238,7 @@ class PingFederateStack(Stack):
             protocol=elbv2.ApplicationProtocol.HTTPS,
         )
 
-        # Admin API listener (port 9999) — used by the Lambda custom resource
+        # Lambda 사용자 지정 리소스에서 사용하는 Admin API 리스너(포트 9999)
         admin_listener = self.alb.add_listener(
             "AdminListener",
             port=PING_FEDERATE_ADMIN_PORT,
@@ -263,10 +263,10 @@ class PingFederateStack(Stack):
             protocol=elbv2.ApplicationProtocol.HTTPS,
         )
 
-        # --- Private Hosted Zone ---
-        # The VPC Lattice resource gateway resolves the discovery URL domain from within
-        # the VPC. A private hosted zone maps the certificate domain to the internal ALB
-        # so that AgentCore Identity can reach PingFederate via its public domain name.
+        # --- 프라이빗 호스팅 영역 ---
+        # VPC Lattice Resource Gateway는 VPC 내부에서 검색 URL 도메인을 확인함
+        # 프라이빗 호스팅 영역은 인증서 도메인을 내부 ALB에 매핑하여 AgentCore Identity가
+        # 퍼블릭 도메인 이름으로 PingFederate에 접근할 수 있게 함
         private_zone = route53.PrivateHostedZone(
             self,
             "PrivateZone",
@@ -280,7 +280,7 @@ class PingFederateStack(Stack):
             target=route53.RecordTarget.from_alias(targets.LoadBalancerTarget(self.alb)),
         )
 
-        # --- Lambda Custom Resource: Configure PingFederate ---
+        # --- Lambda 사용자 지정 리소스: PingFederate 구성 ---
         configure_fn = lambda_.Function(
             self,
             "ConfigurePingFedFn",
@@ -294,11 +294,11 @@ class PingFederateStack(Stack):
             log_retention=logs.RetentionDays.ONE_MONTH,
         )
 
-        # Allow the Lambda to reach the internal ALB (HTTPS on engine + admin ports)
+        # Lambda가 내부 ALB에 접근하도록 허용(엔진 및 관리 포트의 HTTPS)
         configure_fn.connections.allow_to(alb_sg, ec2.Port.tcp(443), "HTTPS to ALB engine")
         configure_fn.connections.allow_to(alb_sg, ec2.Port.tcp(PING_FEDERATE_ADMIN_PORT), "HTTPS to ALB admin")
 
-        # Allow the Lambda to read the admin password from Secrets Manager
+        # Lambda가 Secrets Manager에서 관리자 암호를 읽도록 허용
         ping_secret.grant_read(configure_fn)
 
         admin_url = f"https://{self.alb.load_balancer_dns_name}:{PING_FEDERATE_ADMIN_PORT}"
@@ -317,7 +317,7 @@ class PingFederateStack(Stack):
         )
         configure_resource.node.add_dependency(service)
 
-        # --- Outputs ---
+        # --- 출력 ---
         self.discovery_url = f"https://{self.ping_domain}/.well-known/openid-configuration"
 
         CfnOutput(self, "SecretName", value=ping_secret.secret_name)

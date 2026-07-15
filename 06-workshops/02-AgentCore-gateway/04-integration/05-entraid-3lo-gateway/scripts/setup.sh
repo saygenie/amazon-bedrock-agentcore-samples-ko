@@ -2,22 +2,22 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 # =============================================================================
-# Full automated setup: EntraID app registrations + AWS deployment.
+# 전체 자동 설정: EntraID 앱 등록 + AWS 배포
 #
-# Creates both EntraID app registrations (App A + App B), the AWS OAuth
-# credential provider, deploys the CDK stack, and wires everything together
-# (redirect URIs, workload identity return URLs).
+# EntraID 앱 등록(App A + App B)과 AWS OAuth credential provider를 생성하고,
+# CDK 스택을 배포한 다음 모든 요소(redirect URI, workload identity return URL)를
+# 연결합니다.
 #
-# Usage:
+# 사용법:
 #   ./setup.sh \
 #     --tenant-id <entra-tenant-id> \
 #     --tenant-type <ciam|standard> \
-#     --ciam-domain <domain>          # only for ciam tenants \
+#     --ciam-domain <domain>          # ciam tenant에만 사용 \
 #     --region <aws-region> \
 #     --stack-name <cfn-stack-name> \
-#     --suffix <resource-suffix>       # optional, for parallel deployments
+#     --suffix <resource-suffix>       # 선택 사항, 병렬 배포용
 #
-# Example (CIAM tenant):
+# 예(CIAM tenant):
 #   ./setup.sh \
 #     --tenant-id 00000000-0000-0000-0000-000000000000 \
 #     --tenant-type ciam \
@@ -26,23 +26,23 @@
 #     --stack-name MyEntraIdStack \
 #     --suffix v2
 #
-# Example (standard tenant):
+# 예(표준 tenant):
 #   ./setup.sh \
 #     --tenant-id abcd1234-... \
 #     --tenant-type standard \
 #     --region us-east-1 \
 #     --stack-name EntraIdProd
 #
-# Prerequisites:
+# 사전 요구 사항:
 #   - Azure CLI: az login --tenant <tenant-id> --allow-no-subscriptions
-#   - AWS CLI v2 configured with credentials
+#   - 자격 증명이 구성된 AWS CLI v2
 #   - Node.js 18+, npm, CDK CLI
-#   - jq installed
+#   - jq 설치
 # =============================================================================
 
 set -euo pipefail
 
-# --- Defaults ---
+# --- 기본값 ---
 TENANT_ID=""
 TENANT_TYPE="standard"
 CIAM_DOMAIN=""
@@ -52,7 +52,7 @@ SUFFIX=""
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CDK_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# --- Parse arguments ---
+# --- 인자 파싱 ---
 while [[ $# -gt 0 ]]; do
   case $1 in
     --tenant-id) TENANT_ID="$2"; shift 2 ;;
@@ -65,7 +65,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# --- Validate ---
+# --- 검증 ---
 if [ -z "$TENANT_ID" ] || [ -z "$AWS_REGION" ] || [ -z "$STACK_NAME" ]; then
   echo "Usage: $0 --tenant-id <id> --region <region> --stack-name <name> [--tenant-type ciam|standard] [--ciam-domain <domain>] [--suffix <suffix>]"
   exit 1
@@ -76,7 +76,7 @@ if [ "$TENANT_TYPE" = "ciam" ] && [ -z "$CIAM_DOMAIN" ]; then
   exit 1
 fi
 
-# Derive authority host
+# authority host 파생
 if [ "$TENANT_TYPE" = "ciam" ]; then
   AUTHORITY_HOST="${CIAM_DOMAIN}.ciamlogin.com"
 else
@@ -102,12 +102,12 @@ echo "  Provider name: $PROVIDER_NAME"
 echo "============================================="
 echo ""
 
-# --- Helper: get Graph API token ---
+# --- 헬퍼: Graph API 토큰 가져오기 ---
 get_graph_token() {
   az account get-access-token --resource https://graph.microsoft.com --tenant "$TENANT_ID" --query accessToken -o tsv 2>/dev/null
 }
 
-# --- Step 1: Create App A (SPA, public client) ---
+# --- 1단계: App A 생성(SPA, public client) ---
 echo "=== Step 1: Create App A (inbound auth, SPA) ==="
 TOKEN=$(get_graph_token)
 
@@ -141,9 +141,9 @@ if [ "$APP_A_OBJECT_ID" = "null" ] || [ -z "$APP_A_OBJECT_ID" ]; then
 fi
 echo "✓ App A created: $APP_A_CLIENT_ID (object: $APP_A_OBJECT_ID)"
 
-# Set Application ID URI and expose gateway.access scope
+# Application ID URI를 설정하고 gateway.access scope 공개
 echo "→ Setting Application ID URI and exposing gateway.access scope..."
-sleep 2  # Graph API needs a moment after app creation
+sleep 2  # 앱 생성 후 Graph API에 잠시 시간이 필요함
 
 curl -s -X PATCH "https://graph.microsoft.com/v1.0/applications/$APP_A_OBJECT_ID" \
   -H "Authorization: Bearer $TOKEN" \
@@ -169,7 +169,7 @@ curl -s -X PATCH "https://graph.microsoft.com/v1.0/applications/$APP_A_OBJECT_ID
 
 echo "✓ Exposed scope: api://$APP_A_CLIENT_ID/gateway.access"
 
-# Create service principal for App A (required for token issuance)
+# App A의 service principal 생성(토큰 발급에 필요)
 echo "→ Creating service principal for App A..."
 curl -s -X POST "https://graph.microsoft.com/v1.0/servicePrincipals" \
   -H "Authorization: Bearer $TOKEN" \
@@ -179,7 +179,7 @@ echo "✓ Service principal created"
 
 echo ""
 
-# --- Step 2: Create App B (Web, confidential client) ---
+# --- 2단계: App B 생성(Web, confidential client) ---
 echo "=== Step 2: Create App B (outbound auth, confidential) ==="
 
 APP_B_NAME="agentcore-weather-api"
@@ -209,7 +209,7 @@ if [ "$APP_B_OBJECT_ID" = "null" ] || [ -z "$APP_B_OBJECT_ID" ]; then
 fi
 echo "✓ App B created: $APP_B_CLIENT_ID (object: $APP_B_OBJECT_ID)"
 
-# Set Application ID URI and expose weather.read scope
+# Application ID URI를 설정하고 weather.read scope 공개
 echo "→ Setting Application ID URI and exposing weather.read scope..."
 sleep 2
 
@@ -237,7 +237,7 @@ curl -s -X PATCH "https://graph.microsoft.com/v1.0/applications/$APP_B_OBJECT_ID
 
 echo "✓ Exposed scope: api://$APP_B_CLIENT_ID/weather.read"
 
-# Create client secret for App B
+# App B의 client secret 생성
 echo "→ Creating client secret for App B..."
 SECRET_RESPONSE=$(curl -s -X POST "https://graph.microsoft.com/v1.0/applications/$APP_B_OBJECT_ID/addPassword" \
   -H "Authorization: Bearer $TOKEN" \
@@ -252,7 +252,7 @@ if [ "$APP_B_SECRET" = "null" ] || [ -z "$APP_B_SECRET" ]; then
 fi
 echo "✓ Client secret created"
 
-# Create service principal for App B
+# App B의 service principal 생성
 echo "→ Creating service principal for App B..."
 curl -s -X POST "https://graph.microsoft.com/v1.0/servicePrincipals" \
   -H "Authorization: Bearer $TOKEN" \
@@ -262,16 +262,16 @@ echo "✓ Service principal created"
 
 echo ""
 
-# --- Step 3: Create OAuth Credential Provider (AWS) ---
+# --- 3단계: OAuth Credential Provider 생성(AWS) ---
 echo "=== Step 3: Create OAuth Credential Provider ==="
 
-# Build the provider config based on tenant type
+# tenant 유형에 따라 provider 구성
 if [ "$TENANT_TYPE" = "ciam" ]; then
   VENDOR="CustomOauth2"
   PROVIDER_CONFIG="{\"customOauth2ProviderConfig\":{\"oauthDiscovery\":{\"discoveryUrl\":\"$DISCOVERY_URL\"},\"clientId\":\"$APP_B_CLIENT_ID\",\"clientSecret\":\"$APP_B_SECRET\"}}"
 else
   VENDOR="CustomOauth2"
-  # Even for standard tenants, use CustomOauth2 for explicit control over discovery URL
+  # 표준 tenant에서도 discovery URL을 명시적으로 제어하기 위해 CustomOauth2 사용
   PROVIDER_CONFIG="{\"customOauth2ProviderConfig\":{\"oauthDiscovery\":{\"discoveryUrl\":\"$DISCOVERY_URL\"},\"clientId\":\"$APP_B_CLIENT_ID\",\"clientSecret\":\"$APP_B_SECRET\"}}"
 fi
 
@@ -299,7 +299,7 @@ echo "  Callback: $OAUTH_CALLBACK_URL"
 
 echo ""
 
-# --- Step 4: Register OAuth callback URL in App B ---
+# --- 4단계: App B에 OAuth 콜백 URL 등록 ---
 echo "=== Step 4: Register callback URL in App B ==="
 TOKEN=$(get_graph_token)
 
@@ -312,12 +312,12 @@ curl -s -X PATCH "https://graph.microsoft.com/v1.0/applications/$APP_B_OBJECT_ID
 echo "✓ Redirect URI registered in App B"
 echo ""
 
-# --- Step 5: Deploy CDK Stack ---
+# --- 5단계: CDK 스택 배포 ---
 echo "=== Step 5: Deploy CDK Stack ==="
 echo "→ Installing dependencies..."
 npm install --prefix "$CDK_DIR" --silent 2>/dev/null
 
-# Create deployment-specific OpenAPI spec with placeholder URL (updated after deploy)
+# 자리 표시자 URL로 배포별 OpenAPI spec 생성(배포 후 업데이트)
 OPENAPI_SOURCE="$CDK_DIR/openapi/weather-api.json"
 OPENAPI_FILE="$CDK_DIR/openapi/weather-api-${STACK_NAME}.json"
 
@@ -334,7 +334,7 @@ echo "$INIT_SPEC" > "$OPENAPI_FILE"
 
 echo "→ Deploying stack: $STACK_NAME"
 
-# Build CDK context args
+# CDK context 인자 구성
 CDK_CONTEXT="-c stackName=$STACK_NAME"
 CDK_CONTEXT="$CDK_CONTEXT -c entra:tenantId=$TENANT_ID"
 CDK_CONTEXT="$CDK_CONTEXT -c entra:appAClientId=$APP_A_CLIENT_ID"
@@ -354,7 +354,7 @@ fi
 
 CDK_CONTEXT="$CDK_CONTEXT -c openapi:path=$OPENAPI_FILE"
 
-# Check if an OIDC provider already exists for this issuer (same tenant = same issuer)
+# 이 issuer의 OIDC provider가 이미 있는지 확인(같은 tenant = 같은 issuer)
 ISSUER_HOST_FOR_OIDC=""
 if [ "$TENANT_TYPE" = "ciam" ]; then
   ISSUER_HOST_FOR_OIDC="${TENANT_ID}.ciamlogin.com"
@@ -374,7 +374,7 @@ done)
 if [ -n "$EXISTING_OIDC_ARN" ]; then
   echo "  (Reusing existing OIDC provider: $EXISTING_OIDC_ARN)"
   CDK_CONTEXT="$CDK_CONTEXT -c oidc:providerArn=$EXISTING_OIDC_ARN"
-  # Ensure our App A client ID is in the OIDC provider's audience list
+  # OIDC provider의 audience 목록에 App A client ID가 있는지 확인
   aws iam add-client-id-to-open-id-connect-provider \
     --open-id-connect-provider-arn "$EXISTING_OIDC_ARN" \
     --client-id "$APP_A_CLIENT_ID" \
@@ -382,10 +382,10 @@ if [ -n "$EXISTING_OIDC_ARN" ]; then
   echo "  (Ensured App A client ID in OIDC audience list)"
 fi
 
-# Deploy
+# 배포
 CDK_DEFAULT_REGION="$AWS_REGION" npx cdk deploy $STACK_NAME --require-approval never $CDK_CONTEXT --app "npx ts-node --prefer-ts-exts bin/cdk.ts" --output "cdk.out-${STACK_NAME}" 2>&1 | tee /tmp/cdk-deploy-$$.log
 
-# Extract outputs from CloudFormation
+# CloudFormation에서 출력 추출
 echo ""
 echo "→ Reading stack outputs..."
 OUTPUTS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$AWS_REGION" --query "Stacks[0].Outputs" --output json)
@@ -403,11 +403,11 @@ echo "  API Endpoint: $API_ENDPOINT"
 echo "  Gateway ID:   $GATEWAY_ID"
 echo ""
 
-# --- Step 6: Register API Gateway redirect URIs in App A ---
+# --- 6단계: App A에 API Gateway redirect URI 등록 ---
 echo "=== Step 6: Register redirect URIs in App A ==="
 TOKEN=$(get_graph_token)
 
-# Read existing SPA redirect URIs and add the new ones
+# 기존 SPA redirect URI를 읽고 새 URI 추가
 EXISTING_URIS=$(curl -s -H "Authorization: Bearer $TOKEN" \
   "https://graph.microsoft.com/v1.0/applications/$APP_A_OBJECT_ID" | jq -r '.spa.redirectUris // []')
 
@@ -428,7 +428,7 @@ curl -s -X PATCH "https://graph.microsoft.com/v1.0/applications/$APP_A_OBJECT_ID
 echo "✓ Redirect URIs registered in App A"
 echo ""
 
-# --- Step 7: Update workload identity return URLs ---
+# --- 7단계: workload identity return URL 업데이트 ---
 echo "=== Step 7: Update workload identity return URLs ==="
 echo "→ Setting allowed return URL: $API_ENDPOINT/auth/callback"
 
@@ -440,15 +440,15 @@ aws bedrock-agentcore-control update-workload-identity \
 echo "✓ Workload identity updated"
 echo ""
 
-# --- Step 8: Update OpenAPI spec and redeploy ---
+# --- 8단계: OpenAPI spec 업데이트 및 재배포 ---
 echo "=== Step 8: Update OpenAPI spec with API endpoint ==="
 
-# Create a deployment-specific copy of the OpenAPI spec (preserves the original)
+# OpenAPI spec의 배포별 복사본 생성(원본 유지)
 OPENAPI_SOURCE="$CDK_DIR/openapi/weather-api.json"
 OPENAPI_FILE="$CDK_DIR/openapi/weather-api-${STACK_NAME}.json"
 cp "$OPENAPI_SOURCE" "$OPENAPI_FILE"
 
-# Update server URL and security scheme URLs
+# 서버 URL 및 security scheme URL 업데이트
 UPDATED_SPEC=$(jq --arg url "$API_ENDPOINT" \
   --arg tenant_id "$TENANT_ID" \
   --arg authority_host "$AUTHORITY_HOST" \
@@ -469,7 +469,7 @@ CDK_DEFAULT_REGION="$AWS_REGION" npx cdk deploy $STACK_NAME --require-approval n
 echo "✓ Redeployment complete"
 echo ""
 
-# --- Done ---
+# --- 완료 ---
 echo "============================================="
 echo "  Setup Complete"
 echo "============================================="
@@ -494,7 +494,7 @@ echo "      }"
 echo "    }"
 echo "  }"
 echo ""
-# Get tenant domain for the demo user hint
+# 데모 사용자 안내를 위한 tenant 도메인 가져오기
 TENANT_DOMAIN=$(curl -s -H "Authorization: Bearer $(get_graph_token)" \
   "https://graph.microsoft.com/v1.0/domains?\$top=1" | jq -r '.value[0].id // empty')
 if [ -z "$TENANT_DOMAIN" ]; then
@@ -507,7 +507,7 @@ echo ""
 echo "  Test at: $API_ENDPOINT/auth"
 echo ""
 
-# --- Step 9: Generate env file for redeploy-cdk.sh ---
+# --- 9단계: redeploy-cdk.sh용 환경 파일 생성 ---
 ENV_FILE="$CDK_DIR/.env.${STACK_NAME}"
 cat > "$ENV_FILE" <<EOF
 # Generated by setup.sh on $(date -u +"%Y-%m-%dT%H:%M:%SZ")

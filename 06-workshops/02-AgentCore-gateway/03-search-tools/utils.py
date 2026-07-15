@@ -21,7 +21,7 @@ IAM_TRUST_POLICY = {
     ],
 }
 
-# AgentCore Gateway IAM Role constants
+# AgentCore Gateway IAM 역할 상수
 GATEWAY_AGENTCORE_ROLE_NAME = "GatewaySearchAgentCoreRole"
 GATEWAY_AGENTCORE_TRUST_POLICY = {
     "Version": "2012-10-17",
@@ -36,7 +36,7 @@ GATEWAY_AGENTCORE_TRUST_POLICY = {
 
 GATEWAY_AGENTCORE_POLICY_NAME = "BedrockAgentPolicy"
 
-# Cognito configuration constants
+# Cognito 구성 상수
 COGNITO_POOL_NAME = "MCPServerPool"
 COGNITO_CLIENT_NAME = "MCPServerPoolClient"
 COGNITO_PASSWORD_MIN_LENGTH = 8
@@ -50,12 +50,12 @@ COGNITO_PASSWORD_POLICY = {"PasswordPolicy": {"MinimumLength": COGNITO_PASSWORD_
 
 
 def _format_error_message(error: ClientError) -> str:
-    """Format error message from ClientError."""
+    """ClientError의 오류 메시지를 구성합니다."""
     return f"{error.response['Error']['Code']}-{error.response['Error']['Message']}"
 
 
 def _create_or_get_iam_role(iam_client, role_name: str) -> str:
-    """Create IAM role or return existing role ARN."""
+    """IAM 역할을 생성하거나 기존 역할 ARN을 반환합니다."""
     try:
         print("Creating IAM role for lambda function")
         response = iam_client.create_role(
@@ -85,7 +85,7 @@ def _create_or_get_iam_role(iam_client, role_name: str) -> str:
 
 
 def _create_or_get_lambda_function(lambda_client, function_name: str, role_arn: str, code: bytes) -> str:
-    """Create Lambda function or return existing function ARN."""
+    """Lambda 함수를 생성하거나 기존 함수 ARN을 반환합니다."""
     try:
         print("Creating lambda function")
         response = lambda_client.create_function(
@@ -110,14 +110,14 @@ def _create_or_get_lambda_function(lambda_client, function_name: str, role_arn: 
 
 
 def create_gateway_lambda(lambda_function_code_path: str, lambda_function_name: str) -> Dict[str, Union[str, int]]:
-    """Create AWS Lambda function with IAM role for AgentCore Gateway.
+    """AgentCore Gateway용 IAM 역할이 있는 AWS Lambda 함수를 생성합니다.
 
-    Args:
-        lambda_function_code_path: Path to the Lambda function code zip file
-        lambda_function_name: Name for the Lambda function
+    인수:
+        lambda_function_code_path: Lambda 함수 코드 zip 파일 경로
+        lambda_function_name: Lambda 함수 이름
 
-    Returns:
-        Dictionary with 'lambda_function_arn' and 'exit_code' keys
+    반환값:
+        'lambda_function_arn' 및 'exit_code' 키가 있는 딕셔너리
     """
     session = boto3.Session()
     region = session.region_name
@@ -155,7 +155,7 @@ def create_gateway_lambda(lambda_function_code_path: str, lambda_function_name: 
 
 
 def _create_cognito_user_pool(cognito_client, pool_name: str) -> str:
-    """Create Cognito User Pool and return pool ID."""
+    """Cognito User Pool을 생성하고 풀 ID를 반환합니다."""
     print(f"Creating Cognito User Pool: {pool_name}")
     response = cognito_client.create_user_pool(PoolName=pool_name, Policies=COGNITO_PASSWORD_POLICY)
     pool_id = response["UserPool"]["Id"]
@@ -164,7 +164,7 @@ def _create_cognito_user_pool(cognito_client, pool_name: str) -> str:
 
 
 def _create_cognito_app_client(cognito_client, pool_id: str, client_name: str) -> str:
-    """Create Cognito App Client and return client ID."""
+    """Cognito App Client를 생성하고 클라이언트 ID를 반환합니다."""
     print(f"Creating Cognito App Client: {client_name}")
     response = cognito_client.create_user_pool_client(
         UserPoolId=pool_id,
@@ -184,7 +184,7 @@ def _create_cognito_user(
     temp_password: str,
     permanent_password: str,
 ) -> None:
-    """Create Cognito user with temporary password and set permanent password."""
+    """임시 암호로 Cognito 사용자를 생성하고 영구 암호를 설정합니다."""
     print(f"Creating Cognito user: {username}")
     cognito_client.admin_create_user(
         UserPoolId=pool_id,
@@ -203,7 +203,7 @@ def _create_cognito_user(
 
 
 def _authenticate_user(cognito_client, client_id: str, username: str, password: str) -> str:
-    """Authenticate user and return access token."""
+    """사용자를 인증하고 액세스 토큰을 반환합니다."""
     print(f"Authenticating user: {username}")
     auth_response = cognito_client.initiate_auth(
         ClientId=client_id,
@@ -214,16 +214,16 @@ def _authenticate_user(cognito_client, client_id: str, username: str, password: 
 
 
 def get_bearer_token(client_id: str, username: str, password: str, region: Optional[str] = None) -> Optional[str]:
-    """Get bearer token from existing Cognito User Pool.
+    """기존 Cognito User Pool에서 bearer token을 가져옵니다.
 
-    Args:
+    인수:
         client_id: Cognito App Client ID
-        username: Username for authentication
-        password: User password
-        region: AWS region (if None, uses session default)
+        username: 인증할 사용자 이름
+        password: 사용자 암호
+        region: AWS 리전(None이면 세션 기본값 사용)
 
-    Returns:
-        Bearer token string or None if authentication fails
+    반환값:
+        bearer token 문자열. 인증에 실패하면 None
     """
     if not region:
         session = boto3.Session()
@@ -264,15 +264,15 @@ def create_gateway_iam_role(
     role_name: str = GATEWAY_AGENTCORE_ROLE_NAME,
     policy_name: str = GATEWAY_AGENTCORE_POLICY_NAME,
 ) -> Optional[str]:
-    """Create IAM role for AgentCore Gateway with Lambda invoke permissions.
+    """Lambda 호출 권한이 있는 AgentCore Gateway용 IAM 역할을 생성합니다.
 
-    Args:
-        lambda_arns: List of Lambda function ARNs to grant invoke permissions
-        role_name: Name for the IAM role
-        policy_name: Name for the inline policy
+    인수:
+        lambda_arns: 호출 권한을 부여할 Lambda 함수 ARN 목록
+        role_name: IAM 역할 이름
+        policy_name: 인라인 정책 이름
 
-    Returns:
-        Role ARN string or None if creation fails
+    반환값:
+        역할 ARN 문자열. 생성에 실패하면 None
     """
     session = boto3.Session()
     region = session.region_name
@@ -280,7 +280,7 @@ def create_gateway_iam_role(
     iam_client = boto3.client("iam", region_name=region)
 
     try:
-        # Create the IAM role
+        # IAM 역할 생성
         print(f"Creating IAM role: {role_name}")
         response = iam_client.create_role(
             RoleName=role_name,
@@ -289,7 +289,7 @@ def create_gateway_iam_role(
         )
         role_arn = response["Role"]["Arn"]
 
-        # Create the inline policy document
+        # 인라인 정책 문서 생성
         policy_document = {
             "Version": "2012-10-17",
             "Statement": [
@@ -302,7 +302,7 @@ def create_gateway_iam_role(
             ],
         }
 
-        # Attach the inline policy
+        # 인라인 정책 연결
         print(f"Attaching policy: {policy_name}")
         iam_client.put_role_policy(
             RoleName=role_name,
@@ -319,7 +319,7 @@ def create_gateway_iam_role(
             response = iam_client.get_role(RoleName=role_name)
             role_arn = response["Role"]["Arn"]
 
-            # Update the policy if role exists
+            # 역할이 있으면 정책 업데이트
             try:
                 policy_document = {
                     "Version": "2012-10-17",
@@ -354,33 +354,33 @@ def create_gateway_iam_role(
 
 
 def _extract_function_name_from_arn(lambda_arn: str) -> str:
-    """Extract function name from Lambda ARN.
+    """Lambda ARN에서 함수 이름을 추출합니다.
 
-    Args:
-        lambda_arn: Lambda function ARN
+    인수:
+        lambda_arn: Lambda 함수 ARN
 
-    Returns:
-        Function name extracted from ARN
+    반환값:
+        ARN에서 추출한 함수 이름
 
-    Example:
+    예:
         arn:aws:lambda:us-east-1:123456789012:function:my-function -> my-function
     """
-    # ARN format: arn:aws:lambda:region:account:function:function-name
+    # ARN 형식: arn:aws:lambda:region:account:function:function-name
     if lambda_arn.startswith("arn:aws:lambda:"):
         return lambda_arn.split(":")[-1]
     else:
-        # If it's already a function name, return as is
+    # 이미 함수 이름이면 그대로 반환
         return lambda_arn
 
 
 def delete_gateway_lambda(lambda_function_arn: str) -> bool:
-    """Delete Lambda function and associated IAM role.
+    """Lambda 함수와 연결된 IAM 역할을 삭제합니다.
 
-    Args:
-        lambda_function_arn: ARN or name of the Lambda function to delete
+    인수:
+        lambda_function_arn: 삭제할 Lambda 함수의 ARN 또는 이름
 
-    Returns:
-        True if deletion successful, False otherwise
+    반환값:
+        삭제에 성공하면 True, 그렇지 않으면 False
     """
     session = boto3.Session()
     region = session.region_name
@@ -388,17 +388,17 @@ def delete_gateway_lambda(lambda_function_arn: str) -> bool:
     lambda_client = boto3.client("lambda", region_name=region)
     iam_client = boto3.client("iam", region_name=region)
 
-    # Extract function name from ARN
+        # ARN에서 함수 이름 추출
     lambda_function_name = _extract_function_name_from_arn(lambda_function_arn)
     role_name = f"{lambda_function_name}_lambda_iamrole"
 
     try:
-        # Delete Lambda function (can use ARN or name)
+        # Lambda 함수 삭제(ARN 또는 이름 사용 가능)
         print(f"Deleting Lambda function: {lambda_function_name}")
         lambda_client.delete_function(FunctionName=lambda_function_arn)
         print(f"Lambda function {lambda_function_name} deleted successfully")
 
-        # Delete IAM role and detach policies
+        # IAM 역할 삭제 및 정책 분리
         try:
             print(f"Detaching policies from IAM role: {role_name}")
             iam_client.detach_role_policy(
@@ -435,14 +435,14 @@ def delete_gateway_iam_role(
     role_name: str = GATEWAY_AGENTCORE_ROLE_NAME,
     policy_name: str = GATEWAY_AGENTCORE_POLICY_NAME,
 ) -> bool:
-    """Delete IAM role for AgentCore Gateway.
+    """AgentCore Gateway용 IAM 역할을 삭제합니다.
 
-    Args:
-        role_name: Name of the IAM role to delete
-        policy_name: Name of the inline policy to delete
+    인수:
+        role_name: 삭제할 IAM 역할 이름
+        policy_name: 삭제할 인라인 정책 이름
 
-    Returns:
-        True if deletion successful, False otherwise
+    반환값:
+        삭제에 성공하면 True, 그렇지 않으면 False
     """
     session = boto3.Session()
     region = session.region_name
@@ -450,7 +450,7 @@ def delete_gateway_iam_role(
     iam_client = boto3.client("iam", region_name=region)
 
     try:
-        # Delete inline policy first
+        # 인라인 정책을 먼저 삭제
         print(f"Deleting inline policy: {policy_name}")
         iam_client.delete_role_policy(
             RoleName=role_name,
@@ -458,7 +458,7 @@ def delete_gateway_iam_role(
         )
         print(f"Inline policy {policy_name} deleted successfully")
 
-        # Delete IAM role
+        # IAM 역할 삭제
         print(f"Deleting IAM role: {role_name}")
         iam_client.delete_role(RoleName=role_name)
         print(f"IAM role {role_name} deleted successfully")
@@ -482,14 +482,14 @@ def delete_cognito_user_pool(
     pool_name: str = COGNITO_POOL_NAME,
     username: str = COGNITO_DEFAULT_USERNAME,
 ) -> bool:
-    """Delete Cognito User Pool and associated resources.
+    """Cognito User Pool과 연결된 리소스를 삭제합니다.
 
-    Args:
-        pool_name: Name of the Cognito User Pool to delete
-        username: Username to delete from the pool
+    인수:
+        pool_name: 삭제할 Cognito User Pool 이름
+        username: 풀에서 삭제할 사용자 이름
 
-    Returns:
-        True if deletion successful, False otherwise
+    반환값:
+        삭제에 성공하면 True, 그렇지 않으면 False
     """
     session = boto3.Session()
     region = session.region_name
@@ -497,7 +497,7 @@ def delete_cognito_user_pool(
     cognito_client = boto3.client("cognito-idp", region_name=region)
 
     try:
-        # Find the User Pool by name
+        # 이름으로 User Pool 찾기
         print(f"Finding User Pool: {pool_name}")
         response = cognito_client.list_user_pools(MaxResults=50)
 
@@ -511,7 +511,7 @@ def delete_cognito_user_pool(
             print(f"User Pool {pool_name} not found")
             return False
 
-        # Delete user first
+        # 사용자를 먼저 삭제
         try:
             print(f"Deleting user: {username}")
             cognito_client.admin_delete_user(
@@ -525,7 +525,7 @@ def delete_cognito_user_pool(
             else:
                 print(f"Warning: Could not delete user: {_format_error_message(user_error)}")
 
-        # Delete User Pool (this will also delete app clients)
+        # User Pool 삭제(App Client도 함께 삭제됨)
         print(f"Deleting User Pool: {pool_name}")
         cognito_client.delete_user_pool(UserPoolId=pool_id)
         print(f"User Pool {pool_name} deleted successfully")
@@ -548,17 +548,17 @@ def setup_cognito_user_pool(
     temp_password: str = COGNITO_DEFAULT_TEMP_PASSWORD,
     permanent_password: str = COGNITO_DEFAULT_PASSWORD,
 ) -> Optional[Dict[str, str]]:
-    """Set up Cognito User Pool with app client and test user.
+    """App Client와 테스트 사용자가 있는 Cognito User Pool을 설정합니다.
 
-    Args:
-        pool_name: Name for the Cognito User Pool
-        client_name: Name for the App Client
-        username: Username for the test user
-        temp_password: Temporary password for the test user
-        permanent_password: Permanent password for the test user
+    인수:
+        pool_name: Cognito User Pool 이름
+        client_name: App Client 이름
+        username: 테스트 사용자 이름
+        temp_password: 테스트 사용자의 임시 암호
+        permanent_password: 테스트 사용자의 영구 암호
 
-    Returns:
-        Dictionary with client_id and discovery_url or None if setup fails
+    반환값:
+        client_id 및 discovery_url이 있는 딕셔너리. 설정에 실패하면 None
     """
     session = boto3.Session()
     region = session.region_name
@@ -573,7 +573,7 @@ def setup_cognito_user_pool(
 
         discovery_url = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/openid-configuration"
 
-        # Output the required values
+        # 필요한 값 출력
         print(f"Pool ID: {pool_id}")
         print(f"Discovery URL: {discovery_url}")
         print(f"Client ID: {client_id}")

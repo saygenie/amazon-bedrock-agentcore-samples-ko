@@ -1,9 +1,8 @@
 """
-AWS Systems Manager Parameter Store abstraction layer
-Handles all read/write operations for workshop parameters
+AWS Systems Manager Parameter Store 추상화 계층
+Workshop 파라미터의 모든 읽기/쓰기 작업을 처리합니다.
 
-Provides a clean interface for storing and retrieving deployment values
-across multiple AWS accounts and regions.
+여러 AWS 계정과 리전에서 배포 값을 저장하고 가져오는 간결한 인터페이스를 제공합니다.
 """
 
 import boto3
@@ -11,9 +10,9 @@ from lab_helpers.constants import PARAMETER_PATHS
 from lab_helpers.config import AWS_REGION as DEFAULT_AWS_REGION
 
 
-# Initialize SSM client (region will be specified per call if needed)
+# SSM 클라이언트 초기화(필요하면 호출별로 리전 지정)
 def get_ssm_client(region_name=None):
-    """Get SSM client for specified region, defaults to AWS_REGION from config"""
+    """지정된 리전의 SSM 클라이언트를 가져오며 기본값은 config의 AWS_REGION입니다."""
     if region_name:
         return boto3.client("ssm", region_name=region_name)
     return boto3.client("ssm", region_name=DEFAULT_AWS_REGION)
@@ -21,26 +20,26 @@ def get_ssm_client(region_name=None):
 
 def put_parameter(key, value, description="", region_name=None, overwrite=True):
     """
-    Store a parameter in Parameter Store
+    Parameter Store에 파라미터를 저장합니다.
 
-    Args:
-        key: Parameter path (e.g., "/aiml301/lab-02/ecr-repository-uri")
-        value: Parameter value (string)
-        description: Human-readable description
-        region_name: AWS region (defaults to AWS_REGION from config.py if None)
-        overwrite: Replace existing parameter (default: True)
+    인자:
+        key: 파라미터 경로(예: "/aiml301/lab-02/ecr-repository-uri")
+        value: 파라미터 값(문자열)
+        description: 사람이 읽을 수 있는 설명
+        region_name: AWS 리전(None이면 config.py의 AWS_REGION 사용)
+        overwrite: 기존 파라미터 교체 여부(기본값: True)
 
-    Returns:
-        Parameter version
+    반환:
+        파라미터 버전
     """
     try:
         ssm = get_ssm_client(region_name)
 
-        # Determine if this is a sensitive parameter
+        # 민감한 파라미터인지 확인
         sensitive_keywords = ["password", "secret", "token", "key", "credential"]
         is_sensitive = any(keyword in key.lower() for keyword in sensitive_keywords)
 
-        # DEBUG: Log parameter write attempt
+        # DEBUG: 파라미터 쓰기 시도 로깅
         effective_region = region_name if region_name else DEFAULT_AWS_REGION
         print("🔍 DEBUG: put_parameter() called")
         print(f"   Key: {key}")  # codeql[py/clear-text-logging-sensitive-data]
@@ -51,7 +50,7 @@ def put_parameter(key, value, description="", region_name=None, overwrite=True):
         print(f"   Region: {effective_region}")
         print(f"   Overwrite: {overwrite}")
 
-        # Check if parameter already exists
+        # 파라미터가 이미 있는지 확인
         parameter_exists = False
         try:
             existing = ssm.get_parameter(Name=key)
@@ -65,11 +64,11 @@ def put_parameter(key, value, description="", region_name=None, overwrite=True):
             parameter_exists = False
             print("   Existing value: None")
         except Exception as e:
-            # If error checking, proceed with put_parameter (will fail if appropriate)
+            # 확인 중 오류가 나면 put_parameter를 계속 진행하고 필요하면 실패 처리
             print(f"   Error checking existence: {e}")
             pass
 
-        # Determine action and provide feedback
+        # 작업을 결정하고 피드백 제공
         if parameter_exists:
             if str(value) == existing_value:
                 print("   → Action: SKIP (same value)")
@@ -86,7 +85,7 @@ def put_parameter(key, value, description="", region_name=None, overwrite=True):
             action = "CREATED"
             print("   → Action: CREATED")
 
-        # Store parameter
+        # 파라미터 저장
         print("   🔄 Calling ssm.put_parameter()...")
         response = ssm.put_parameter(
             Name=key,
@@ -111,15 +110,15 @@ def put_parameter(key, value, description="", region_name=None, overwrite=True):
 
 def get_parameter(key, default=None, region_name=None):
     """
-    Retrieve a parameter from Parameter Store
+    Parameter Store에서 파라미터를 가져옵니다.
 
-    Args:
-        key: Parameter path
-        default: Default value if parameter not found
-        region_name: AWS region (defaults to AWS_REGION from config.py if None)
+    인자:
+        key: 파라미터 경로
+        default: 파라미터를 찾지 못했을 때의 기본값
+        region_name: AWS 리전(None이면 config.py의 AWS_REGION 사용)
 
-    Returns:
-        Parameter value or default
+    반환:
+        파라미터 값 또는 기본값
     """
     try:
         ssm = get_ssm_client(region_name)
@@ -147,11 +146,11 @@ def get_parameter(key, default=None, region_name=None):
 
 def delete_parameter(key, region_name=None):
     """
-    Delete a parameter from Parameter Store
+    Parameter Store에서 파라미터를 삭제합니다.
 
-    Args:
-        key: Parameter path
-        region_name: AWS region (uses default if None)
+    인자:
+        key: 파라미터 경로
+        region_name: AWS 리전(None이면 기본값 사용)
     """
     try:
         ssm = get_ssm_client(region_name)
@@ -166,15 +165,15 @@ def delete_parameter(key, region_name=None):
 
 def get_parameters_by_path(path_prefix, region_name=None, recursive=True):
     """
-    Retrieve all parameters under a path prefix
+    경로 접두사 아래의 모든 파라미터를 가져옵니다.
 
-    Args:
-        path_prefix: Parameter path prefix (e.g., "/aiml301/lab-02")
-        region_name: AWS region (uses default if None)
-        recursive: Include all subpaths
+    인자:
+        path_prefix: 파라미터 경로 접두사(예: "/aiml301/lab-02")
+        region_name: AWS 리전(None이면 기본값 사용)
+        recursive: 모든 하위 경로 포함 여부
 
-    Returns:
-        Dictionary of {parameter_name: value}
+    반환:
+        {parameter_name: value} 딕셔너리
     """
     try:
         ssm = get_ssm_client(region_name)
@@ -183,7 +182,7 @@ def get_parameters_by_path(path_prefix, region_name=None, recursive=True):
 
         for page in paginator.paginate(Path=path_prefix, Recursive=recursive, WithDecryption=True):
             for param in page.get("Parameters", []):
-                param_name = param["Name"].split("/")[-1]  # Get last part of path
+                param_name = param["Name"].split("/")[-1]  # 경로의 마지막 부분 가져오기
                 parameters[param_name] = param["Value"]
 
         return parameters
@@ -194,12 +193,12 @@ def get_parameters_by_path(path_prefix, region_name=None, recursive=True):
 
 def delete_parameters_by_path(path_prefix, region_name=None, recursive=True):
     """
-    Delete all parameters under a path prefix (cleanup)
+    경로 접두사 아래의 모든 파라미터를 삭제합니다.
 
-    Args:
-        path_prefix: Parameter path prefix
-        region_name: AWS region (uses default if None)
-        recursive: Include all subpaths
+    인자:
+        path_prefix: 파라미터 경로 접두사
+        region_name: AWS 리전(None이면 기본값 사용)
+        recursive: 모든 하위 경로 포함 여부
     """
     try:
         ssm = get_ssm_client(region_name)  # noqa: F841
@@ -215,11 +214,11 @@ def delete_parameters_by_path(path_prefix, region_name=None, recursive=True):
         raise
 
 
-# Convenience functions for common operations
+# 일반 작업용 편의 함수
 
 
 def store_workshop_metadata(account_id, region, region_name=None):
-    """Store workshop-level metadata"""
+    """Workshop 수준 메타데이터를 저장합니다."""
     put_parameter(
         PARAMETER_PATHS["workshop"]["account_id"],
         account_id,
@@ -235,40 +234,40 @@ def store_workshop_metadata(account_id, region, region_name=None):
 
 
 def get_lab_02_config(region_name=None):
-    """Retrieve all Lab 02 configuration from Parameter Store"""
+    """Parameter Store에서 Lab 02 구성을 모두 가져옵니다."""
     return get_parameters_by_path("/aiml301/lab-02", region_name=region_name, recursive=False)
 
 
 def get_lab_03_config(region_name=None):
-    """Retrieve all Lab 03 configuration from Parameter Store"""
+    """Parameter Store에서 Lab 03 구성을 모두 가져옵니다."""
     return get_parameters_by_path("/aiml301/lab-03", region_name=region_name, recursive=False)
 
 
 def get_all_workshop_parameters(region_name=None):
-    """Retrieve all workshop parameters"""
+    """모든 Workshop 파라미터를 가져옵니다."""
     return get_parameters_by_path("/aiml301", region_name=region_name, recursive=True)
 
 
 def check_lab_prerequisites(lab_number, region_name=None):
     """
-    Check if prerequisites for a lab are available
+    Lab 사전 요구 사항을 사용할 수 있는지 확인합니다.
 
-    Args:
-        lab_number: Lab number (1, 2, 3, etc.)
-        region_name: AWS region (defaults to AWS_REGION from config.py if None)
+    인자:
+        lab_number: Lab 번호(1, 2, 3 등)
+        region_name: AWS 리전(None이면 config.py의 AWS_REGION 사용)
 
-    Returns:
-        Dict with 'ready' (bool) and 'missing' (list of missing parameters)
+    반환:
+        'ready'(bool)와 'missing'(누락된 파라미터 목록)이 포함된 딕셔너리
     """
     prerequisites = {
-        1: [],  # Lab-01 has no prerequisites
-        2: [PARAMETER_PATHS["cognito"]["user_pool_id"]],  # Lab-02 needs Cognito from Lab-01
-        3: [  # Lab-03 needs Cognito from Lab-01 AND optionally Lab-02
+        1: [],  # Lab-01에는 사전 요구 사항 없음
+        2: [PARAMETER_PATHS["cognito"]["user_pool_id"]],  # Lab-02에는 Lab-01의 Cognito가 필요
+        3: [  # Lab-03에는 Lab-01의 Cognito와 선택적으로 Lab-02가 필요
             PARAMETER_PATHS["cognito"]["user_pool_id"],
             PARAMETER_PATHS["cognito"]["m2m_client_id"],
             PARAMETER_PATHS["cognito"]["user_auth_client_id"],
         ],
-        4: [PARAMETER_PATHS["cognito"]["user_pool_id"]],  # Lab-04 needs Cognito
+        4: [PARAMETER_PATHS["cognito"]["user_pool_id"]],  # Lab-04에는 Cognito가 필요
     }
 
     required_params = prerequisites.get(lab_number, [])

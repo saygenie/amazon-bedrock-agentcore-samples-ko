@@ -1,11 +1,11 @@
 """
-Setup script: Creates a Cognito User Pool for AgentCore Runtime inbound JWT auth.
+설정 스크립트: AgentCore Runtime 인바운드 JWT 인증용 Cognito User Pool을 생성합니다.
 
-Usage:
+사용법:
     python setup_cognito.py
 
-Outputs:
-    cognito_config.json  - Cognito configuration used by subsequent scripts
+출력:
+    cognito_config.json  - 후속 스크립트에서 사용하는 Cognito 구성
 """
 
 import boto3

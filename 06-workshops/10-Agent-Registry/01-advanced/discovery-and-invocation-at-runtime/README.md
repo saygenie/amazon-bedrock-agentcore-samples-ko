@@ -1,79 +1,81 @@
-# Discovering Tools and Agents at Runtime Using AWS Agent Registry
+# AWS Agent Registry를 사용하여 런타임에 도구 및 에이전트 검색
 
-## Overview
+## 개요
 
-This tutorial demonstrates an autonomous agent that discovers tools and agents at runtime via **AWS Agent Registry** semantic search and invokes them dynamically — zero hardcoded integrations.
+이 튜토리얼에서는 하드코딩된 통합 없이 **AWS Agent Registry** 시맨틱 검색을 통해 런타임에 도구와 에이전트를 검색하고 동적으로 호출하는 자율 에이전트를 보여 줍니다.
 
-The orchestrator agent follows a three-phase discovery pattern:
+오케스트레이터 에이전트는 다음과 같은 3단계 검색 패턴을 따릅니다.
 
-1. **Discovery** — Searches the Registry with natural language to find relevant MCP servers and A2A agents
-2. **Instantiation** — Creates live connections: `MCPClient` for Amazon Bedrock AgentCore Gateway MCP servers, `@tool` wrappers for A2A agents
-3. **Execution** — Runs the user's request using only the dynamically discovered capabilities
+1. **검색**: 자연어로 레지스트리를 검색하여 관련 MCP 서버 및 A2A 에이전트를 찾습니다.
+2. **인스턴스화**: Amazon Bedrock AgentCore Gateway MCP 서버용 `MCPClient`와 A2A 에이전트용 `@tool` 래퍼를 사용하여 실시간 연결을 생성합니다.
+3. **실행**: 동적으로 검색한 기능만 사용하여 사용자의 요청을 실행합니다.
 
-### Registry-Driven Discovery
+### 레지스트리 기반 검색
 
-In traditional agent systems, integrations are hardcoded at build time. **AWS Agent Registry** flips this: MCP servers and agents register themselves in a catalog with rich descriptions, and at runtime the orchestrator searches the catalog with natural language to find what it needs. New capabilities become available instantly — no redeployment required.
+기존 에이전트 시스템에서는 빌드할 때 통합을 하드코딩합니다. **AWS Agent Registry**는 이 방식을 뒤집습니다. MCP 서버와 에이전트가 자세한 설명과 함께 카탈로그에 자신을 등록하면, 런타임에 오케스트레이터가 자연어로 카탈로그를 검색하여 필요한 항목을 찾습니다. 재배포하지 않아도 새로운 기능을 즉시 사용할 수 있습니다.
 
-![With vs Without AWS Agent Registry](images/With_Vs_Without_AWS_Agent_Registry.png)
+![AWS Agent Registry 사용 여부 비교](images/With_Vs_Without_AWS_Agent_Registry.png)
 
-### Use Case: Order Management & Customer Service
+### 사용 사례: 주문 관리 및 고객 서비스
 
-An orchestrator agent helps customers with order-related tasks by dynamically discovering:
-- **MCP servers** for order data retrieval (get status, update orders)
-- **A2A agents** for business logic reasoning (pricing/discounts, returns/refunds)
+오케스트레이터 에이전트는 다음 항목을 동적으로 검색하여 고객의 주문 관련 작업을 지원합니다.
+- 주문 데이터 검색(상태 확인, 주문 업데이트)을 위한 **MCP 서버**
+- 비즈니스 로직 추론(가격/할인, 반품/환불)을 위한 **A2A 에이전트**
 
-### Tutorial Details
+### 튜토리얼 세부 정보
 
-| Information | Details |
+| 정보 | 세부 정보 |
 |:---|:---|
-| Tutorial type | Agentic Discovery & Multi-Agent Orchestration |
-| AgentCore components | AWS Agent Registry, Amazon Bedrock AgentCore Gateway, Amazon Bedrock AgentCore Runtime |
-| Agentic Framework | Strands Agents |
-| Gateway Target type | AWS Lambda |
-| Inbound Auth | OAuth2 (Custom JWT via Amazon Cognito) |
-| Outbound Auth | Gateway IAM Role |
-| LLM model | Anthropic Claude Sonnet 4.6 |
-| Tutorial components | AWS Agent Registry, Amazon Bedrock AgentCore Gateway (MCP/OAuth2), Amazon Bedrock AgentCore Runtime (A2A/SigV4), AWS Lambda, Amazon Cognito |
-| Tutorial vertical | Cross-vertical (Order Management & Customer Service) |
-| Example complexity | Advanced |
-| SDK used | boto3 |
+| 튜토리얼 유형 | 에이전트 기반 검색 및 멀티 에이전트 오케스트레이션 |
+| AgentCore 구성 요소 | AWS Agent Registry, Amazon Bedrock AgentCore Gateway, Amazon Bedrock AgentCore Runtime |
+| 에이전트 프레임워크 | Strands Agents |
+| Gateway 대상 유형 | AWS Lambda |
+| 인바운드 인증 | OAuth2(Amazon Cognito를 통한 Custom JWT) |
+| 아웃바운드 인증 | Gateway IAM 역할 |
+| LLM 모델 | Anthropic Claude Sonnet 4.6 |
+| 튜토리얼 구성 요소 | AWS Agent Registry, Amazon Bedrock AgentCore Gateway(MCP/OAuth2), Amazon Bedrock AgentCore Runtime(A2A/SigV4), AWS Lambda, Amazon Cognito |
+| 튜토리얼 분야 | 여러 분야에 적용 가능(주문 관리 및 고객 서비스) |
+| 예제 난이도 | 고급 |
+| 사용 SDK | boto3 |
 
-## Tutorial Architecture
+## 튜토리얼 아키텍처
 
-![Order Management AWS Agent Registry Flow](images/OrderManagement_AWS_Agent_Registry_Flow.png)
+![주문 관리 AWS Agent Registry 흐름](images/OrderManagement_AWS_Agent_Registry_Flow.png)
 
-The orchestrator searches the Registry on every request, instantiates tools from the results, and executes — all at runtime with zero hardcoded integrations.
+오케스트레이터는 요청이 들어올 때마다 레지스트리를 검색하고 결과에서 도구를 인스턴스화한 후 실행합니다. 이 모든 과정은 하드코딩된 통합 없이 런타임에 이루어집니다.
 
-### Orchestrator Agent Flow
+### 오케스트레이터 에이전트 흐름
 
-![Orchestrator Agent Flow](images/orchestrator_agent_flow_v3.png)
+![오케스트레이터 에이전트 흐름](images/orchestrator_agent_flow_v3.png)
 
-The orchestrator is deployed to Amazon Bedrock AgentCore Runtime. On each request it runs three phases — **discover** capabilities from the Registry, **connect** to them (MCP via Amazon Bedrock AgentCore Gateway, A2A via Amazon Bedrock AgentCore Runtime), and **execute** using a Strands Agent created with only the discovered tools.
+오케스트레이터는 Amazon Bedrock AgentCore Runtime에 배포됩니다. 요청이 들어올 때마다 레지스트리에서 기능을 **검색**하고, 해당 기능에 **연결**한 다음(MCP는 Amazon Bedrock AgentCore Gateway, A2A는 Amazon Bedrock AgentCore Runtime 사용), 검색된 도구만으로 생성한 Strands Agent를 사용하여 **실행**하는 3단계를 진행합니다.
 
-## Tutorial Key Features
+## 튜토리얼 주요 기능
 
-- **Semantic discovery** — Registry search finds capabilities by meaning, not name (e.g., "return refund" matches the Customer Support Agent even though those exact words don't appear in its name)
-- **Dynamic orchestration** — No hardcoded integrations; the agent builds its toolset at runtime
-- **Mixed protocols** — MCP servers (via Amazon Bedrock AgentCore Gateway) and A2A agents (via Amazon Bedrock AgentCore Runtime) in a single agent
-- **OAuth2 + SigV4** — Amazon Bedrock AgentCore Gateway uses Amazon Cognito JWT auth; Amazon Bedrock AgentCore Runtime uses IAM SigV4 signing
-- **Protocol-agnostic discovery** — One AWS Agent Registry search returns both MCP servers and A2A agents
-- **End-to-end lifecycle** — Creates all infrastructure, runs demos, and cleans up
+- **시맨틱 검색**: 레지스트리 검색은 이름이 아니라 의미로 기능을 찾습니다. 예를 들어 이름에 해당 단어가 정확히 없어도 "return refund"는 Customer Support Agent와 일치합니다.
+- **동적 오케스트레이션**: 하드코딩된 통합 없이 에이전트가 런타임에 도구 세트를 구성합니다.
+- **혼합 프로토콜**: 하나의 에이전트에서 MCP 서버(Amazon Bedrock AgentCore Gateway 경유)와 A2A 에이전트(Amazon Bedrock AgentCore Runtime 경유)를 사용합니다.
+- **OAuth2 + SigV4**: Amazon Bedrock AgentCore Gateway는 Amazon Cognito JWT 인증을 사용하고, Amazon Bedrock AgentCore Runtime은 IAM SigV4 서명을 사용합니다.
+- **프로토콜 독립적 검색**: 한 번의 AWS Agent Registry 검색으로 MCP 서버와 A2A 에이전트를 모두 반환합니다.
+- **엔드 투 엔드 수명 주기**: 모든 인프라를 생성하고 데모를 실행한 후 정리합니다.
 
-## Prerequisites
+## 사전 요구 사항
 
-- **Amazon SageMaker notebook instance** — Recommended configuration:
-  - Platform: **Amazon Linux 2**
-  - Notebook environment: **JupyterLab 4** (`notebook-al2-v3`)
-  - Kernel: **conda_python3**
-  - Instance type: `ml.t3.xlarge` or larger
-- AWS account with Amazon Bedrock model access (Claude Sonnet 4.6)
-- IAM role attached to the notebook instance with the required permissions (see below)
+- **Amazon SageMaker 노트북 인스턴스**: 권장 구성:
+  - 플랫폼: **Amazon Linux 2**
+  - 노트북 환경: **JupyterLab 4**(`notebook-al2-v3`)
+  - 커널: **conda_python3**
+  - 인스턴스 유형: `ml.t3.xlarge` 이상
+- Amazon Bedrock 모델(Claude Sonnet 4.6) 액세스 권한이 있는 AWS 계정
+- 필수 권한이 있고 노트북 인스턴스에 연결된 IAM 역할(아래 참조)
 - Python 3.10+
 - boto3 >= 1.42.87
 
-### Required IAM Permissions
+<a id="required-iam-permissions"></a>
 
-This tutorial creates and manages resources across multiple AWS services. Attach the following IAM policy to the SageMaker notebook instance's execution role:
+### 필수 IAM 권한
+
+이 튜토리얼에서는 여러 AWS 서비스의 리소스를 생성하고 관리합니다. 다음 IAM 정책을 SageMaker 노트북 인스턴스의 실행 역할에 연결하세요.
 
 ```json
 {
@@ -202,52 +204,52 @@ This tutorial creates and manages resources across multiple AWS services. Attach
 }
 ```
 
-> **Note:** This policy follows least-privilege principles and is scoped to the resources this tutorial creates. Copy the JSON above and attach it as an inline policy to your SageMaker notebook instance's execution role.
+> **참고:** 이 정책은 최소 권한 원칙을 따르며 이 튜토리얼에서 생성하는 리소스로 범위가 제한됩니다. 위 JSON을 복사하여 SageMaker 노트북 인스턴스의 실행 역할에 인라인 정책으로 연결하세요.
 
-## Tutorials Overview
+## 튜토리얼 개요
 
-| Notebook | Description |
+| 노트북 | 설명 |
 |:---|:---|
-| [discovery-and-invocation-at-runtime.ipynb](discovery-and-invocation-at-runtime.ipynb) | End-to-end tutorial: deploy infrastructure, create Registry, register records, deploy orchestrator, run 3 live demos, and clean up |
+| [discovery-and-invocation-at-runtime.ipynb](discovery-and-invocation-at-runtime.ipynb) | 인프라 배포, 레지스트리 생성, 레코드 등록, 오케스트레이터 배포, 라이브 데모 3개 실행 및 정리를 다루는 엔드 투 엔드 튜토리얼 |
 
-### Notebook Structure
+### 노트북 구성
 
-The tutorial is organized into five main steps:
+튜토리얼은 5개의 주요 단계로 구성됩니다.
 
-**Step 1: Deploy Infrastructure** — Creates all backend resources that will be registered in the Registry:
-- **MCP Servers (via Amazon Bedrock AgentCore Gateway):** `get_order_status` and `update_order` tools backed by AWS Lambda, authenticated via Amazon Cognito OAuth2
-- **A2A Agents (via Amazon Bedrock AgentCore Runtime):** Pricing Agent and Customer Support Agent as Docker containers, authenticated via IAM SigV4
+**1단계: 인프라 배포**: 레지스트리에 등록할 모든 백엔드 리소스를 생성합니다.
+- **MCP 서버(Amazon Bedrock AgentCore Gateway 경유):** AWS Lambda에서 지원하고 Amazon Cognito OAuth2를 통해 인증하는 `get_order_status` 및 `update_order` 도구
+- **A2A 에이전트(Amazon Bedrock AgentCore Runtime 경유):** IAM SigV4를 통해 인증하고 Docker 컨테이너로 실행하는 Pricing Agent 및 Customer Support Agent
 
-**Step 2: Create Registry & Register Records** — Creates an AWS Agent Registry with `autoApproval: False`, registers 3 records (1 MCP, 2 A2A), approves them through the two-step workflow (DRAFT → PENDING_APPROVAL → APPROVED), and verifies semantic search
+**2단계: 레지스트리 생성 및 레코드 등록**: `autoApproval: False`를 사용하는 AWS Agent Registry를 생성하고 레코드 3개(MCP 1개, A2A 2개)를 등록한 후 2단계 워크플로(DRAFT → PENDING_APPROVAL → APPROVED)를 통해 승인하고 시맨틱 검색을 검증합니다.
 
-**Step 3: Deploy Orchestrator Agent** — Deploys an orchestrator agent to Amazon Bedrock AgentCore Runtime that uses `discover_and_execute` to search the Registry, parse metadata into live connections, and execute the user's request
+**3단계: 오케스트레이터 에이전트 배포**: `discover_and_execute`를 사용하여 레지스트리를 검색하고 메타데이터를 실시간 연결로 파싱한 후 사용자의 요청을 실행하는 오케스트레이터 에이전트를 Amazon Bedrock AgentCore Runtime에 배포합니다.
 
-**Step 4: End-to-End Demos** — Three scenarios demonstrating different tool combinations:
-1. **Order Status** — MCP server invocation only
-2. **Pricing & Discounts** — MCP + A2A multi-agent collaboration
-3. **Return & Refund** — Customer Support decision with A2A agent
+**4단계: 엔드 투 엔드 데모**: 서로 다른 도구 조합을 보여 주는 세 가지 시나리오입니다.
+1. **주문 상태**: MCP 서버만 호출
+2. **가격 및 할인**: MCP + A2A 멀티 에이전트 협업
+3. **반품 및 환불**: A2A 에이전트를 사용한 Customer Support 의사 결정
 
-**Step 5: Cleanup** — Deletes all resources in reverse order of creation
+**5단계: 정리**: 생성 역순으로 모든 리소스를 삭제합니다.
 
-## Getting Started
+## 시작하기
 
-1. **Create an Amazon SageMaker notebook instance** with the recommended configuration above. Attach an IAM role with the policy listed in [Required IAM Permissions](#required-iam-permissions).
+1. 위 권장 구성으로 **Amazon SageMaker 노트북 인스턴스를 생성**합니다. [필수 IAM 권한](#required-iam-permissions)에 나열된 정책을 포함하는 IAM 역할을 연결합니다.
 
-2. Once the instance is **InService**, click **Open JupyterLab**.
+2. 인스턴스가 **InService** 상태가 되면 **Open JupyterLab**을 클릭합니다.
 
-3. **Upload all files** to the notebook's home directory:
+3. 다음 **모든 파일을 업로드**하여 노트북의 홈 디렉터리에 저장합니다.
    - `discovery-and-invocation-at-runtime.ipynb`
    - `utils.py`
    - `cleanup.py`
-   - `images/` folder (all PNG files)
+   - `images/` 폴더(모든 PNG 파일)
 
-4. Open `discovery-and-invocation-at-runtime.ipynb` and select the **conda_python3** kernel.
+4. `discovery-and-invocation-at-runtime.ipynb`를 열고 **conda_python3** 커널을 선택합니다.
 
-5. Run cells sequentially — the notebook installs all dependencies (including boto3 >= 1.42.87), deploys infrastructure, creates and populates the Registry, deploys the orchestrator, runs three live demos, and cleans up.
+5. 셀을 순서대로 실행합니다. 노트북에서 모든 종속성(boto3 >= 1.42.87 포함)을 설치하고 인프라를 배포하며, 레지스트리를 생성하고 채운 후 오케스트레이터를 배포하고 세 가지 라이브 데모를 실행한 다음 리소스를 정리합니다.
 
-## Resources
+## 리소스
 
-- [AgentCore samples repository](https://github.com/awslabs/agentcore-samples)
-- [Amazon Bedrock AgentCore documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/userguide/)
-- [Amazon Bedrock AgentCore Gateway tutorials](https://github.com/awslabs/agentcore-samples/tree/main/06-workshops/02-AgentCore-gateway)
+- [AgentCore 샘플 리포지토리](https://github.com/awslabs/agentcore-samples)
+- [Amazon Bedrock AgentCore 설명서](https://docs.aws.amazon.com/bedrock-agentcore/latest/userguide/)
+- [Amazon Bedrock AgentCore Gateway 튜토리얼](https://github.com/awslabs/agentcore-samples/tree/main/06-workshops/02-AgentCore-gateway)
 - [Strands Agents SDK](https://github.com/strands-agents/sdk-python)

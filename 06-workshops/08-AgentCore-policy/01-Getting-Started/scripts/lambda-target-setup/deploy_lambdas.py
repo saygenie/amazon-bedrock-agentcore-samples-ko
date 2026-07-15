@@ -1,14 +1,14 @@
 """
-Deploy Lambda functions and save their ARNs to config.json
+Lambda 함수를 배포하고 ARN을 config.json에 저장합니다.
 
-Usage:
+사용법:
     python deploy_lambdas.py --region REGION [--role-arn ROLE_ARN]
 
-Examples:
-    # Use existing role
+예시:
+    # 기존 역할 사용
     python deploy_lambdas.py --region us-west-2 --role-arn arn:aws:iam::123456789012:role/MyLambdaRole
 
-    # Create new role automatically
+    # 새 역할 자동 생성
     python deploy_lambdas.py --region us-west-2
 """
 
@@ -23,7 +23,7 @@ import time
 
 
 def get_or_create_lambda_role(iam_client):
-    """Get or create IAM role for Lambda execution"""
+    """Lambda 실행용 IAM 역할을 가져오거나 생성합니다."""
     role_name = "AgentCoreLambdaExecutionRole"
 
     try:
@@ -33,7 +33,7 @@ def get_or_create_lambda_role(iam_client):
     except iam_client.exceptions.NoSuchEntityException:
         print(f"   📝 Creating IAM role: {role_name}")
 
-        # Trust policy for Lambda
+        # Lambda용 신뢰 정책
         trust_policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -45,14 +45,14 @@ def get_or_create_lambda_role(iam_client):
             ],
         }
 
-        # Create role
+        # 역할 생성
         response = iam_client.create_role(
             RoleName=role_name,
             AssumeRolePolicyDocument=json.dumps(trust_policy),
             Description="Execution role for AgentCore Lambda functions",
         )
 
-        # Attach basic Lambda execution policy
+        # 기본 Lambda 실행 정책 연결
         iam_client.attach_role_policy(
             RoleName=role_name,
             PolicyArn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
@@ -64,18 +64,18 @@ def get_or_create_lambda_role(iam_client):
 
 
 def deploy_lambda(lambda_client, function_name, js_file, role_arn):
-    """Deploy a Lambda function from a JS file"""
+    """JS 파일에서 Lambda 함수를 배포합니다."""
 
     print(f"📦 Deploying {function_name}...")
 
-    # Read the JS file
+    # JS 파일 읽기
     script_dir = os.path.dirname(os.path.abspath(__file__))
     js_path = os.path.join(script_dir, js_file)
 
     with open(js_path, "r") as f:
         code_content = f.read()
 
-    # Create a zip file in memory with the code as index.mjs (ES module)
+    # 메모리에서 코드를 index.mjs(ES 모듈)로 포함하는 zip 파일 생성
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         zip_file.writestr("index.mjs", code_content)
@@ -84,7 +84,7 @@ def deploy_lambda(lambda_client, function_name, js_file, role_arn):
     zip_content = zip_buffer.read()
 
     try:
-        # Try to create the function
+        # 함수 생성 시도
         response = lambda_client.create_function(
             FunctionName=function_name,
             Runtime="nodejs20.x",
@@ -101,7 +101,7 @@ def deploy_lambda(lambda_client, function_name, js_file, role_arn):
         return response["FunctionArn"]
 
     except lambda_client.exceptions.ResourceConflictException:
-        # Function already exists, update it
+        # 함수가 이미 있으면 업데이트
         print("   ℹ️  Function exists, updating code...")
 
         response = lambda_client.update_function_code(FunctionName=function_name, ZipFile=zip_content)
@@ -116,12 +116,12 @@ def deploy_lambda(lambda_client, function_name, js_file, role_arn):
 
 
 def save_config(lambda_arns, region, output_file="config.json"):
-    """Save Lambda ARNs to config.json in the Getting-Started directory"""
+    """Lambda ARN을 Getting-Started 디렉터리의 config.json에 저장합니다."""
 
-    # Get the script directory (lambda-target-setup)
+    # 스크립트 디렉터리 가져오기(lambda-target-setup)
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # Navigate up to Getting-Started directory: lambda-target-setup -> scripts -> Getting-Started
+    # Getting-Started 디렉터리로 이동: lambda-target-setup -> scripts -> Getting-Started
     getting_started_dir = os.path.dirname(os.path.dirname(script_dir))
     config_path = os.path.join(getting_started_dir, output_file)
 
@@ -137,13 +137,13 @@ def main():
     print("🚀 Deploying Lambda Functions\n")
     print("=" * 70)
 
-    # Parse arguments
+    # 인수 파싱
     parser = argparse.ArgumentParser(description="Deploy Lambda functions for AgentCore Policy demo")
     parser.add_argument("--region", type=str, default=None, help="AWS region to deploy into")
     parser.add_argument("--role-arn", type=str, default=None, help="IAM role ARN for Lambda execution")
     args = parser.parse_args()
 
-    # Resolve region
+    # 리전 결정
     region = args.region
     if not region:
         session = boto3.Session()
@@ -156,14 +156,14 @@ def main():
 
     print(f"\nRegion: {region}")
 
-    # Initialize AWS clients
+    # AWS 클라이언트 초기화
     lambda_client = boto3.client("lambda", region_name=region)
     iam_client = boto3.client("iam", region_name=region)
 
     if args.role_arn:
         role_arn = args.role_arn
 
-        # Validate role ARN format
+        # 역할 ARN 형식 검증
         if not role_arn.startswith("arn:aws:iam::"):
             print(f"\n❌ Error: Invalid role ARN format: {role_arn}")
             print("Expected format: arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME")
@@ -174,16 +174,16 @@ def main():
         print()
         newly_created = False
     else:
-        # No role provided, create one
+        # 역할이 제공되지 않았으면 새로 생성
         print("\n🔐 No role provided, setting up IAM role...")
         role_arn, newly_created = get_or_create_lambda_role(iam_client)
         print()
 
-        # Wait for IAM propagation if role was just created
+        # 역할을 방금 생성했으면 IAM 전파 대기
         if newly_created:
             time.sleep(10)
 
-    # Deploy each function
+    # 각 함수 배포
     functions = [
         ("ApplicationTool", "application_tool.js"),
         ("ApprovalTool", "approval_tool.js"),
@@ -197,10 +197,10 @@ def main():
         if arn:
             lambda_arns[function_name] = arn
         print()
-        # Small delay between deployments
+        # 배포 사이에 잠시 대기
         time.sleep(1)
 
-    # Save configuration
+    # 구성 저장
     if lambda_arns:
         save_config(lambda_arns, region)
 

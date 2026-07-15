@@ -4,7 +4,7 @@ import asyncio
 import concurrent.futures
 from bedrock_agentcore.runtime import (
     BedrockAgentCoreApp,
-)  #### AGENTCORE RUNTIME - LINE 1 ####
+)  #### AGENTCORE RUNTIME - 1번 줄 ####
 
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
@@ -19,15 +19,15 @@ import boto3
 from bedrock_agentcore.memory import MemoryClient
 from lab_helpers.utils import get_ssm_parameter
 
-# Initialize boto3 client
+# boto3 클라이언트 초기화
 sts_client = boto3.client("sts")
 
-# Get AWS account details
+# AWS 계정 세부 정보 가져오기
 REGION = boto3.session.Session().region_name
 
 ACTOR_ID = "customer_001"
 
-# Lab2 import: Memory
+# Lab 2 가져오기: Memory
 memory_id = os.environ.get("MEMORY_ID")
 if not memory_id:
     raise Exception("Environment variable MEMORY_ID is required")
@@ -35,7 +35,7 @@ if not memory_id:
 memory_client = MemoryClient(region_name=REGION)
 
 # ============================================================
-# System prompt
+# 시스템 프롬프트
 # ============================================================
 SYSTEM_PROMPT = """You are a helpful and professional customer support assistant for an electronics e-commerce company.
 Your role is to:
@@ -54,7 +54,7 @@ You have access to the following tools:
 Always use the appropriate tool to get accurate, up-to-date information rather than making assumptions about electronic products or specifications."""
 
 # ============================================================
-# Local tools (same as Lab 3)
+# 로컬 도구(Lab 3과 동일)
 # ============================================================
 
 
@@ -202,12 +202,12 @@ def get_technical_support(issue_description: str) -> str:
 
 
 # ============================================================
-# MCP Gateway tool wrappers (same pattern as Lab 3)
+# MCP Gateway 도구 래퍼(Lab 3과 동일한 패턴)
 # ============================================================
 
 
 async def _call_mcp_tool(tool_name: str, arguments: dict, gateway_url: str, auth_header: str) -> str:
-    """Helper to call an MCP tool on the AgentCore Gateway."""
+    """AgentCore Gateway의 MCP 도구를 호출하는 헬퍼."""
     async with streamablehttp_client(
         gateway_url,
         headers={"Authorization": auth_header},
@@ -221,13 +221,13 @@ async def _call_mcp_tool(tool_name: str, arguments: dict, gateway_url: str, auth
 
 
 def _run_async_in_thread(coro):
-    """Run an async coroutine in a separate thread to avoid 'event loop already running' errors."""
+    """'event loop already running' 오류를 방지하도록 별도 스레드에서 비동기 코루틴을 실행한다."""
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         future = executor.submit(asyncio.run, coro)
         return future.result()
 
 
-# These will be set per-request in the entrypoint
+# 진입점에서 요청마다 설정됨
 _gateway_url = None
 _auth_header = None
 
@@ -265,44 +265,44 @@ def web_search(keywords: str, region: str, max_results: int) -> str:
     return _run_async_in_thread(_call_mcp_tool("LambdaUsingSDK___web_search", args, _gateway_url, _auth_header))
 
 
-# Initialize the AgentCore Runtime App
-app = BedrockAgentCoreApp()  #### AGENTCORE RUNTIME - LINE 2 ####
+# AgentCore Runtime 앱 초기화
+app = BedrockAgentCoreApp()  #### AGENTCORE RUNTIME - 2번 줄 ####
 
 
-@app.entrypoint  #### AGENTCORE RUNTIME - LINE 3 ####
+@app.entrypoint  #### AGENTCORE RUNTIME - 3번 줄 ####
 async def invoke(payload, context=None):
-    """AgentCore Runtime entrypoint function"""
+    """AgentCore Runtime 진입점 함수"""
     global _gateway_url, _auth_header
 
     user_input = payload.get("prompt", "")
-    session_id = context.session_id  # Get session_id from context
+    session_id = context.session_id  # 컨텍스트에서 session_id 가져오기
     actor_id = payload.get("actor_id", ACTOR_ID)
-    # Access request headers - handle None case
+    # 요청 헤더에 접근하고 None인 경우 처리
     request_headers = context.request_headers or {}
 
-    # Get Client JWT token
+    # 클라이언트 JWT 토큰 가져오기
     auth_header = request_headers.get("Authorization", "")
     print(f"Authorization header: {auth_header}")
 
-    # Get Gateway ID
+    # Gateway ID 가져오기
     existing_gateway_id = get_ssm_parameter("/app/customersupport/agentcore/gateway_id")
 
-    # Initialize Bedrock AgentCore Control client
+    # Bedrock AgentCore Control 클라이언트 초기화
     gateway_client = boto3.client(
         "bedrock-agentcore-control",
         region_name=REGION,
     )
-    # Get existing gateway details
+    # 기존 Gateway 세부 정보 가져오기
     gateway_response = gateway_client.get_gateway(gatewayIdentifier=existing_gateway_id)
     gateway_url = gateway_response["gatewayUrl"]
 
     if gateway_url and auth_header:
         try:
-            # Set module-level vars for MCP tool wrappers
+            # MCP 도구 래퍼용 모듈 수준 변수 설정
             _gateway_url = gateway_url
             _auth_header = auth_header
 
-            # All tools: local + MCP gateway wrappers
+            # 모든 도구: 로컬 도구 + MCP Gateway 래퍼
             all_tools = [
                 get_product_info,
                 get_return_policy,
@@ -311,7 +311,7 @@ async def invoke(payload, context=None):
                 web_search,
             ]
 
-            # --- 1. Retrieve customer context from memory ---
+            # --- 1. Memory에서 고객 컨텍스트 검색 ---
             all_context = []
             namespaces = {
                 "preferences": f"support/customer/{actor_id}/preferences/",
@@ -333,14 +333,14 @@ async def invoke(payload, context=None):
                 except Exception as e:
                     print(f"Warning: Could not retrieve {context_type} memories: {e}")
 
-            # --- 2. Build enriched query with context ---
+            # --- 2. 컨텍스트가 포함된 보강 쿼리 구성 ---
             if all_context:
                 context_text = "\n".join(all_context)
                 enriched_query = f"Customer Context:\n{context_text}\n\n{user_input}"
             else:
                 enriched_query = user_input
 
-            # --- 3. Create and run the ADK agent ---
+            # --- 3. ADK 에이전트 생성 및 실행 ---
             agent = LlmAgent(
                 name="customer_support_agent",
                 model=LiteLlm(model="bedrock/global.anthropic.claude-haiku-4-5-20251001-v1:0"),
@@ -367,7 +367,7 @@ async def invoke(payload, context=None):
                 if event.is_final_response():
                     final_response = event.content.parts[0].text
 
-            # --- 4. Save interaction to memory ---
+            # --- 4. Memory에 상호 작용 저장 ---
             if final_response:
                 try:
                     memory_client.create_event(
@@ -391,4 +391,4 @@ async def invoke(payload, context=None):
 
 
 if __name__ == "__main__":
-    app.run()  #### AGENTCORE RUNTIME - LINE 4 ####
+    app.run()  #### AGENTCORE RUNTIME - 4번 줄 ####

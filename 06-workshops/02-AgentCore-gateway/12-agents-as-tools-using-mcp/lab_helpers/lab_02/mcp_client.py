@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Lab 02: MCP Client Helper
+Lab 02: MCP 클라이언트 헬퍼
 
-Provides a simple MCP client for connecting to the AgentCore Gateway
-and invoking MCP tools with Cognito JWT authentication.
+AgentCore Gateway에 연결하고 Cognito JWT 인증으로 MCP 도구를 호출하는
+간단한 MCP 클라이언트를 제공합니다.
 
-Key Features:
-- Cognito JWT authentication
-- MCP protocol (initialize, tools/list, tools/call)
-- Gateway connection management
-- Simple interface for tool invocation
+주요 기능:
+- Cognito JWT 인증
+- MCP 프로토콜(initialize, tools/list, tools/call)
+- Gateway 연결 관리
+- 간단한 도구 호출 인터페이스
 
-Usage:
+사용법:
     from lab_helpers.lab_02.mcp_client import MCPClient
 
     client = MCPClient(gateway_url, cognito_token)
@@ -27,23 +27,23 @@ from typing import Dict, List, Any, Optional
 
 class MCPClient:
     """
-    MCP Client for connecting to AgentCore Gateway.
+    AgentCore Gateway에 연결하는 MCP 클라이언트입니다.
 
-    This client handles:
-    - JWT authentication with Cognito tokens
-    - MCP protocol (JSON-RPC 2.0)
-    - Session initialization
-    - Tool discovery and invocation
+    이 클라이언트는 다음을 처리합니다.
+    - Cognito 토큰을 사용한 JWT 인증
+    - MCP 프로토콜(JSON-RPC 2.0)
+    - 세션 초기화
+    - 도구 검색 및 호출
     """
 
     def __init__(self, gateway_url: str, access_token: str, timeout: int = 900):
         """
-        Initialize MCP Client.
+        MCP 클라이언트를 초기화합니다.
 
-        Args:
-            gateway_url: Gateway MCP endpoint URL
-            access_token: Cognito JWT access token
-            timeout: Request timeout in seconds (default: 30)
+        인자:
+            gateway_url: Gateway MCP 엔드포인트 URL
+            access_token: Cognito JWT 액세스 토큰
+            timeout: 요청 제한 시간(초)(기본값: 30)
         """
         self.gateway_url = gateway_url
         self.access_token = access_token
@@ -53,24 +53,24 @@ class MCPClient:
         self.server_info = {}
 
     def _next_request_id(self) -> int:
-        """Generate next request ID for JSON-RPC"""
+        """다음 JSON-RPC 요청 ID를 생성합니다."""
         self.request_id += 1
         return self.request_id
 
     def _mcp_request(self, method: str, params: Optional[Dict] = None) -> Dict[str, Any]:
         """
-        Make MCP JSON-RPC request to Gateway.
+        Gateway에 MCP JSON-RPC 요청을 보냅니다.
 
-        Args:
-            method: MCP method name (e.g., "initialize", "tools/list", "tools/call")
-            params: Method parameters (optional)
+        인자:
+            method: MCP 메서드 이름(예: "initialize", "tools/list", "tools/call")
+            params: 메서드 파라미터(선택 사항)
 
-        Returns:
-            JSON-RPC response as dictionary
+        반환:
+            딕셔너리 형식의 JSON-RPC 응답
 
-        Raises:
-            requests.HTTPError: If HTTP request fails
-            ValueError: If response contains error
+        예외:
+            requests.HTTPError: HTTP 요청이 실패한 경우
+            ValueError: 응답에 오류가 포함된 경우
         """
         request_payload = {
             "jsonrpc": "2.0",
@@ -94,7 +94,7 @@ class MCPClient:
         response.raise_for_status()
         result = response.json()
 
-        # Check for JSON-RPC errors
+        # JSON-RPC 오류 확인
         if "error" in result:
             error = result["error"]
             raise ValueError(f"MCP Error [{error.get('code')}]: {error.get('message')}")
@@ -107,18 +107,18 @@ class MCPClient:
         client_version: str = "1.0.0",
     ) -> Dict[str, Any]:
         """
-        Initialize MCP session with Gateway.
+        Gateway와의 MCP 세션을 초기화합니다.
 
-        This must be called before any other MCP operations.
+        다른 MCP 작업보다 먼저 호출해야 합니다.
 
-        Args:
-            client_name: Client application name
-            client_version: Client version string
+        인자:
+            client_name: 클라이언트 애플리케이션 이름
+            client_version: 클라이언트 버전 문자열
 
-        Returns:
-            Server info from initialize response
+        반환:
+            initialize 응답의 서버 정보
 
-        Example:
+        예:
             >>> client.initialize()
             {'name': 'aiml301-diagnostics-gateway', 'version': '1.0.0'}
         """
@@ -147,12 +147,12 @@ class MCPClient:
 
     def list_tools(self) -> List[Dict[str, Any]]:
         """
-        List all available MCP tools from Gateway.
+        Gateway에서 사용 가능한 모든 MCP 도구를 나열합니다.
 
-        Returns:
-            List of tool definitions with name, description, and schema
+        반환:
+            이름, 설명 및 스키마가 포함된 도구 정의 목록
 
-        Example:
+        예:
             >>> tools = client.list_tools()
             >>> print(f"Found {len(tools)} tools")
             >>> for tool in tools:
@@ -171,7 +171,7 @@ class MCPClient:
 
             for i, tool in enumerate(tools, 1):
                 tool_name = tool.get("name", "unnamed")
-                # Get first line of description
+                # 설명의 첫 줄 가져오기
                 description = tool.get("description", "No description")
                 first_line = description.split("\n")[0]
                 print(f"     {i}. {tool_name}")
@@ -183,16 +183,16 @@ class MCPClient:
 
     def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Invoke an MCP tool with arguments.
+        인자를 사용해 MCP 도구를 호출합니다.
 
-        Args:
-            tool_name: Name of the tool to invoke
-            arguments: Tool arguments as dictionary
+        인자:
+            tool_name: 호출할 도구 이름
+            arguments: 딕셔너리 형식의 도구 인자
 
-        Returns:
-            Tool execution result
+        반환:
+            도구 실행 결과
 
-        Example:
+        예:
             >>> result = client.call_tool(
             ...     "strands-diagnostics-agent___invoke_diagnostics_agent",
             ...     {"query": "What are the main issues?"}
@@ -211,12 +211,12 @@ class MCPClient:
             result = response["result"]
             print("  ✅ Tool execution successful")
 
-            # Try to extract and display content
+            # 콘텐츠 추출 및 표시 시도
             if "content" in result:
                 for content_item in result["content"]:
                     if content_item.get("type") == "text":
                         try:
-                            # Try to parse as JSON for better display
+                            # 더 읽기 쉽게 표시하도록 JSON 파싱 시도
                             text_content = content_item["text"]
                             parsed = json.loads(text_content)
                             print("\n  📋 Result:")
@@ -229,23 +229,23 @@ class MCPClient:
             raise ValueError("Tool call failed: No result in response")
 
     def close(self):
-        """Close MCP session (cleanup if needed)"""
+        """MCP 세션을 닫습니다(필요한 경우 정리)."""
         self.initialized = False
         print("\n✅ MCP session closed")
 
 
 def create_mcp_client(gateway_url: str, cognito_token: str) -> MCPClient:
     """
-    Factory function to create and initialize MCP client.
+    MCP 클라이언트를 생성하고 초기화하는 팩토리 함수입니다.
 
-    Args:
-        gateway_url: Gateway MCP endpoint URL
-        cognito_token: Cognito JWT access token
+    인자:
+        gateway_url: Gateway MCP 엔드포인트 URL
+        cognito_token: Cognito JWT 액세스 토큰
 
-    Returns:
-        Initialized MCPClient instance
+    반환:
+        초기화된 MCPClient 인스턴스
 
-    Example:
+    예:
         >>> from lab_helpers.lab_02.mcp_client import create_mcp_client
         >>> client = create_mcp_client(gateway_url, token)
         >>> tools = client.list_tools()

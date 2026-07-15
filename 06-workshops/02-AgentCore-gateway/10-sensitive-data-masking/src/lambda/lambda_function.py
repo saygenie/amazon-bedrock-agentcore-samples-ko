@@ -1,9 +1,9 @@
 """
-PII Masking Interceptor for Gateway MCP RESPONSES using Bedrock Guardrails
+Bedrock Guardrails를 사용하는 Gateway MCP 응답용 PII 마스킹 인터셉터
 
-This Lambda function intercepts Gateway MCP tools/call RESPONSES and masks
-sensitive PII data using Amazon Bedrock Guardrails API for ALL tool responses.
-It is configured as a RESPONSE interceptor that transforms any tool response.
+이 Lambda 함수는 Gateway MCP tools/call 응답을 가로채 모든 도구 응답의
+민감한 PII 데이터를 Amazon Bedrock Guardrails API로 마스킹합니다.
+모든 도구 응답을 변환하는 응답 인터셉터로 구성됩니다.
 """
 
 import json
@@ -11,23 +11,23 @@ import os
 import boto3
 from typing import Any, Dict
 
-# Initialize Bedrock Runtime client
+# Bedrock Runtime 클라이언트 초기화
 bedrock_runtime = boto3.client("bedrock-runtime")
 
-# Get Guardrail configuration from environment variables
+# 환경 변수에서 Guardrail 구성 가져오기
 GUARDRAIL_ID = os.environ.get("GUARDRAIL_ID")
 GUARDRAIL_VERSION = os.environ.get("GUARDRAIL_VERSION", "DRAFT")
 
 
 def mask_pii_with_guardrails(text: str) -> str:
     """
-    Use Bedrock Guardrails to mask PII in text.
+    Bedrock Guardrails를 사용해 텍스트의 PII를 마스킹합니다.
 
-    Args:
-        text: Text content that may contain PII
+    인자:
+        text: PII가 포함될 수 있는 텍스트 콘텐츠
 
-    Returns:
-        Text with PII masked/anonymized by Guardrails
+    반환:
+        Guardrails로 PII를 마스킹하거나 익명화한 텍스트
     """
     print(f"[DEBUG] mask_pii_with_guardrails - INPUT text (first 200 chars): {text[:200]}")
 
@@ -39,31 +39,31 @@ def mask_pii_with_guardrails(text: str) -> str:
     try:
         print(f"[DEBUG] Calling Bedrock Guardrails API with ID: {GUARDRAIL_ID}, Version: {GUARDRAIL_VERSION}")
 
-        # Apply guardrail to the text
+        # 텍스트에 Guardrail 적용
         response = bedrock_runtime.apply_guardrail(
             guardrailIdentifier=GUARDRAIL_ID,
             guardrailVersion=GUARDRAIL_VERSION,
-            source="OUTPUT",  # We're filtering output from tools
+            source="OUTPUT",  # 도구 출력을 필터링
             outputScope="FULL",
             content=[{"text": {"text": text}}],
         )
 
         print(f"[DEBUG] Guardrails API response received: {json.dumps(response, default=str)}")
 
-        # Extract the masked text from the response
+        # 응답에서 마스킹된 텍스트 추출
         outputs = response.get("outputs", [])
         if outputs and len(outputs) > 0:
             masked_text = outputs[0].get("text", text)
             print(f"[DEBUG] Extracted masked_text (first 200 chars): {masked_text[:200]}")
 
-            # Log PII detection details
+            # PII 탐지 세부 정보 로깅
             usage = response.get("usage", {})
             assessments = response.get("assessments", [])
 
             if usage.get("contentPolicyUnits", 0) > 0:
                 print("[DEBUG] PII detected and anonymized by Guardrails")
 
-                # Log what types of PII were detected
+                # 탐지된 PII 유형 로깅
                 if assessments:
                     for assessment in assessments:
                         sensitive_info = assessment.get("sensitiveInformationPolicy", {})
@@ -84,35 +84,35 @@ def mask_pii_with_guardrails(text: str) -> str:
         print(f"[DEBUG]   Guardrail ID: {GUARDRAIL_ID}")
         print(f"[DEBUG]   Guardrail Version: {GUARDRAIL_VERSION}")
 
-        # Check if it's a validation error about guardrail not existing
+        # 존재하지 않는 Guardrail에 대한 검증 오류인지 확인
         if "does not exist" in error_message or "ValidationException" in error_message:
             print("[DEBUG]   ⚠ The Guardrail ID or version is invalid or doesn't exist")
             print("[DEBUG]   ⚠ Make sure Step 1.3 was run successfully to create the Guardrail")
             print("[DEBUG]   ⚠ Verify the Lambda environment variables are set correctly")
 
-        # On error, return original text (fail open to avoid blocking)
+        # 오류 발생 시 차단을 피하도록 원본 텍스트 반환(fail open)
         print("[DEBUG] mask_pii_with_guardrails - RETURNING original text (error occurred)")
         return text
 
 
 def mask_tool_response(response_body: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Mask PII in tool response by extracting text from body->result->content->text,
-    parsing the JSON, anonymizing it with Bedrock Guardrails, and reconstructing properly.
+    도구 응답의 body->result->content->text에서 텍스트를 추출하고 JSON을 파싱한 뒤,
+    Bedrock Guardrails로 익명화하여 올바른 형태로 다시 구성합니다.
 
-    Args:
-        response_body: MCP JSON-RPC response body
+    인자:
+        response_body: MCP JSON-RPC 응답 본문
 
-    Returns:
-        Response body with masked PII in the text field
+    반환:
+        text 필드의 PII가 마스킹된 응답 본문
     """
     print(f"[DEBUG] mask_tool_response - INPUT response_body: {json.dumps(response_body, default=str)}")
 
-    # Create a deep copy to avoid modifying the original
+    # 원본을 수정하지 않도록 깊은 복사본 생성
     masked_response = json.loads(json.dumps(response_body))
     print("[DEBUG] Created deep copy of response_body")
 
-    # Navigate to body->result->content
+    # body->result->content로 이동
     if "result" not in masked_response:
         print("[DEBUG] No 'result' field in response_body")
         return masked_response
@@ -128,7 +128,7 @@ def mask_tool_response(response_body: Dict[str, Any]) -> Dict[str, Any]:
 
     print(f"[DEBUG] Processing {len(content_list)} content items")
 
-    # Process each content item
+    # 각 콘텐츠 항목 처리
     for i, content_item in enumerate(content_list):
         if content_item.get("type") != "text":
             print(f"[DEBUG] Content item {i} is not type 'text', skipping")
@@ -142,27 +142,27 @@ def mask_tool_response(response_body: Dict[str, Any]) -> Dict[str, Any]:
         print(f"[DEBUG] Content item {i} text (first 200 chars): {text_value[:200]}")
 
         try:
-            # Try to parse the text as JSON
+            # 텍스트를 JSON으로 파싱 시도
             parsed_json = json.loads(text_value)
             print("[DEBUG] Successfully parsed text as JSON")
             print(f"[DEBUG] Parsed JSON structure: {json.dumps(parsed_json, default=str)[:300]}")
 
-            # Convert the parsed JSON to a pretty string for Guardrails processing
+            # Guardrails 처리를 위해 파싱한 JSON을 보기 좋은 문자열로 변환
             json_string = json.dumps(parsed_json, indent=2)
             print(f"[DEBUG] Converted to JSON string for Guardrails (first 300 chars): {json_string[:300]}")
 
-            # Apply Bedrock Guardrails to anonymize the JSON content
+            # JSON 콘텐츠를 익명화하도록 Bedrock Guardrails 적용
             print("[DEBUG] Applying Bedrock Guardrails to anonymize JSON content...")
             anonymized_json_string = mask_pii_with_guardrails(json_string)
             print(f"[DEBUG] Anonymized JSON string (first 300 chars): {anonymized_json_string[:300]}")
 
-            # Parse the anonymized string back to JSON object
+            # 익명화된 문자열을 다시 JSON 객체로 파싱
             try:
                 anonymized_json = json.loads(anonymized_json_string)
                 print("[DEBUG] Successfully parsed anonymized string back to JSON")
                 print(f"[DEBUG] Anonymized JSON object: {json.dumps(anonymized_json, default=str)[:300]}")
 
-                # Replace with the JSON object directly (not as a string)
+                # 문자열이 아닌 JSON 객체로 직접 교체
                 masked_response["result"]["content"][i]["text"] = anonymized_json
                 print(f"[DEBUG] Replaced text in content item {i} with JSON object (not string)")
 
@@ -172,15 +172,15 @@ def mask_tool_response(response_body: Dict[str, Any]) -> Dict[str, Any]:
                 masked_response["result"]["content"][i]["text"] = anonymized_json_string
 
         except json.JSONDecodeError:
-            # Not JSON, treat as plain text
+            # JSON이 아니면 일반 텍스트로 처리
             print("[DEBUG] Text is not JSON, treating as plain text")
 
-            # Apply Bedrock Guardrails to anonymize the text
+            # 텍스트를 익명화하도록 Bedrock Guardrails 적용
             print("[DEBUG] Applying Bedrock Guardrails to anonymize plain text...")
             anonymized_text = mask_pii_with_guardrails(text_value)
             print(f"[DEBUG] Anonymized text (first 200 chars): {anonymized_text[:200]}")
 
-            # Replace the text back in the response
+            # 응답의 텍스트 교체
             masked_response["result"]["content"][i]["text"] = anonymized_text
             print(f"[DEBUG] Replaced text in content item {i}")
 
@@ -190,11 +190,11 @@ def mask_tool_response(response_body: Dict[str, Any]) -> Dict[str, Any]:
 
 def lambda_handler(event, context):
     """
-    Main Lambda handler for Gateway RESPONSE interceptor.
+    Gateway 응답 인터셉터의 기본 Lambda 핸들러입니다.
 
-    This handler applies PII masking to ALL tool responses using Bedrock Guardrails.
+    이 핸들러는 Bedrock Guardrails를 사용해 모든 도구 응답에 PII 마스킹을 적용합니다.
 
-    Expected event structure (from Gateway RESPONSE for tools/call):
+    예상 이벤트 구조(tools/call에 대한 Gateway 응답):
     {
         "interceptorInputVersion": "1.0",
         "mcp": {
@@ -219,13 +219,13 @@ def lambda_handler(event, context):
         }
     }
 
-    Returns transformed response with masked PII for any tool.
+    모든 도구에 대해 PII가 마스킹된 변환 응답을 반환합니다.
     """
     print("[DEBUG] ========== LAMBDA HANDLER START ==========")
     print(f"[DEBUG] PII Masking Interceptor - Received event: {json.dumps(event, default=str)}")
 
     try:
-        # Extract MCP data
+        # MCP 데이터 추출
         mcp_data = event.get("mcp", {})
         print(f"[DEBUG] Extracted mcp_data: {json.dumps(mcp_data, default=str)}")
 
@@ -235,7 +235,7 @@ def lambda_handler(event, context):
         gateway_request = mcp_data.get("gatewayRequest", {})
         print(f"[DEBUG] Extracted gateway_request: {json.dumps(gateway_request, default=str)}")
 
-        # Get response data
+        # 응답 데이터 가져오기
         response_headers = gateway_response.get("headers", {})
         print(f"[DEBUG] response_headers: {response_headers}")
 
@@ -245,14 +245,14 @@ def lambda_handler(event, context):
         status_code = gateway_response.get("statusCode", 200)
         print(f"[DEBUG] status_code: {status_code}")
 
-        # Get request data to check which tool was called
+        # 호출된 도구를 확인하기 위해 요청 데이터 가져오기
         request_body = gateway_request.get("body", {})
         print(f"[DEBUG] request_body: {json.dumps(request_body, default=str)}")
 
         method = request_body.get("method", "")
         print(f"[DEBUG] Method: {method}")
 
-        # Only process tools/call responses
+        # tools/call 응답만 처리
         if method == "tools/call":
             params = request_body.get("params", {})
             tool_name = params.get("name", "")
@@ -260,12 +260,12 @@ def lambda_handler(event, context):
             print(f"[DEBUG] Tool called: {tool_name}")
             print("[DEBUG] Applying PII masking to tool response...")
 
-            # Mask PII in the response for any tool
+            # 모든 도구의 응답에서 PII 마스킹
             masked_body = mask_tool_response(response_body)
 
             print(f"[DEBUG] Masked response body: {json.dumps(masked_body, default=str)}")
 
-            # Build return object
+            # 반환 객체 구성
             return_obj = {
                 "interceptorOutputVersion": "1.0",
                 "mcp": {
@@ -281,7 +281,7 @@ def lambda_handler(event, context):
             print("[DEBUG] ========== LAMBDA HANDLER END (tools/call) ==========")
             return return_obj
 
-        # Pass through unchanged for non-customer-data responses
+        # tools/call이 아닌 응답은 변경 없이 전달
         print("[DEBUG] Method is not 'tools/call', passing through unchanged")
 
         passthrough_obj = {
@@ -306,7 +306,7 @@ def lambda_handler(event, context):
 
         print(f"[DEBUG] Traceback: {traceback.format_exc()}")
 
-        # On error, pass through unchanged (safer than blocking)
+        # 오류 발생 시 차단하는 대신 변경 없이 전달
         error_obj = {
             "interceptorOutputVersion": "1.0",
             "mcp": {

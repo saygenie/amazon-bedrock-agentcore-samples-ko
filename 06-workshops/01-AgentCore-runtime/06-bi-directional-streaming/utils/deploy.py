@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Amazon Bedrock AgentCore Deployment Script using Starter Toolkit
+Starter Toolkit을 사용하는 Amazon Bedrock AgentCore 배포 스크립트
 
-This script is a Python-based deployment
-using the bedrock-agentcore-starter-toolkit.
+bedrock-agentcore-starter-toolkit을 사용하는
+Python 기반 배포 스크립트입니다.
 
-Usage:
+사용법:
     python deploy.py <websocket-folder> [options]
 
-Examples:
+예시:
     python deploy.py 01-bedrock-sonic-ws
     python deploy.py 02-strands-ws --region us-west-2
     python deploy.py 03-langchain-transcribe-polly-ws --agent-name my-langchain-agent
@@ -36,32 +36,32 @@ from bedrock_agentcore_starter_toolkit.operations.runtime.launch import (
 
 
 class Colors:
-    """ANSI color codes for terminal output"""
+    """터미널 출력용 ANSI 색상 코드입니다."""
 
     GREEN = "\033[0;32m"
     BLUE = "\033[0;34m"
     YELLOW = "\033[1;33m"
     RED = "\033[0;31m"
-    NC = "\033[0m"  # No Color
+    NC = "\033[0m"  # 색상 없음
 
 
 class AgentCoreDeployer:
-    """Handles deployment of agents to Amazon Bedrock AgentCore Runtime"""
+    """Amazon Bedrock AgentCore Runtime으로의 에이전트 배포를 처리합니다."""
 
     def __init__(self, websocket_folder: str, args: argparse.Namespace):
         self.websocket_folder = websocket_folder
         self.args = args
 
-        # Resolve paths relative to the project root directory
+        # 프로젝트 루트 디렉터리를 기준으로 경로 확인
         self.base_dir = Path(__file__).parent.parent
 
-        # Validate folder exists
+        # 폴더 존재 여부 검증
         self.websocket_path = self.base_dir / websocket_folder / "websocket"
         if not self.websocket_path.exists():
             self._error(f"Websocket folder not found: {self.websocket_path}")
             sys.exit(1)
 
-        # Set configuration
+        # 구성 설정
         self.aws_region = args.region or os.getenv("AWS_REGION", "us-east-1")
         self.account_id = args.account_id or os.getenv("ACCOUNT_ID")
         self.agent_name = args.agent_name or f"bidi_{websocket_folder.replace('-', '_')}_agent"
@@ -73,27 +73,27 @@ class AgentCoreDeployer:
         self.config_file = self.base_dir / websocket_folder / "setup_config.json"
 
     def _print(self, message: str, color: str = Colors.NC):
-        """Print colored message"""
+        """색상이 적용된 메시지를 출력합니다."""
         print(f"{color}{message}{Colors.NC}")
 
     def _error(self, message: str):
-        """Print error message"""
+        """오류 메시지를 출력합니다."""
         self._print(f"❌ {message}", Colors.RED)
 
     def _success(self, message: str):
-        """Print success message"""
+        """성공 메시지를 출력합니다."""
         self._print(f"✅ {message}", Colors.GREEN)
 
     def _info(self, message: str):
-        """Print info message"""
+        """정보 메시지를 출력합니다."""
         self._print(f"ℹ️  {message}", Colors.BLUE)
 
     def _warning(self, message: str):
-        """Print warning message"""
+        """경고 메시지를 출력합니다."""
         self._print(f"⚠️  {message}", Colors.YELLOW)
 
     def _run_command(self, cmd: list, cwd: Optional[Path] = None, check: bool = True) -> subprocess.CompletedProcess:
-        """Run a shell command and return the result"""
+        """Shell 명령을 실행하고 결과를 반환합니다."""
         try:
             result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=check)
             return result
@@ -105,7 +105,7 @@ class AgentCoreDeployer:
             return e
 
     def create_memory(self) -> Optional[Dict]:
-        """Create an AgentCore Memory resource for the strands agent."""
+        """Strands 에이전트용 AgentCore Memory 리소스를 생성합니다."""
         if self.websocket_folder != "02-strands-ws":
             return None
 
@@ -118,7 +118,7 @@ class AgentCoreDeployer:
 
             memory_name = f"{self.agent_name}_memory"
 
-            # Check if memory already exists by listing and matching name
+            # 목록에서 이름을 대조하여 Memory가 이미 존재하는지 확인
             try:
                 existing = client.list_memories()
                 for mem in existing.get("memories", []):
@@ -127,7 +127,7 @@ class AgentCoreDeployer:
                         self._info(f"Found existing memory: {memory_name} (ID: {memory_id})")
                         return {"memory_id": memory_id, "memory_name": memory_name}
             except Exception:
-                pass  # list may not be supported or empty, proceed to create
+                pass  # 목록 조회가 지원되지 않거나 비어 있을 수 있으므로 생성 진행
 
             memory = client.create_memory(
                 name=memory_name,
@@ -149,7 +149,7 @@ class AgentCoreDeployer:
             return None
 
     def deploy_mcp_gateway(self) -> Optional[Dict]:
-        """Deploy MCP Gateways (for strands and langchain agents that use MCP tools)"""
+        """MCP 도구를 사용하는 Strands 및 LangChain 에이전트용 MCP Gateway를 배포합니다."""
         if self.websocket_folder not in (
             "02-strands-ws",
             "03-langchain-transcribe-polly-ws",
@@ -158,11 +158,11 @@ class AgentCoreDeployer:
 
         self._print("\n🌐 Deploying MCP Gateways...", Colors.YELLOW)
 
-        # Initialize Gateway client
+        # Gateway 클라이언트 초기화
         client = GatewayClient(region_name=self.aws_region)
         bedrock_client = boto3.client("bedrock-agentcore-control", region_name=self.aws_region)
 
-        # Define the four gateways to create
+        # 생성할 Gateway 4개 정의
         gateway_configs = [
             {
                 "name": "auth-tools",
@@ -204,7 +204,7 @@ class AgentCoreDeployer:
 
             gateway = None
 
-            # Check if gateway already exists
+            # Gateway가 이미 존재하는지 확인
             try:
                 response = bedrock_client.list_gateways()
                 for gw in response.get("items", []):
@@ -216,7 +216,7 @@ class AgentCoreDeployer:
             except Exception as e:
                 self._warning(f"Could not check for existing gateway: {e}")
 
-            # Create MCP Gateway if it doesn't exist
+            # MCP Gateway가 없으면 생성
             if not gateway:
                 self._info(f"Creating {gateway_name} gateway...")
                 try:
@@ -245,7 +245,7 @@ class AgentCoreDeployer:
             self._success(f"Gateway ready: {gateway_id}")
             self._info(f"   URL: {gateway_url}")
 
-            # Create MCP Server Target
+            # MCP Server 대상 생성
             self._info(f"Creating MCP Server Target for {gw_config['mcp_server']}...")
 
             try:
@@ -264,7 +264,7 @@ class AgentCoreDeployer:
                 else:
                     raise
 
-            # Store gateway info
+            # Gateway 정보 저장
             deployed_gateways.append(
                 {
                     "gateway_name": gateway_name,
@@ -278,7 +278,7 @@ class AgentCoreDeployer:
                 }
             )
 
-        # Save gateway configuration
+        # Gateway 구성 저장
         gateway_config = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "deployment_type": "mcp-gateway",
@@ -296,7 +296,7 @@ class AgentCoreDeployer:
         return {"gateways": deployed_gateways}
 
     def check_prerequisites(self):
-        """Check if required tools are installed"""
+        """필수 도구 설치 여부를 확인합니다."""
         self._print("\n📋 Checking prerequisites...", Colors.YELLOW)
 
         required_tools = {
@@ -322,10 +322,10 @@ class AgentCoreDeployer:
         self._success("All prerequisites met")
 
     def setup_agentcore_project(self):
-        """Set up AgentCore project structure"""
+        """AgentCore 프로젝트 구조를 설정합니다."""
         self._print("\n📦 Setting up AgentCore project...", Colors.YELLOW)
 
-        # Create .bedrock_agentcore.yaml configuration
+        # .bedrock_agentcore.yaml 구성 생성
         config = {
             "agent_name": self.agent_name,
             "region": self.aws_region,
@@ -339,19 +339,19 @@ class AgentCoreDeployer:
 
         config_path = self.websocket_path / ".bedrock_agentcore.yaml"
 
-        # Write configuration
+        # 구성 기록
         with open(config_path, "w") as f:
             yaml.dump(config, f, default_flow_style=False)
 
         self._success(f"Created AgentCore configuration: {config_path}")
 
     def create_iam_role(self) -> str:
-        """Create IAM role for the agent"""
+        """에이전트용 IAM 역할을 생성합니다."""
         self._print("\n🔐 Creating IAM role...", Colors.YELLOW)
 
         role_name = f"WebSocket{self.websocket_folder.capitalize()}AgentRole"
 
-        # Read policy files early so they're available for both create and update paths
+        # 생성 및 업데이트 경로 모두에서 사용할 수 있도록 정책 파일을 미리 읽기
         deploy_dir = Path(__file__).parent
         agent_role_path = deploy_dir / "agent_role.json"
         trust_policy_path = deploy_dir / "trust_policy.json"
@@ -360,7 +360,7 @@ class AgentCoreDeployer:
             self._error("Policy files not found (agent_role.json, trust_policy.json)")
             sys.exit(1)
 
-        # Check if role exists
+        # 역할 존재 여부 확인
         check_cmd = ["aws", "iam", "get-role", "--role-name", role_name]
         result = self._run_command(check_cmd, check=False)
 
@@ -369,7 +369,7 @@ class AgentCoreDeployer:
             role_arn = role_data["Role"]["Arn"]
             self._info(f"IAM role {role_name} already exists")
 
-            # Always update the policy to ensure latest permissions are applied
+            # 최신 권한이 적용되도록 항상 정책 업데이트
             with open(agent_role_path, "r") as f:
                 agent_role_policy = f.read().replace("${ACCOUNT_ID}", self.account_id)
 
@@ -388,11 +388,11 @@ class AgentCoreDeployer:
             self._success(f"Updated policy on existing role: {role_arn}")
             return role_arn
 
-        # Read and substitute ACCOUNT_ID in agent_role.json
+        # agent_role.json을 읽고 ACCOUNT_ID 치환
         with open(agent_role_path, "r") as f:
             agent_role_policy = f.read().replace("${ACCOUNT_ID}", self.account_id)
 
-        # Create role
+        # 역할 생성
         create_role_cmd = [
             "aws",
             "iam",
@@ -408,7 +408,7 @@ class AgentCoreDeployer:
         result = self._run_command(create_role_cmd)
         self._success("Role created")
 
-        # Attach policy
+        # 정책 연결
         put_policy_cmd = [
             "aws",
             "iam",
@@ -424,14 +424,14 @@ class AgentCoreDeployer:
         self._run_command(put_policy_cmd)
         self._success("Policy attached")
 
-        # Get role ARN
+        # 역할 ARN 가져오기
         result = self._run_command(["aws", "iam", "get-role", "--role-name", role_name, "--output", "json"])
         role_data = json.loads(result.stdout)
         role_arn = role_data["Role"]["Arn"]
 
         self._success(f"IAM role created: {role_arn}")
 
-        # Wait for IAM propagation
+        # IAM 반영 대기
         self._info("Waiting 10 seconds for IAM role to propagate...")
         time.sleep(10)
 
@@ -443,25 +443,25 @@ class AgentCoreDeployer:
         gateway_info: Optional[Dict] = None,
         memory_info: Optional[Dict] = None,
     ) -> Dict:
-        """Deploy agent using starter toolkit"""
+        """starter toolkit을 사용해 에이전트를 배포합니다."""
         self._print("\n🚀 Deploying agent to AgentCore Runtime...", Colors.YELLOW)
 
-        # Change to websocket directory
+        # WebSocket 디렉터리로 이동
         original_dir = Path.cwd()
         os.chdir(self.websocket_path)
 
         try:
-            # Remove any existing configuration file first
+            # 먼저 기존 구성 파일 제거
             config_path = Path(".bedrock_agentcore.yaml")
             if config_path.exists():
                 self._info("Removing existing configuration...")
                 config_path.unlink()
 
-            # Create .bedrock_agentcore.yaml configuration file directly
+            # .bedrock_agentcore.yaml 구성 파일 직접 생성
             self._info("Creating AgentCore configuration...")
 
-            # The toolkit expects an 'agents' section with agent definitions
-            # Use ecr_auto_create to let the SDK create the repository and get the full URI
+            # toolkit은 에이전트 정의가 포함된 'agents' 섹션을 요구함
+            # SDK가 리포지토리를 생성하고 전체 URI를 가져오도록 ecr_auto_create 사용
             config = {
                 "agents": {
                     self.agent_name: {
@@ -480,15 +480,15 @@ class AgentCoreDeployer:
                 "region": self.aws_region,
             }
 
-            # Prepare environment variables
+            # 환경 변수 준비
             env_vars = {}
 
-            # Add MCP Gateway environment variables if available (for strands and langchain)
+            # 사용 가능한 경우 MCP Gateway 환경 변수 추가(Strands 및 LangChain용)
             if self.websocket_folder in ("02-strands-ws", "03-langchain-transcribe-polly-ws") and gateway_info:
                 gateways = gateway_info.get("gateways", [])
 
                 if gateways:
-                    # Pass all gateway ARNs and URLs as JSON-encoded environment variables
+                    # 모든 Gateway ARN과 URL을 JSON 인코딩된 환경 변수로 전달
                     gateway_arns = [gw["gateway_arn"] for gw in gateways]
                     gateway_urls = [gw["gateway_url"] for gw in gateways]
 
@@ -499,13 +499,13 @@ class AgentCoreDeployer:
                     for gw in gateways:
                         self._info(f"   {gw['gateway_name']}: {gw['gateway_url']}")
 
-            # Add AgentCore Memory environment variable if available (for strands)
+            # 사용 가능한 경우 AgentCore Memory 환경 변수 추가(Strands용)
             if memory_info and memory_info.get("memory_id"):
                 env_vars["MEMORY_ID"] = memory_info["memory_id"]
                 env_vars["MEMORY_REGION"] = self.aws_region
                 self._info(f"Added MEMORY_ID={memory_info['memory_id']} to environment")
 
-            # Add Pipecat-specific environment variables from .env file (if any)
+            # .env 파일에 Pipecat 전용 환경 변수가 있으면 추가
             if self.websocket_folder == "04-pipecat-sonic-ws":
                 env_file = self.websocket_path / ".env"
                 if env_file.exists():
@@ -525,7 +525,7 @@ class AgentCoreDeployer:
 
             self._success(f"Configuration created: {config_path}")
 
-            # Determine deployment mode
+            # 배포 모드 결정
             local = self.args.local
             use_codebuild = not self.args.local_build
 
@@ -538,7 +538,7 @@ class AgentCoreDeployer:
 
             self._info("Launching agent (this may take a few minutes)...")
 
-            # Use starter toolkit to launch
+            # starter toolkit을 사용해 시작
             result = launch_bedrock_agentcore(
                 config_path=config_path,
                 agent_name=self.agent_name,
@@ -548,7 +548,7 @@ class AgentCoreDeployer:
                 auto_update_on_conflict=True,
             )
 
-            # Extract agent information from result
+            # 결과에서 에이전트 정보 추출
             agent_arn = result.agent_arn
             agent_id = result.agent_id
 
@@ -569,7 +569,7 @@ class AgentCoreDeployer:
             os.chdir(original_dir)
 
     def save_configuration(self, deployment_info: Dict):
-        """Save deployment configuration to JSON file"""
+        """배포 구성을 JSON 파일에 저장합니다."""
         self._print("\n💾 Saving configuration...", Colors.YELLOW)
 
         config = {
@@ -584,7 +584,7 @@ class AgentCoreDeployer:
             "deployment_method": "agentcore-starter-toolkit",
         }
 
-        # Include memory info if available
+        # 사용 가능한 경우 Memory 정보 포함
         if "memory" in deployment_info:
             config["memory"] = deployment_info["memory"]
 
@@ -594,7 +594,7 @@ class AgentCoreDeployer:
         self._success(f"Configuration saved to {self.config_file}")
 
     def print_summary(self, deployment_info: Dict):
-        """Print deployment summary"""
+        """배포 요약을 출력합니다."""
         self._print("\n" + "=" * 80, Colors.GREEN)
         self._print("✅ Deployment Complete!", Colors.GREEN)
         self._print("=" * 80, Colors.GREEN)
@@ -611,7 +611,7 @@ class AgentCoreDeployer:
         print(f"   Agent ARN:         {deployment_info['agent_arn']}")
         print(f"   IAM Role:          {deployment_info['role_arn']}")
 
-        # Show gateway info if available (strands deployment)
+        # 사용 가능한 경우 Gateway 정보 표시(Strands 배포)
         if "gateways" in deployment_info:
             gateways = deployment_info["gateways"]
             print(f"\n{Colors.YELLOW}MCP Gateways ({len(gateways)} deployed):{Colors.NC}")
@@ -622,7 +622,7 @@ class AgentCoreDeployer:
                 print(f"      Target ID:      {gw['target_id']}")
                 print(f"      Tools:          {', '.join(gw['tools'])}")
 
-        # Show memory info if available (strands deployment)
+        # 사용 가능한 경우 Memory 정보 표시(Strands 배포)
         if "memory" in deployment_info:
             mem = deployment_info["memory"]
             print(f"\n{Colors.YELLOW}AgentCore Memory:{Colors.NC}")
@@ -648,38 +648,38 @@ class AgentCoreDeployer:
         self._print("\n" + "=" * 80, Colors.GREEN)
 
     def deploy(self):
-        """Main deployment workflow"""
+        """기본 배포 워크플로입니다."""
         try:
             self._print(f"\n🚀 AgentCore Deployment - {self.websocket_folder}", Colors.BLUE)
             self._print(f"📁 Using websocket folder: {self.websocket_folder}\n", Colors.BLUE)
 
-            # Step 1: Check prerequisites
+            # 1단계: 필수 조건 확인
             self.check_prerequisites()
 
-            # Step 1.5: Deploy MCP Gateway (only for strands)
+            # 1.5단계: MCP Gateway 배포(Strands 전용)
             gateway_info = self.deploy_mcp_gateway()
 
-            # Step 1.6: Create AgentCore Memory (only for strands)
+            # 1.6단계: AgentCore Memory 생성(Strands 전용)
             memory_info = self.create_memory()
 
-            # Step 2: Create IAM role
+            # 2단계: IAM 역할 생성
             role_arn = self.create_iam_role()
 
-            # Step 3: Deploy agent
+            # 3단계: 에이전트 배포
             deployment_info = self.deploy_agent(role_arn, gateway_info, memory_info)
 
-            # Add gateway info to deployment info if available
+            # 사용 가능한 경우 배포 정보에 Gateway 정보 추가
             if gateway_info:
                 deployment_info["gateway"] = gateway_info
 
-            # Add memory info to deployment info if available
+            # 사용 가능한 경우 배포 정보에 Memory 정보 추가
             if memory_info:
                 deployment_info["memory"] = memory_info
 
-            # Step 4: Save configuration
+            # 4단계: 구성 저장
             self.save_configuration(deployment_info)
 
-            # Step 5: Print summary
+            # 5단계: 요약 출력
             self.print_summary(deployment_info)
 
         except KeyboardInterrupt:
@@ -737,7 +737,7 @@ Environment Variables:
 
     args = parser.parse_args()
 
-    # Create deployer and run
+    # 배포 도구를 생성하여 실행
     deployer = AgentCoreDeployer(args.websocket_folder, args)
     deployer.deploy()
 

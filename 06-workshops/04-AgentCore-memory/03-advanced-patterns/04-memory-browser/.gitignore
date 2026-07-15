@@ -1,17 +1,17 @@
-# Dependencies
+# 종속성
 node_modules/
 backend/venv/
 backend/.venv/
 .venv/
 
-# Environment variables with sensitive/personal data
-# backend/.env - now cleaned and safe to share
+# 민감한 데이터 또는 개인 데이터가 포함된 환경 변수
+# backend/.env - 정리되어 공유해도 안전함
 
-# Keep both .env files as they only contain non-sensitive config
-# .env (frontend) - safe to share
-# backend/.env - safe to share (cleaned of personal AWS profile)
+# 두 .env 파일에는 민감하지 않은 구성만 있으므로 모두 유지
+# .env (frontend) - 공유해도 안전함
+# backend/.env - 공유해도 안전함(개인 AWS profile 제거됨)
 
-# Python cache
+# Python 캐시
 __pycache__/
 *.pyc
 *.pyo
@@ -19,60 +19,60 @@ __pycache__/
 .Python
 *.so
 
-# Build outputs
+# 빌드 출력
 build/
 dist/
 
-# IDE files
+# IDE 파일
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS files
+# OS 파일
 .DS_Store
 Thumbs.db
 
-# Logs
+# 로그
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Runtime data
+# 런타임 데이터
 pids
 *.pid
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
+# istanbul과 같은 도구에서 사용하는 커버리지 디렉터리
 coverage/
 
-# nyc test coverage
+# nyc 테스트 커버리지
 .nyc_output
 
-# Dependency directories
+# 종속성 디렉터리
 jspm_packages/
 
-# Optional npm cache directory
+# 선택적 npm cache 디렉터리
 .npm
 
-# Optional REPL history
+# 선택적 REPL 기록
 .node_repl_history
 
-# Output of 'npm pack'
+# 'npm pack'의 출력
 *.tgz
 
-# Yarn Integrity file
+# Yarn 무결성 파일
 .yarn-integrity
 
-# dotenv environment variables file
+# dotenv 환경 변수 파일
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# AWS credentials (if accidentally placed in project)
+# AWS 자격 증명(실수로 프로젝트에 추가된 경우)
 .aws/
 credentials
 config

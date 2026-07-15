@@ -1,8 +1,8 @@
 """
-LangChain Voice Agent WebSocket Server
+LangChain Voice Agent WebSocket 서버
 
-FastAPI server with IMDS credential management and WebSocket endpoint.
-Agent logic lives in agent.py (following the strands pattern).
+IMDS 자격 증명 관리와 WebSocket 엔드포인트를 제공하는 FastAPI Server입니다.
+Agent 로직은 Strands 패턴에 따라 agent.py에 있습니다.
 """
 
 import logging
@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Environment / Gateway config
+# 환경/Gateway 구성
 # ---------------------------------------------------------------------------
 MCP_GATEWAY_ARNS = os.getenv("MCP_GATEWAY_ARNS")
 MCP_GATEWAY_URLS = os.getenv("MCP_GATEWAY_URLS")
@@ -47,12 +47,12 @@ _credential_refresh_task = None
 
 
 # ---------------------------------------------------------------------------
-# IMDS credential helpers (same pattern as strands server)
+# IMDS 자격 증명 헬퍼(Strands Server와 같은 패턴)
 # ---------------------------------------------------------------------------
 
 
 def get_imdsv2_token():
-    """Get IMDSv2 token for secure metadata access."""
+    """안전한 메타데이터 접근을 위한 IMDSv2 token을 가져옵니다."""
     try:
         resp = requests.put(
             "http://169.254.169.254/latest/api/token",
@@ -67,7 +67,7 @@ def get_imdsv2_token():
 
 
 def get_credentials_from_imds():
-    """Retrieve IAM role credentials from EC2 IMDS (tries IMDSv2 first, falls back to IMDSv1)."""
+    """EC2 IMDS에서 IAM 역할 자격 증명을 가져옵니다(IMDSv2 우선, 실패 시 IMDSv1)."""
     result = {
         "success": False,
         "credentials": None,
@@ -115,7 +115,7 @@ def get_credentials_from_imds():
 
 
 async def refresh_credentials_from_imds():
-    """Background task to refresh credentials from IMDS."""
+    """IMDS에서 자격 증명을 갱신하는 백그라운드 작업입니다."""
     logger.info("Starting credential refresh task")
     while True:
         try:
@@ -145,7 +145,7 @@ async def refresh_credentials_from_imds():
 
 
 # ---------------------------------------------------------------------------
-# FastAPI app
+# FastAPI 앱
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="LangChain Voice Agent WebSocket Server")

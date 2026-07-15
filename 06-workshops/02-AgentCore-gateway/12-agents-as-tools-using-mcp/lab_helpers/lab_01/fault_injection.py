@@ -1,6 +1,6 @@
 """
-Fault injection functions for Lab 01
-Implements three common infrastructure faults for SRE training
+Lab 01용 fault injection 함수
+SRE 교육을 위한 일반적인 인프라 장애 세 가지를 구현합니다.
 """
 
 import boto3
@@ -11,20 +11,20 @@ from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from .ssm_helper import get_stack_resources
 
-# Global storage for original configurations (for potential future rollback)
+# 향후 rollback에 사용할 수 있도록 원래 구성을 저장하는 전역 저장소
 original_configs = {}
 
 
 def initialize_fault_injection(region_name: str, profile_name: str = None) -> Dict[str, str]:
     """
-    Initialize fault injection by retrieving infrastructure resource IDs
+    인프라 리소스 ID를 가져와 fault injection을 초기화합니다.
 
-    Args:
-        region_name: AWS region
-        profile_name: AWS profile name (optional)
+    인자:
+        region_name: AWS 리전
+        profile_name: AWS profile 이름(선택 사항)
 
-    Returns:
-        Dictionary of resource identifiers
+    반환:
+        리소스 식별자 딕셔너리
     """
     print("Retrieving infrastructure resources from SSM Parameter Store...")
     resources = get_stack_resources(region_name, profile_name)
@@ -39,38 +39,38 @@ def initialize_fault_injection(region_name: str, profile_name: str = None) -> Di
 
 def _update_single_table(dynamodb, table_name: str) -> tuple:
     """
-    Update a single DynamoDB table to PROVISIONED mode with low capacity.
-    Designed for parallel execution.
+    단일 DynamoDB 테이블을 용량이 낮은 PROVISIONED 모드로 변경합니다.
+    병렬 실행용으로 설계되었습니다.
 
-    Returns:
+    반환:
         tuple: (table_name, success, original_billing_mode_or_error)
     """
     try:
-        # Store original billing mode for potential rollback
+        # rollback에 사용할 수 있도록 원래 billing mode 저장
         print(f"Processing table: {table_name}")
         table_info = dynamodb.describe_table(TableName=table_name)
         original_billing_mode = table_info["Table"]["BillingModeSummary"]["BillingMode"]
         print(f"  Original billing mode: {original_billing_mode}")  # codeql[py/clear-text-logging-sensitive-data]
 
-        # Convert to provisioned capacity with dangerously low limits
+        # 지나치게 낮은 제한의 provisioned capacity로 변환
         print("  Converting to PROVISIONED mode with minimal capacity...")
         dynamodb.update_table(
             TableName=table_name,
             BillingMode="PROVISIONED",
             ProvisionedThroughput={
-                "ReadCapacityUnits": 1,  # Extremely low - guaranteed to throttle
-                "WriteCapacityUnits": 1,  # Extremely low - guaranteed to throttle
+                "ReadCapacityUnits": 1,  # 매우 낮아 제한 발생이 보장됨
+                "WriteCapacityUnits": 1,  # 매우 낮아 제한 발생이 보장됨
             },
         )
 
-        # Wait for table update to complete
+        # 테이블 업데이트가 완료될 때까지 대기
         print(f"  Waiting for {table_name} update to complete...")
         waiter = dynamodb.get_waiter("table_exists")
         waiter.wait(
             TableName=table_name,
             WaiterConfig={
-                "Delay": 2,  # Check every 2 seconds (reduced from 5)
-                "MaxAttempts": 90,  # 3 minutes max
+                "Delay": 2,  # 2초마다 확인(5초에서 단축)
+                "MaxAttempts": 90,  # 최대 3분
             },
         )
 
@@ -84,27 +84,27 @@ def _update_single_table(dynamodb, table_name: str) -> tuple:
 
 def inject_dynamodb_throttling(resources: Dict[str, str], region_name: str, profile_name: str = None) -> bool:
     """
-    Inject DynamoDB throttling by converting tables to PROVISIONED mode with low capacity.
-    This simulates a common production issue where table capacity is insufficient for
-    the application workload, causing ProvisionedThroughputExceededException errors.
+    테이블을 낮은 용량의 PROVISIONED 모드로 변경하여 DynamoDB 제한을 주입합니다.
+    애플리케이션 워크로드에 비해 테이블 용량이 부족하여
+    ProvisionedThroughputExceededException이 발생하는 일반적인 프로덕션 문제를 재현합니다.
 
-    Args:
-        resources: Dictionary of resource identifiers from get_stack_resources()
-        region_name: AWS region
-        profile_name: AWS profile name (optional)
+    인자:
+        resources: get_stack_resources()에서 가져온 리소스 식별자 딕셔너리
+        region_name: AWS 리전
+        profile_name: AWS profile 이름(선택 사항)
 
-    Returns:
-        Boolean indicating success/failure
+    반환:
+        성공/실패 여부
     """
     try:
-        # Get list of DynamoDB table names from resources
+        # 리소스에서 DynamoDB 테이블 이름 목록 가져오기
         table_keys = [key for key in resources.keys() if key.endswith("_table_name") and "crm" in key]
 
         if not table_keys:
             print("❌ No DynamoDB table names found in resources")
             return False
 
-        # Create DynamoDB client
+        # DynamoDB 클라이언트 생성
         if profile_name:
             session = boto3.Session(profile_name=profile_name, region_name=region_name)
             dynamodb = session.client("dynamodb")
@@ -118,34 +118,34 @@ def inject_dynamodb_throttling(resources: Dict[str, str], region_name: str, prof
         success_count = 0
         failed_tables = []
 
-        # Extract table names
+        # 테이블 이름 추출
         table_names = [resources.get(key) for key in table_keys if resources.get(key)]
 
         if not table_names:
             print("❌ No valid table names found")
             return False
 
-        # Process tables concurrently
-        max_workers = min(len(table_names), 10)  # Limit to 10 concurrent operations
+        # 테이블을 동시에 처리
+        max_workers = min(len(table_names), 10)  # 동시 작업을 10개로 제한
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all table updates
+            # 모든 테이블 업데이트 제출
             future_to_table = {
                 executor.submit(_update_single_table, dynamodb, table_name): table_name for table_name in table_names
             }
 
-            # Collect results as they complete
+            # 완료되는 대로 결과 수집
             for future in as_completed(future_to_table):
                 table_name, success, result = future.result()
 
                 if success:
-                    # Store original config for rollback
+                    # rollback용 원래 구성 저장
                     original_configs[f"dynamodb_billing_mode_{table_name}"] = result
                     success_count += 1
                 else:
                     failed_tables.append(table_name)
 
-        # Summary
+        # 요약
         print(f"\n{'=' * 60}")
         print(f"Summary: {success_count}/{len(table_names)} tables updated successfully")
         if failed_tables:
@@ -161,18 +161,18 @@ def inject_dynamodb_throttling(resources: Dict[str, str], region_name: str, prof
 
 def inject_iam_permissions(resources: Dict[str, str], region_name: str, profile_name: str = None) -> bool:
     """
-    Inject IAM permission issues by replacing DynamoDB Allow policy with Deny policy
+    DynamoDB Allow policy를 Deny policy로 교체하여 IAM 권한 문제를 주입합니다.
 
-    This simulates a common production issue where overly restrictive security policies
-    or accidental policy changes prevent applications from accessing required AWS resources.
+    지나치게 제한적인 보안 policy나 실수로 변경된 policy 때문에 애플리케이션이
+    필요한 AWS 리소스에 접근하지 못하는 일반적인 프로덕션 문제를 재현합니다.
 
-    Args:
-        resources: Dictionary of resource identifiers from get_stack_resources()
-        region_name: AWS region
-        profile_name: AWS profile name (optional)
+    인자:
+        resources: get_stack_resources()에서 가져온 리소스 식별자 딕셔너리
+        region_name: AWS 리전
+        profile_name: AWS profile 이름(선택 사항)
 
-    Returns:
-        Boolean indicating success/failure
+    반환:
+        성공/실패 여부
     """
     try:
         ec2_role_name = resources.get("ec2_role_name")
@@ -181,7 +181,7 @@ def inject_iam_permissions(resources: Dict[str, str], region_name: str, profile_
             print("❌ EC2 role name not found in resources")
             return False
 
-        # Create IAM client
+        # IAM 클라이언트 생성
         if profile_name:
             session = boto3.Session(profile_name=profile_name, region_name=region_name)
             iam = session.client("iam")
@@ -190,7 +190,7 @@ def inject_iam_permissions(resources: Dict[str, str], region_name: str, profile_
 
         print(f"\nTarget IAM role: {ec2_role_name}")
 
-        # Store original policy for potential rollback
+        # rollback에 사용할 수 있도록 원래 policy 저장
         print("Backing up original DynamoDB policy...")
         try:
             original_policy = iam.get_role_policy(RoleName=ec2_role_name, PolicyName="DynamoDBAccess")
@@ -199,7 +199,7 @@ def inject_iam_permissions(resources: Dict[str, str], region_name: str, profile_
         except ClientError:
             print("  ⚠️  Could not backup original policy (may not exist)")
 
-        # Create a restrictive policy that denies DynamoDB access
+        # DynamoDB 접근을 거부하는 제한적 policy 생성
         print("\nApplying restrictive IAM policy...")
         print("  Technical details:")
         print("  - Replacing existing 'Allow' statements with 'Deny' statements")
@@ -240,18 +240,18 @@ def inject_iam_permissions(resources: Dict[str, str], region_name: str, profile_
 
 def inject_nginx_crash(resources: Dict[str, str], region_name: str, profile_name: str = None) -> bool:
     """
-    Inject nginx crash by killing the nginx process via AWS Systems Manager
+    AWS Systems Manager를 통해 nginx 프로세스를 종료하여 장애를 주입합니다.
 
-    This simulates a common production issue where services crash due to memory leaks,
-    segmentation faults, or resource exhaustion, causing ALB health check failures.
+    메모리 누수, segmentation fault 또는 리소스 고갈로 서비스가 중단되어
+    ALB 상태 점검이 실패하는 일반적인 프로덕션 문제를 재현합니다.
 
-    Args:
-        resources: Dictionary of resource identifiers from get_stack_resources()
-        region_name: AWS region
-        profile_name: AWS profile name (optional)
+    인자:
+        resources: get_stack_resources()에서 가져온 리소스 식별자 딕셔너리
+        region_name: AWS 리전
+        profile_name: AWS profile 이름(선택 사항)
 
-    Returns:
-        Boolean indicating success/failure
+    반환:
+        성공/실패 여부
     """
     try:
         nginx_instance_id = resources.get("nginx_instance_id")
@@ -260,7 +260,7 @@ def inject_nginx_crash(resources: Dict[str, str], region_name: str, profile_name
             print("❌ Nginx instance ID not found in resources")
             return False
 
-        # Create SSM client
+        # SSM 클라이언트 생성
         if profile_name:
             session = boto3.Session(profile_name=profile_name, region_name=region_name)
             ssm = session.client("ssm")
@@ -275,7 +275,7 @@ def inject_nginx_crash(resources: Dict[str, str], region_name: str, profile_name
         print("  - ALB health checks will get 'connection refused' when trying to reach /health")
         print("  - After 3 consecutive failures (90 seconds), target marked as unhealthy")
 
-        # Kill nginx process to simulate crash
+        # 장애를 재현하도록 nginx 프로세스 종료
         crash_script = """
 echo "Current nginx process status:"
 sudo systemctl status nginx --no-pager -l || echo "Nginx not running"
@@ -305,7 +305,7 @@ ps aux | grep nginx | grep -v grep || echo "No nginx processes running"
         command_id = response["Command"]["CommandId"]
         print(f"  Command ID: {command_id}")
 
-        # Wait for command to complete
+        # 명령 완료 대기
         print("  Waiting for crash simulation to complete...")
         time.sleep(10)
 
@@ -326,18 +326,18 @@ ps aux | grep nginx | grep -v grep || echo "No nginx processes running"
 
 def inject_nginx_timeout(resources: Dict[str, str], region_name: str, profile_name: str = None) -> bool:
     """
-    Inject nginx timeout misconfiguration by setting proxy timeouts too short
+    proxy timeout을 지나치게 짧게 설정하여 nginx timeout 구성 오류를 주입합니다.
 
-    This simulates a common production issue where reverse proxy timeouts don't
-    account for backend response times, causing 502 Bad Gateway errors.
+    reverse proxy timeout이 백엔드 응답 시간을 고려하지 않아 502 Bad Gateway 오류가
+    발생하는 일반적인 프로덕션 문제를 재현합니다.
 
-    Args:
-        resources: Dictionary of resource identifiers from get_stack_resources()
-        region_name: AWS region
-        profile_name: AWS profile name (optional)
+    인자:
+        resources: get_stack_resources()에서 가져온 리소스 식별자 딕셔너리
+        region_name: AWS 리전
+        profile_name: AWS profile 이름(선택 사항)
 
-    Returns:
-        Boolean indicating success/failure
+    반환:
+        성공/실패 여부
     """
     try:
         nginx_instance_id = resources.get("nginx_instance_id")
@@ -346,7 +346,7 @@ def inject_nginx_timeout(resources: Dict[str, str], region_name: str, profile_na
             print("❌ Nginx instance ID not found in resources")
             return False
 
-        # Create SSM client
+        # SSM 클라이언트 생성
         if profile_name:
             session = boto3.Session(profile_name=profile_name, region_name=region_name)
             ssm = session.client("ssm")
@@ -394,7 +394,7 @@ echo "Nginx timeout misconfiguration injected successfully"
         command_id = response["Command"]["CommandId"]
         print(f"  Command ID: {command_id}")
 
-        # Wait for command to complete
+        # 명령 완료 대기
         print("  Waiting for injection to complete...")
         time.sleep(10)
 

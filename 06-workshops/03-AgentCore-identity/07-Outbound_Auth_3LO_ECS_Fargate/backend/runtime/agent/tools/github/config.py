@@ -1,12 +1,12 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""GitHub tool configuration."""
+"""GitHub 도구 설정."""
 
 from pydantic import BaseModel, Field
 
 
 class GitHubConfig(BaseModel):
-    """Configuration for GitHub tools."""
+    """GitHub 도구 설정."""
 
     session_binding_url: str = Field(..., description="Session Binding URL for the customer-managed service")
     github_api_base: str = Field(..., description="GitHub API base URL")

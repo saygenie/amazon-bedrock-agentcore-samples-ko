@@ -3,30 +3,30 @@
 
 # Managed VPC Resource
 
-> AgentCore Gateway-managed mode for VPC egress. Uses Amazon VPC Lattice under the hood; you don't manage the Lattice resources directly.
+> VPC egress를 위한 AgentCore Gateway 관리형 모드입니다. 내부적으로 Amazon VPC Lattice를 사용하며 Lattice 리소스를 직접 관리하지 않습니다.
 
-Amazon Bedrock AgentCore Gateway creates and manages the VPC Lattice resource gateway and resource configuration on your behalf. You provide your VPC, subnets, and optional security groups — AgentCore handles the rest.
+Amazon Bedrock AgentCore Gateway가 VPC Lattice Resource Gateway와 Resource Configuration을 대신 생성하고 관리합니다. VPC, subnet 및 선택적 security group을 제공하면 나머지는 AgentCore가 처리합니다.
 
-![arch](./images/arch.png)
+![아키텍처](./images/arch.png)
 
-## How it works
+## 작동 방식
 
-When you call `CreateGatewayTarget` with `privateEndpoint.managedVpcResource`, AgentCore:
+`privateEndpoint.managedVpcResource`와 함께 `CreateGatewayTarget`을 호출하면 AgentCore가 다음 작업을 수행합니다.
 
-1. **Creates a Resource Gateway** in your VPC — provisions one ENI per subnet you specify. These ENIs are the entry point for AgentCore traffic into your VPC.
-2. **Creates a Resource Configuration** scoped to your target endpoint — this defines what AgentCore is allowed to reach through the Resource Gateway.
-3. **Associates the Resource Configuration** with the AgentCore service network — this enables end-to-end connectivity.
-4. **Resolves the target endpoint via Private DNS** — at invocation time, the Resource Gateway uses your VPC's DNS resolver (including any associated Route 53 private hosted zones) to look up the endpoint domain. See [Private DNS](#private-dns) below.
+1. VPC에 **Resource Gateway 생성** - 지정한 각 subnet에 ENI를 하나씩 프로비저닝합니다. 이 ENI는 AgentCore 트래픽이 VPC로 들어오는 진입점입니다.
+2. 대상 엔드포인트로 범위가 지정된 **Resource Configuration 생성** - AgentCore가 Resource Gateway를 통해 연결할 수 있는 대상을 정의합니다.
+3. Resource Configuration을 AgentCore service network에 **연결** - end-to-end 연결을 활성화합니다.
+4. **Private DNS를 통해 대상 엔드포인트 확인** - 호출 시 Resource Gateway가 VPC의 DNS resolver(연결된 Route 53 private hosted zone 포함)를 사용해 엔드포인트 도메인을 조회합니다. 아래의 [프라이빗 DNS](#private-dns)를 참조하세요.
 
-If a Resource Gateway already exists in your account with the same VPC, subnet, and security group IDs, AgentCore reuses it rather than creating a new one.
+계정에 동일한 VPC, subnet 및 security group ID를 가진 Resource Gateway가 이미 있으면 AgentCore가 새로 생성하지 않고 재사용합니다.
 
-AgentCore uses the `AWSServiceRoleForBedrockAgentCoreGatewayNetwork` service-linked role to manage these resources. This role is created automatically the first time you create a gateway target with a managed private endpoint. You do not need VPC Lattice permissions in your own IAM policies.
+AgentCore는 `AWSServiceRoleForBedrockAgentCoreGatewayNetwork` service-linked role을 사용해 이러한 리소스를 관리합니다. managed private endpoint를 사용하는 Gateway 대상을 처음 생성할 때 이 역할이 자동으로 생성됩니다. 자체 IAM 정책에 VPC Lattice 권한을 추가할 필요는 없습니다.
 
-- Make sure you have correct IAM permissions for [AgentCore Gateway managed VPC resource](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/vpc-egress-private-endpoints.html#lattice-vpc-egress-managed-lattice)
-- Learn about Amazon Bedrock AgentCore Gateway - [Service Linked role](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/vpc-egress-private-endpoints.html#lattice-vpc-egress-slr).
+- [AgentCore Gateway managed VPC resource](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/vpc-egress-private-endpoints.html#lattice-vpc-egress-managed-lattice)에 필요한 올바른 IAM 권한이 있는지 확인하세요.
+- Amazon Bedrock AgentCore Gateway의 [Service Linked role](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/vpc-egress-private-endpoints.html#lattice-vpc-egress-slr)을 알아보세요.
 
 
-## What you need to provide
+## 제공해야 하는 항목
 
 ```json
 {
@@ -41,61 +41,67 @@ AgentCore uses the `AWSServiceRoleForBedrockAgentCoreGatewayNetwork` service-lin
 }
 ```
 
-### Parameters
+### 파라미터
 
-| Parameter | Required | Description |
+| 파라미터 | 필수 | 설명 |
 |-----------|----------|-------------|
-| `vpcIdentifier` | Yes | The ID of the VPC that contains your private resource. |
-| `subnetIds` | Yes | Subnet IDs where the Resource Gateway ENIs will be placed. |
-| `endpointIpAddressType` | Yes | IP address type. Valid values: `IPV4`, `IPV6`. |
-| `securityGroupIds` | No | Security groups for the Resource Gateway ENIs. See [Security groups](#security-groups). |
-| `routingDomain` | No | Fallback for VPCs that do not have DNS enabled. Publicly resolvable domain used for VPC Lattice routing. See [Routing domain](#routing-domain). |
-| `tags` | No | Tags for the managed Resource Gateway. `BedrockAgentCoreGatewayManaged` is reserved. |
+| `vpcIdentifier` | 예 | private resource가 포함된 VPC의 ID입니다. |
+| `subnetIds` | 예 | Resource Gateway ENI를 배치할 subnet ID입니다. |
+| `endpointIpAddressType` | 예 | IP 주소 유형입니다. 유효한 값: `IPV4`, `IPV6`. |
+| `securityGroupIds` | 아니요 | Resource Gateway ENI의 security group입니다. [보안 그룹](#security-groups)을 참조하세요. |
+| `routingDomain` | 아니요 | DNS가 활성화되지 않은 VPC의 fallback입니다. VPC Lattice 라우팅에 사용하는 publicly resolvable domain입니다. [라우팅 도메인](#routing-domain)을 참조하세요. |
+| `tags` | 아니요 | managed Resource Gateway의 tag입니다. `BedrockAgentCoreGatewayManaged`는 예약되어 있습니다. |
 
-## Security groups
+<a id="security-groups"></a>
 
-The security group controls what **outbound traffic** the Resource Gateway ENIs can send to resources inside your VPC.
+## 보안 그룹
 
-**If you do not pass `securityGroupIds`**, AgentCore uses the VPC's default security group. The default SG typically only allows traffic from itself, meaning the ENIs cannot reach your resource — the target creation will fail with a timeout error.
+Security group은 Resource Gateway ENI가 VPC 내부 리소스로 전송할 수 있는 **아웃바운드 트래픽**을 제어합니다.
 
-**Always pass a security group** that allows outbound traffic on the port your resource listens on (e.g., port 443 for HTTPS). The simplest approach is to pass the same security group used by your load balancer or VPC endpoint.
+**`securityGroupIds`를 전달하지 않으면** AgentCore가 VPC의 default security group을 사용합니다. default SG는 일반적으로 자체 트래픽만 허용하므로 ENI가 리소스에 연결할 수 없으며, 대상 생성이 timeout 오류로 실패합니다.
 
-Example from the [Getting Started lab](./01-getting-started.ipynb):
+리소스가 수신하는 포트(예: HTTPS의 포트 443)에서 아웃바운드 트래픽을 허용하는 **security group을 항상 전달하세요**. 가장 간단한 방법은 load balancer 또는 VPC endpoint가 사용하는 것과 동일한 security group을 전달하는 것입니다.
+
+[시작하기 실습](./01-getting-started.ipynb)의 예시:
 ```python
-"securityGroupIds": [VPCE_SG_ID]  # VPCE SG allows inbound 443 from VPC CIDR
+"securityGroupIds": [VPCE_SG_ID]  # VPCE SG가 VPC CIDR의 443 inbound 허용
 ```
 
-## Private DNS
+<a id="private-dns"></a>
 
-With **Private DNS** (the default for VPCs with DNS support enabled), the Resource Gateway resolves the target endpoint domain using your VPC's DNS resolver. If your VPC is associated with a Route 53 private hosted zone for the domain, the resolver returns that record — so a target like `https://internal.example.com/api` reaches your private resource without any extra configuration.
+## 프라이빗 DNS
 
-### Requirements
+DNS 지원이 활성화된 VPC의 기본값인 **Private DNS**를 사용하면 Resource Gateway가 VPC의 DNS resolver로 대상 엔드포인트 도메인을 확인합니다. 해당 도메인의 Route 53 private hosted zone이 VPC에 연결되어 있으면 resolver가 그 record를 반환하므로 `https://internal.example.com/api` 같은 대상이 추가 구성 없이 private resource에 연결됩니다.
 
-- **VPC DNS support** — `enableDnsSupport` and `enableDnsHostnames` must both be `true` on the VPC (the default for new VPCs).
-- **Hosted zone association** — the Route 53 private hosted zone must be associated with the VPC where the Resource Gateway ENIs live.
-- **Publicly trusted TLS certificate** — AgentCore Gateway validates certificates against public root CAs. The endpoint must present a cert (typically on a load balancer) covering the target FQDN.
+### 요구 사항
 
-### What you do not need
+- **VPC DNS 지원** - VPC에서 `enableDnsSupport` 및 `enableDnsHostnames`가 모두 `true`여야 합니다(새 VPC의 기본값).
+- **Hosted zone association** - Route 53 private hosted zone이 Resource Gateway ENI가 있는 VPC에 연결되어 있어야 합니다.
+- **Publicly trusted TLS certificate** - AgentCore Gateway는 public root CA를 기준으로 인증서를 검증합니다. 엔드포인트는 대상 FQDN을 포함하는 인증서(일반적으로 load balancer에 있음)를 제공해야 합니다.
 
-- A public DNS record for the target domain
-- A `routingDomain` parameter
-- A custom TLS SNI workaround
+### 필요하지 않은 항목
 
-## Routing domain (fallback)
+- 대상 도메인의 public DNS record
+- `routingDomain` 파라미터
+- 사용자 지정 TLS SNI 우회 방식
 
-> **Use `routingDomain` only when DNS is not enabled in your VPC.** If your VPC has DNS enabled (the default), Private DNS handles resolution automatically — no `routingDomain` needed.
+<a id="routing-domain"></a>
 
-If your target endpoint uses a domain that is not publicly resolvable (e.g., a Route 53 private hosted zone) **and** your VPC does not have DNS support enabled, set `routingDomain` to an intermediate publicly resolvable domain (typically the load balancer's DNS name).
+## 라우팅 도메인(대체 경로)
 
-When `routingDomain` is set, AgentCore routes traffic through the routing domain but sends requests with the actual endpoint domain as the TLS SNI hostname, so your resource receives requests addressed to its actual domain.
+> **VPC에 DNS가 활성화되어 있지 않을 때만 `routingDomain`을 사용하세요.** VPC에 DNS가 활성화되어 있으면(기본값) Private DNS가 자동으로 확인하므로 `routingDomain`이 필요하지 않습니다.
 
-## Labs
+대상 엔드포인트가 publicly resolvable하지 않은 도메인(예: Route 53 private hosted zone)을 사용하고 VPC에 DNS 지원이 활성화되어 있지 않다면 `routingDomain`을 중간 publicly resolvable domain(일반적으로 load balancer의 DNS 이름)으로 설정합니다.
 
-| Notebook | Description |
+`routingDomain`이 설정되면 AgentCore는 routing domain을 통해 트래픽을 라우팅하지만 실제 엔드포인트 도메인을 TLS SNI hostname으로 사용하여 요청을 전송하므로, 리소스는 실제 도메인을 대상으로 한 요청을 수신합니다.
+
+## 실습
+
+| 노트북 | 설명 |
 |----------|-------------|
-| [01-getting-started.ipynb](./01-getting-started.ipynb) | Deploy a private API Gateway with mock integrations and connect it to AgentCore Gateway. No domain or certificate needed — uses the API-VPCE DNS format. |
-| [02-peering.ipynb](./02-peering.ipynb) | Connect to a Private API Gateway in a peered VPC (cross-region) using managed VPC resource and VPC peering. |
+| [01-getting-started.ipynb](./01-getting-started.ipynb) | mock integration이 구성된 private API Gateway를 배포하고 AgentCore Gateway에 연결합니다. API-VPCE DNS 형식을 사용하므로 도메인이나 인증서가 필요하지 않습니다. |
+| [02-peering.ipynb](./02-peering.ipynb) | managed VPC resource와 VPC peering을 사용해 peered VPC(교차 리전)의 Private API Gateway에 연결합니다. |
 
-## License
+## 라이선스
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](../LICENSE.txt) file for details.
+이 프로젝트는 Apache License 2.0에 따라 라이선스가 부여됩니다. 자세한 내용은 [LICENSE](../LICENSE.txt) 파일을 참조하세요.

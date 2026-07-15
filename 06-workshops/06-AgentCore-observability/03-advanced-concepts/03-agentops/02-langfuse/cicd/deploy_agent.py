@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Deploy agent script for CI/CD pipeline.
-This script reads agent hyperparameters from hp_config.json and deploys an agent
-using the deploy_agent function from utils.agent with specified environment (TST or PRD).
+CI/CD 파이프라인용 에이전트 배포 스크립트입니다.
+이 스크립트는 hp_config.json에서 에이전트 하이퍼파라미터를 읽고,
+utils.agent의 deploy_agent 함수와 지정된 환경(TST 또는 PRD)을 사용하여 에이전트를 배포합니다.
 """
 
 import json
@@ -10,14 +10,14 @@ import sys
 import argparse
 from pathlib import Path
 
-# Add the parent directory to the Python path to import utils
+# utils를 가져올 수 있도록 상위 디렉터리를 Python 경로에 추가
 sys.path.append(str(Path(__file__).parent.parent))
 
 from utils.agent import deploy_agent
 
 
 def load_hp_config(config_path="cicd/hp_config.json"):
-    """Load hyperparameters from the configuration file."""
+    """구성 파일에서 하이퍼파라미터를 로드합니다."""
     try:
         with open(config_path, "r") as f:
             config = json.load(f)
@@ -31,8 +31,8 @@ def load_hp_config(config_path="cicd/hp_config.json"):
 
 
 def main():
-    """Main function to deploy the agent."""
-    # Parse command line arguments
+    """에이전트를 배포하는 기본 함수입니다."""
+    # 명령줄 인수 파싱
     parser = argparse.ArgumentParser(description="Deploy agent to specified environment")
     parser.add_argument(
         "--environment",
@@ -47,7 +47,7 @@ def main():
     print("Loading agent hyperparameters...")
     config = load_hp_config()
 
-    # Extract the model and system prompt from the config
+    # 구성에서 모델과 시스템 프롬프트 추출
     if not config.get("model") or not config.get("system_prompt"):
         print("Error: Configuration must contain 'model' and 'system_prompt' objects.")
         sys.exit(1)
@@ -61,7 +61,7 @@ def main():
     print(f"  Environment: {environment}")
 
     try:
-        # Deploy the agent with specified environment
+        # 지정된 환경에 에이전트 배포
         result = deploy_agent(
             model=model,
             system_prompt=system_prompt,
@@ -74,9 +74,9 @@ def main():
         print(f"Agent ARN: {result['launch_result'].agent_arn}")
         print(f"Agent ID: {result['launch_result'].agent_id}")
 
-        # Add agent ARN to the existing hp_config.json for use by subsequent pipeline steps
-        # Use environment-specific keys to avoid conflicts between TST and PRD deployments
-        # Create the environment key if it doesn't exist
+        # 후속 파이프라인 단계에서 사용하도록 기존 hp_config.json에 에이전트 ARN 추가
+        # TST와 PRD 배포 간 충돌을 방지하도록 환경별 키 사용
+        # 환경 키가 없으면 생성
         if environment.lower() not in config:
             config[environment.lower()] = {}
 
@@ -88,7 +88,7 @@ def main():
             json.dump(config, f, indent=2)
         print(f"Agent ARN added to hp_config.json with {environment} environment key")
 
-        # Wait for agent to be ready
+        # 에이전트가 준비될 때까지 대기
         print("Waiting for agent to be ready...")
         import time
 

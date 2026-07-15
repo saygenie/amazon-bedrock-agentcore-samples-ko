@@ -5,18 +5,18 @@ from botocore.exceptions import ClientError
 import logging
 import re
 
-# Setting logger
+# 로거 설정
 logging.basicConfig(
     format="[%(asctime)s] p%(process)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
-# Initialize DynamoDB resource
+# DynamoDB 리소스 초기화
 dynamodb = boto3.resource("dynamodb")
 smm_client = boto3.client("ssm")
 
-# Get customer profile table name from Parameter Store
+# Parameter Store에서 고객 프로필 테이블 이름 가져오기
 customer_table = smm_client.get_parameter(
     Name="/app/customersupport/dynamodb/customer_profile_table_name",
     WithDecryption=False,
@@ -25,7 +25,7 @@ customer_table_name = customer_table["Parameter"]["Value"]
 
 
 def ensure_customer_table_exists():
-    """Create the DynamoDB customer profile table if it doesn't exist."""
+    """DynamoDB 고객 프로필 테이블이 없으면 생성합니다."""
     try:
         table = dynamodb.Table(customer_table_name)
         table.load()
@@ -35,25 +35,25 @@ def ensure_customer_table_exists():
 
 
 def validate_email(email: str) -> bool:
-    """Validate email format."""
+    """이메일 형식을 검증합니다."""
     pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     return bool(re.match(pattern, email))
 
 
 def validate_phone(phone: str) -> bool:
-    """Validate phone number format."""
-    # Phone number validation pattern
+    """전화번호 형식을 검증합니다."""
+    # 전화번호 검증 패턴
     pattern = r"^\d{10,15}$"
 
-    # Remove extra characters from phone
+    # 전화번호에서 불필요한 문자 제거
     cleaned_phone = re.sub(r"[\s\-\$\+]", "", phone)
 
-    # Check if it's a valid phone number (10-15 digits)
+    # 유효한 전화번호인지 확인(숫자 10~15자리)
     return bool(re.match(pattern, cleaned_phone))
 
 
 def format_address(address_dict: dict) -> str:
-    """Format address dictionary into readable string."""
+    """주소 딕셔너리를 읽기 쉬운 문자열로 구성합니다."""
     if not address_dict or not isinstance(address_dict, dict):
         return "No address on file"
 
@@ -73,13 +73,13 @@ def format_address(address_dict: dict) -> str:
 
 
 def get_tier_emoji(tier: str) -> str:
-    """Get emoji for customer tier."""
+    """고객 등급에 해당하는 이모지를 가져옵니다."""
     tier_emojis = {"Standard": "🥉", "Gold": "🥇", "Premium": "💎", "VIP": "👑"}
     return tier_emojis.get(tier, "👤")
 
 
 def format_preferences(prefs: dict) -> str:
-    """Format communication preferences."""
+    """커뮤니케이션 기본 설정을 구성합니다."""
     if not prefs or not isinstance(prefs, dict):
         return "No preferences set"
 
@@ -96,20 +96,19 @@ def format_preferences(prefs: dict) -> str:
 
 def get_customer_profile(customer_id: str = None, email: str = None, phone: str = None) -> str:
     """
-    Retrieve customer profile information using customer ID, email, or phone number.
+    고객 ID, 이메일 또는 전화번호로 고객 프로필 정보를 가져옵니다.
 
-    Args:
-        customer_id (str, optional): Unique customer identifier (e.g., CUST001).
-        email (str, optional): Customer email address for lookup.
-        phone (str, optional): Customer phone number for lookup (with or without formatting).
+    인수:
+        customer_id (str, optional): 고유 고객 식별자(예: CUST001)
+        email (str, optional): 조회할 고객 이메일 주소
+        phone (str, optional): 조회할 고객 전화번호(형식 지정 여부 무관)
 
-    Returns:
-        str: Formatted customer profile information including personal details,
-             contact information, purchase history, and support preferences.
+    반환값:
+        str: 개인 정보, 연락처 정보, 구매 기록, 지원 기본 설정을 포함해 구성된 고객 프로필 정보
 
-    Raises:
-        ValueError: If no valid search criteria provided or invalid format.
-        ClientError: If there's an issue with DynamoDB operations.
+    예외:
+        ValueError: 유효한 검색 조건이 없거나 형식이 잘못된 경우
+        ClientError: DynamoDB 작업에 문제가 있는 경우
     """
     logger.info(
         json.dumps(
@@ -123,11 +122,11 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
         )
     )
 
-    # Validate input parameters
+    # 입력 매개변수 검증
     if not any([customer_id, email, phone]):
         raise ValueError("Must provide at least one search parameter: customer_id, email, or phone")
 
-    # Validate formats
+    # 형식 검증
     if email and not validate_email(email):
         raise ValueError("Invalid email format")
 
@@ -138,7 +137,7 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
         customer_item = None
         search_method = ""
 
-        # Search by customer_id (primary key - most efficient)
+        # customer_id로 검색(기본 키, 가장 효율적)
         if customer_id:
             search_method = "Customer ID"
             response = table.get_item(Key={"customer_id": customer_id.upper()})
@@ -147,7 +146,7 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
 
             print(customer_item)
 
-        # Search by email using GSI
+        # GSI를 사용해 이메일로 검색
         elif email:
             search_method = "Email"
             response = table.query(
@@ -158,10 +157,10 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
             if response["Items"]:
                 customer_item = response["Items"][0]
 
-        # Search by phone using GSI
+        # GSI를 사용해 전화번호로 검색
         elif phone:
             search_method = "Phone"
-            # Normalize phone number for search
+        # 검색을 위해 전화번호 정규화
             normalized_phone = re.sub(r"[\s\-$$]", "", phone)
             if not normalized_phone.startswith("+"):
                 normalized_phone = "+1-" + normalized_phone if len(normalized_phone) == 10 else phone
@@ -174,7 +173,7 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
             if response["Items"]:
                 customer_item = response["Items"][0]
 
-        # Customer not found
+    # 고객을 찾지 못함
         if not customer_item:
             not_found_response = [
                 "❌ Customer Profile Not Found",
@@ -197,7 +196,7 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
             ]
             return "\n".join(not_found_response)
 
-        # Extract customer information
+    # 고객 정보 추출
         customer_id_value = customer_item.get("customer_id", "Unknown")
         first_name = customer_item.get("first_name", "Unknown")
         last_name = customer_item.get("last_name", "Unknown")
@@ -213,7 +212,7 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
         lifetime_value = customer_item.get("lifetime_value", 0.0)
         notes = customer_item.get("notes", "No notes on file")
 
-        # Calculate customer tenure
+    # 고객 이용 기간 계산
         try:
             reg_date = datetime.strptime(registration_date, "%Y-%m-%d")
             tenure_days = (datetime.now() - reg_date).days
@@ -223,7 +222,7 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
             tenure_years = 0
             tenure_months = 0
 
-        # Format customer profile
+    # 고객 프로필 구성
         tier_emoji = get_tier_emoji(tier)
         formatted_address = format_address(address)
         formatted_prefs = format_preferences(communication_prefs)
@@ -263,7 +262,7 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
             "",
         ]
 
-        # Add customer tier benefits
+    # 고객 등급 혜택 추가
         if tier == "Premium" or tier == "VIP":
             profile_info.extend(
                 [
@@ -286,7 +285,7 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
                 ]
             )
 
-        # Add recommendations based on profile
+    # 프로필에 따른 권장 사항 추가
         recommendations = []
         if support_cases > 3:
             recommendations.append("⚠️  High support case count - consider proactive outreach")
@@ -309,7 +308,7 @@ def get_customer_profile(customer_id: str = None, email: str = None, phone: str 
                 ]
             )
 
-        # Add quick actions
+    # 빠른 작업 추가
         profile_info.extend(
             [
                 "⚡ Quick Actions Available:",

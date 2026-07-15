@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Authentication MCP Server
+인증 MCP Server
 
-Provides authentication and identity verification tools via Model Context Protocol.
-All tools return static JSON responses for demonstration purposes.
+Model Context Protocol을 통해 인증 및 Identity 확인 도구를 제공합니다.
+모든 도구는 데모를 위해 정적 JSON 응답을 반환합니다.
 """
 
 import asyncio
@@ -16,12 +16,12 @@ from mcp.types import Tool, TextContent
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create MCP server
+# MCP Server 생성
 server = Server("auth-tools")
 
 
 # ============================================================================
-# Tool Functions
+# 도구 함수
 # ============================================================================
 
 
@@ -78,7 +78,7 @@ def verify_identity(customer_id: str, last_four_ssn: str) -> str:
 
 
 # ============================================================================
-# MCP Server Configuration
+# MCP Server 구성
 # ============================================================================
 
 TOOLS = [
@@ -148,7 +148,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 
 async def main():
-    """Run the MCP server"""
+    """MCP Server를 실행합니다."""
     logger.info("Starting Authentication Tools MCP Server")
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())

@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""S3 bucket construct for session storage."""
+"""세션 스토리지용 S3 버킷 construct."""
 
 from aws_cdk import Duration
 from aws_cdk import aws_kms as kms
@@ -9,7 +9,7 @@ from constructs import Construct
 
 
 class S3Bucket(Construct):
-    """S3 buckets for access logs and session storage."""
+    """액세스 로그 및 세션 스토리지용 S3 버킷."""
 
     def __init__(
         self,
@@ -20,7 +20,7 @@ class S3Bucket(Construct):
         session_expiration_in_days: int,
         kms_key: kms.Key,
     ):
-        """Initialize S3 buckets."""
+        """S3 버킷을 초기화한다."""
         super().__init__(scope, id)
 
         self.access_logs_bucket = s3.Bucket(

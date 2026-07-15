@@ -1,14 +1,14 @@
 """
-File Handler Tool - Mock file operations for Gateway
+File Handler Tool - Gateway용 모의 파일 작업 도구입니다.
 
-This tool simulates file system operations (list, read, write, delete).
+이 도구는 파일 시스템 작업(list, read, write, delete)을 시뮬레이션합니다.
 """
 
 import json
 from datetime import datetime
 
 
-# Mock file system
+# 모의 파일 시스템
 MOCK_FILE_SYSTEM = {
     "/": {"type": "directory", "contents": ["documents", "images", "config"]},
     "/documents": {
@@ -49,7 +49,7 @@ MOCK_FILE_SYSTEM = {
 
 
 def list_files(path="/"):
-    """List files and directories at the given path."""
+    """지정된 경로의 파일과 디렉터리를 나열합니다."""
     if path not in MOCK_FILE_SYSTEM:
         return None
 
@@ -80,7 +80,7 @@ def list_files(path="/"):
 
 
 def read_file(path):
-    """Read file content at the given path."""
+    """지정된 경로의 파일 내용을 읽습니다."""
     if path not in MOCK_FILE_SYSTEM:
         return None
 
@@ -101,11 +101,11 @@ def read_file(path):
 
 
 def write_file(path, content):
-    """Write content to file (mock operation)."""
-    # Calculate mock file size
+    """파일에 내용을 씁니다(모의 작업)."""
+    # 모의 파일 크기 계산
     size = len(content)
 
-    # Create mock file entry
+    # 모의 파일 항목 생성
     timestamp = datetime.utcnow().isoformat() + "Z"
 
     MOCK_FILE_SYSTEM[path] = {
@@ -120,7 +120,7 @@ def write_file(path, content):
 
 
 def delete_file(path):
-    """Delete file (mock operation)."""
+    """파일을 삭제합니다(모의 작업)."""
     if path not in MOCK_FILE_SYSTEM:
         return None
 
@@ -129,8 +129,8 @@ def delete_file(path):
     if item["type"] != "file":
         return None
 
-    # In real implementation, would delete the file
-    # For mock, just return success
+    # 실제 구현에서는 파일을 삭제함
+    # 모의 구현에서는 성공만 반환
 
     return {
         "path": path,
@@ -142,26 +142,26 @@ def delete_file(path):
 
 def lambda_handler(event, context):
     """
-    Lambda handler for file handler tool.
+    file handler tool용 Lambda 핸들러입니다.
 
-    Expected input:
+    예상 입력:
     {
         "operation": "list" | "read" | "write" | "delete",
         "path": "/path/to/file",
         "content": "file content" (for write operation)
     }
 
-    Returns file operation result.
+    파일 작업 결과를 반환합니다.
     """
     print(f"File handler tool received event: {json.dumps(event)}")
 
-    # Parse input
+        # 입력 파싱
     body = event if isinstance(event, dict) else json.loads(event)
     operation = body.get("operation", "").lower()
     path = body.get("path", "/")
     content = body.get("content", "")
 
-    # Validate operation
+        # operation 검증
     valid_operations = ["list", "read", "write", "delete"]
 
     if operation not in valid_operations:
@@ -232,7 +232,7 @@ def lambda_handler(event, context):
         }
 
 
-# MCP Tool Definition for Gateway registration
+# Gateway 등록용 MCP Tool Definition
 TOOL_DEFINITION = {
     "name": "file_handler_tool",
     "description": "Perform file system operations: list directories, read files, write files, and delete files.",
@@ -258,7 +258,7 @@ TOOL_DEFINITION = {
 
 
 if __name__ == "__main__":
-    # Test the tool locally
+# 로컬에서 도구 테스트
     test_cases = [
         {"operation": "list", "path": "/"},
         {"operation": "list", "path": "/documents"},

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Simple note saver - saves notes to local notes.json file."""
+"""Note를 로컬 notes.json 파일에 저장하는 간단한 saver입니다."""
 
 import json
 import sys
 from datetime import datetime
 from pathlib import Path
 
-# Save notes in current directory
+# 현재 디렉터리에 note 저장
 NOTES_FILE = Path("/mnt/workspace/notes.json")
 
 
 def save_note(content: str) -> None:
-    """Save a note to notes.json."""
-    # Load existing notes
+    """Note를 notes.json에 저장합니다."""
+    # 기존 note 불러오기
     notes = []
     if NOTES_FILE.exists():
         try:
@@ -21,11 +21,11 @@ def save_note(content: str) -> None:
         except json.JSONDecodeError:
             notes = []
 
-    # Add new note
+    # 새 note 추가
     note = {"content": content, "timestamp": datetime.now().isoformat()}
     notes.append(note)
 
-    # Save back to file
+    # 파일에 다시 저장
     with open(NOTES_FILE, "w") as f:
         json.dump(notes, f, indent=2)
 

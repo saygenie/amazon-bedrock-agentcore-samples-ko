@@ -1,78 +1,78 @@
-# 01 — Travel Guide Agent
+# 01 — 여행 가이드 에이전트
 
-A full end-to-end Harness agent that doubles as a **tour of every Harness feature** — built around a travel-guide persona that recommends destinations, renders itineraries, and remembers users across conversations.
+여행지를 추천하고, 여행 일정을 렌더링하며, 대화가 바뀌어도 사용자를 기억하는 여행 가이드 페르소나를 중심으로 구성된 완전한 엔드 투 엔드 AgentCore Harness 에이전트입니다. 이 예제에서는 **AgentCore Harness의 모든 기능을 둘러볼 수 있습니다.**
 
-This is the canonical "read this first" use case — it touches every major capability in one notebook.
+가장 먼저 살펴볼 대표 사용 사례로, 하나의 노트북에서 모든 주요 기능을 다룹니다.
 
-## What's in this folder
+## 폴더 구성
 
-| File | Type | What it does |
+| 파일 | 유형 | 설명 |
 |---|---|---|
-| [`01_travel_guide_agent.ipynb`](01_travel_guide_agent.ipynb) | Notebook | Full guided walkthrough — Parts 0-8, each demonstrating a different Harness feature. |
+| [`01_travel_guide_agent.ipynb`](01_travel_guide_agent.ipynb) | 노트북 | Part 0~8로 구성된 전체 실습 과정으로, 각 Part에서 서로 다른 AgentCore Harness 기능을 보여 줍니다. |
 
-## What you'll build
+## 구축할 항목
 
-A travel-guide agent that:
+다음 기능을 갖춘 여행 가이드 에이전트를 구축합니다.
 
-- Generates **self-contained HTML itineraries** (with inline CSS/JS) for any destination
-- **Renders them inline** in the notebook via `ExecuteCommand` + iframe
-- Emits **automatic traces** to CloudWatch (browsable in X-Ray console)
-- **Remembers users** across sessions via AgentCore Memory
-- Uses a **headless browser** to pull live weather data
-- Combines **Exa MCP search + Code Interpreter** to produce a data-driven tourism report with a matplotlib chart
-- Powers a **local chat web app** (FastAPI + SSE streaming + vanilla JS front-end)
-- Leverages **Agent Skills** (Anthropic's `xlsx` skill) to generate a real Excel budget spreadsheet
+- 모든 여행지에 대한 **독립형 HTML 여행 일정**(인라인 CSS/JS 포함) 생성
+- `ExecuteCommand`와 iframe을 통해 노트북 안에서 여행 일정을 **인라인 렌더링**
+- CloudWatch로 **자동 추적 데이터** 전송(X-Ray 콘솔에서 탐색 가능)
+- AgentCore Memory를 사용하여 세션이 바뀌어도 **사용자 기억**
+- **Headless Browser**를 사용하여 실시간 날씨 데이터 가져오기
+- **Exa MCP 검색과 Code Interpreter**를 결합하여 matplotlib 차트가 포함된 데이터 기반 관광 보고서 생성
+- **로컬 채팅 웹 애플리케이션** 구동(FastAPI, SSE 스트리밍, Vanilla JS 프런트엔드)
+- **Agent Skills**(Anthropic의 `xlsx` Skill)를 활용하여 실제 Excel 예산 스프레드시트 생성
 
-## Notebook walkthrough
+## 노트북 실습 과정
 
-| Part | Feature | What happens |
+| Part | 기능 | 수행 내용 |
 |---|---|---|
-| **0** | Setup | Create IAM execution role, configure boto3 clients, load beta service models |
-| **1** | Create Harness | Control plane: `create_harness` → poll until `READY` |
-| **2** | Invoke + HTML render | Data plane: `invoke_harness` → agent writes HTML → pull back via `ExecuteCommand` → render inline in notebook |
-| **3** | Observability | Check Transaction Search is enabled → open CloudWatch X-Ray console to see the full agent trace |
-| **4** | Memory | Create Memory instance → attach to Harness → multi-turn conversation where the agent remembers name + preferences across invocations |
-| **5** | Browser Tool | `tools=[{"type": "agentcore_browser"}]` → agent navigates a weather site → produces live weather HTML |
-| **6** | Exa + Code Interpreter | Multi-tool invocation: Exa for tourism stats → Code Interpreter for matplotlib chart → pull chart back as PNG |
-| **7** | Local Chat UI | `%%writefile` to save `server.py` (FastAPI + SSE) and `index.html` → copy service models → run locally |
-| **8** | Agent Skills | Install `xlsx` skill via `npx skills add` → invoke with `skills=[...]` → download generated `.xlsx` |
+| **0** | 설정 | IAM 실행 역할 생성, Boto3 클라이언트 구성, 베타 서비스 모델 로드 |
+| **1** | AgentCore Harness 생성 | 제어 영역: `create_harness` → `READY` 상태가 될 때까지 폴링 |
+| **2** | 호출 및 HTML 렌더링 | 데이터 영역: `invoke_harness` → 에이전트가 HTML 작성 → `ExecuteCommand`로 가져오기 → 노트북 안에서 인라인 렌더링 |
+| **3** | Observability | Transaction Search 활성화 여부 확인 → CloudWatch X-Ray 콘솔을 열어 전체 에이전트 추적 확인 |
+| **4** | Memory | Memory 인스턴스 생성 → AgentCore Harness에 연결 → 여러 호출에 걸쳐 에이전트가 이름과 선호도를 기억하는 멀티턴 대화 |
+| **5** | Browser 도구 | `tools=[{"type": "agentcore_browser"}]` → 에이전트가 날씨 사이트 탐색 → 실시간 날씨 HTML 생성 |
+| **6** | Exa 및 Code Interpreter | 여러 도구 호출: Exa로 관광 통계 검색 → Code Interpreter로 matplotlib 차트 생성 → 차트를 PNG로 가져오기 |
+| **7** | 로컬 채팅 UI | `%%writefile`로 `server.py`(FastAPI + SSE)와 `index.html` 저장 → 서비스 모델 복사 → 로컬 실행 |
+| **8** | Agent Skills | `xlsx` Skill을 `npx skills add`로 설치 → `skills=[...]`로 호출 → 생성된 `.xlsx` 다운로드 |
 
-## Prerequisites
+## 사전 요구 사항
 
-- AWS account allowlisted for AgentCore Harness (private beta) in `us-west-2`
-- `uv` installed
-- `HarnessExecutionRole` will be created automatically via `helper/iam.py`
+- `us-west-2`에서 AgentCore Harness(Private Beta) 허용 목록에 등록된 AWS 계정
+- 설치된 `uv`
+- `HarnessExecutionRole`은 `helper/iam.py`를 통해 자동 생성
 
-For **Part 3 (Observability)**: enable [CloudWatch Transaction Search](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Transaction-Search-getting-started.html) once per account.
+**Part 3(Observability)**을 진행하려면 계정별로 [CloudWatch Transaction Search](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Transaction-Search-getting-started.html)를 한 번 활성화하세요.
 
-For **Part 7 (Chat UI)**: `uv` handles the server dependencies via inline script metadata.
+**Part 7(채팅 UI)**에서는 `uv`가 인라인 스크립트 메타데이터를 통해 서버 종속성을 처리합니다.
 
-## How to run
+## 실행 방법
 
 ```bash
 cd 02-use-cases/01-travel-agent
 jupyter notebook 01_travel_guide_agent.ipynb
-# or open in VSCode
+# 또는 VSCode에서 열기
 ```
 
-Run cells top-to-bottom. Each Part is self-contained — you can skip Parts after creating the Harness (Part 1).
+셀을 위에서 아래로 실행하세요. 각 Part는 독립적으로 구성되어 있으므로 Part 1에서 AgentCore Harness를 생성한 후에는 원하는 Part만 실행할 수 있습니다.
 
-### Running the chat UI from Part 7
+### Part 7의 채팅 UI 실행
 
-After Part 7 saves the files, a `travel_chat/` folder appears in `02-use-cases/` (gitignored — it's a generated artifact). To run it:
+Part 7에서 파일을 저장하면 `travel_chat/` 폴더가 `02-use-cases/` 아래에 생성됩니다. 이 폴더는 생성된 아티팩트이므로 Git에서 추적하지 않습니다. 다음 명령으로 실행하세요.
 
 ```bash
 cd ../travel_chat
 HARNESS_ARN=<from-notebook> REGION=us-west-2 DATA_ENDPOINT=<from-notebook> uv run server.py
-# open http://localhost:8000
+# http://localhost:8000 열기
 ```
 
-## Cleanup
+## 정리
 
-**Parts 9+10** delete the Harness, Memory instance, and IAM role. Always run them — idle Harnesses and Memory instances accrue charges.
+**Part 9와 Part 10**에서는 AgentCore Harness, Memory 인스턴스, IAM 역할을 삭제합니다. 유휴 AgentCore Harness와 Memory 인스턴스에도 비용이 발생하므로 반드시 실행하세요.
 
-## What to try next
+## 다음 실습
 
-- **Swap the model** — change `bedrockModelConfig.modelId` to `us.anthropic.claude-sonnet-4-6-20251101-v1:0` or `us.anthropic.claude-opus-4-5-20251101-v1:0` and compare quality
-- **Swap providers** — use OpenAI or Gemini instead of Bedrock (requires `openAiModelConfig` + API key in Secrets Manager)
-- **Add your own tool** — build a custom MCP server and register it as a `remote_mcp` tool in the invoke call
+- **모델 교체** — `bedrockModelConfig.modelId`를 `us.anthropic.claude-sonnet-4-6-20251101-v1:0` 또는 `us.anthropic.claude-opus-4-5-20251101-v1:0`으로 변경하고 품질 비교
+- **공급자 교체** — Bedrock 대신 OpenAI 또는 Gemini 사용(Secrets Manager의 `openAiModelConfig` 및 API 키 필요)
+- **자체 도구 추가** — 사용자 지정 MCP 서버를 구축하고 호출에서 `remote_mcp` 도구로 등록

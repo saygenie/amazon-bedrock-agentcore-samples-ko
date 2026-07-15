@@ -1,8 +1,8 @@
 """
-Simple A2A Agent with IAM Authentication
+IAM 인증을 사용하는 간단한 A2A Agent
 
-This agent demonstrates A2A protocol support with IAM-based authentication.
-It provides a simple greeting tool to demonstrate agent functionality.
+이 Agent는 IAM 기반 인증으로 A2A 프로토콜을 지원하는 방법을 보여 줍니다.
+Agent 기능을 보여 주기 위해 간단한 인사말 도구를 제공합니다.
 """
 
 import os
@@ -15,7 +15,7 @@ import uvicorn
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration
+# 구성
 runtime_url = os.environ.get("AGENTCORE_RUNTIME_URL", "http://127.0.0.1:9000/")
 host, port = "127.0.0.1", 9000
 
@@ -43,7 +43,7 @@ def get_agent_info() -> str:
     return "I am an A2A agent deployed on AgentCore Runtime with IAM authentication. I can greet users and provide information about myself."
 
 
-# System prompt for the agent
+# Agent용 system prompt
 system_prompt = """You are a helpful A2A agent deployed on Amazon Bedrock AgentCore Runtime.
 
 You use AWS IAM authentication for secure communication.
@@ -55,7 +55,7 @@ Your capabilities:
 
 Keep responses concise and friendly."""
 
-# Create the agent with tools
+# 도구가 포함된 Agent 생성
 agent = Agent(
     system_prompt=system_prompt,
     tools=[greet_user, get_agent_info],
@@ -63,10 +63,10 @@ agent = Agent(
     description="A simple A2A agent demonstrating IAM authentication on AgentCore Runtime",
 )
 
-# Create A2A server
+# A2A Server 생성
 a2a_server = A2AServer(agent=agent, http_url=runtime_url, serve_at_root=True)
 
-# Create FastAPI app
+# FastAPI 앱 생성
 app = FastAPI()
 
 
@@ -76,7 +76,7 @@ def ping():
     return {"status": "healthy"}
 
 
-# Mount A2A server
+# A2A Server 마운트
 app.mount("/", a2a_server.to_fastapi_app())
 
 if __name__ == "__main__":

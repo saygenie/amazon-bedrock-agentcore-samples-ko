@@ -1,18 +1,18 @@
 <!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Create an ACM Public Certificate
+# ACM Public Certificate 생성
 
-> **Note:** The guidance in this document is intended for **workshop and learning purposes only**. For production deployments, please adhere to your organization's security policies and certificate lifecycle requirements.
+> **참고:** 이 문서의 가이드는 **워크숍 및 학습 전용**입니다. 프로덕션 배포에서는 조직의 보안 정책 및 인증서 수명 주기 요구 사항을 준수하세요.
 
-## Prerequisites
+## 사전 요구 사항
 
-- A domain you own with a Route 53 hosted zone (or DNS access to add CNAME records)
-- AWS CLI configured
+- Route 53 hosted zone에 등록된 소유 도메인(또는 CNAME record를 추가할 수 있는 DNS 액세스)
+- 구성된 AWS CLI
 
-## Step 1: Request the certificate
+## 1단계: 인증서 요청
 
-In the account where your load balancer will be deployed:
+load balancer를 배포할 계정에서 다음 명령을 실행합니다.
 
 ```bash
 aws acm request-certificate \
@@ -22,11 +22,11 @@ aws acm request-certificate \
   --profile default
 ```
 
-> Use a wildcard cert (`*.your-domain.com`) to cover all subdomains, or request a specific domain. The domain must match what you'll point to the load balancer.
+> 모든 하위 도메인을 포함하려면 wildcard 인증서(`*.your-domain.com`)를 사용하고, 그렇지 않으면 특정 도메인을 요청합니다. 도메인은 load balancer를 가리키도록 설정할 도메인과 일치해야 합니다.
 
-Note the `CertificateArn` from the response.
+응답의 `CertificateArn`을 기록합니다.
 
-## Step 2: Get the DNS validation record
+## 2단계: DNS validation record 가져오기
 
 ```bash
 aws acm describe-certificate \
@@ -36,7 +36,7 @@ aws acm describe-certificate \
   --query 'Certificate.DomainValidationOptions[0].ResourceRecord'
 ```
 
-Returns a CNAME record:
+다음과 같은 CNAME record를 반환합니다.
 
 ```json
 {
@@ -46,23 +46,23 @@ Returns a CNAME record:
 }
 ```
 
-## Step 3: Add the validation CNAME
+## 3단계: validation CNAME 추가
 
-Add this CNAME in the **public hosted zone** for your domain.
+도메인의 **public hosted zone**에 이 CNAME을 추가합니다.
 
-**Console:** Route 53 → Hosted zones → your domain → Create record → CNAME → paste Name and Value.
+**콘솔:** Route 53 → Hosted zones → 도메인 → Create record → CNAME → Name 및 Value 붙여넣기
 
 **CLI:**
 
 ```bash
-# Get the hosted zone ID
+# Hosted zone ID 가져오기
 aws route53 list-hosted-zones-by-name \
   --dns-name your-domain.com \
   --query 'HostedZones[0].Id' \
   --output text \
   --profile <profile-with-dns-access>
 
-# Add the validation record
+# 검증 record 추가
 aws route53 change-resource-record-sets \
   --hosted-zone-id <hosted-zone-id> \
   --profile <profile-with-dns-access> \
@@ -79,9 +79,9 @@ aws route53 change-resource-record-sets \
   }'
 ```
 
-> If your domain is in a different AWS account, add the CNAME in that account's Route 53 hosted zone.
+> 도메인이 다른 AWS 계정에 있다면 해당 계정의 Route 53 hosted zone에 CNAME을 추가합니다.
 
-## Step 4: Wait for validation
+## 4단계: 검증 대기
 
 ```bash
 aws acm describe-certificate \
@@ -91,8 +91,8 @@ aws acm describe-certificate \
   --query 'Certificate.Status'
 ```
 
-Wait until it returns `"ISSUED"`. Usually takes a few minutes.
+`"ISSUED"`가 반환될 때까지 기다립니다. 일반적으로 몇 분 정도 걸립니다.
 
-## License
+## 라이선스
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](../LICENSE.txt) file for details.
+이 프로젝트는 Apache License 2.0에 따라 라이선스가 부여됩니다. 자세한 내용은 [LICENSE](../LICENSE.txt) 파일을 참조하세요.

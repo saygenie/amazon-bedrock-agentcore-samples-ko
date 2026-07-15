@@ -1,105 +1,102 @@
 # Amazon Bedrock AgentCore Gateway
 
-## Overview
-Bedrock AgentCore Gateway provides customers a way to turn their existing APIs and Lambda functions into fully-managed MCP servers without needing to manage infra or hosting. Customers can bring OpenAPI spec or Smithy models for their existing APIs, or add Lambda functions that front their tools. Gateway will provide a uniform Model Context Protocol (MCP) interface across all these tools. Gateway employs a dual authentication model to ensure secure access control for both incoming requests and outbound connections to target resources. The framework consists of two key components: Inbound Auth, which validates and authorizes users attempting to access gateway targets, and Outbound Auth, which enables the gateway to securely connect to backend resources on behalf of authenticated users. Together, these authentication mechanisms create a secure bridge between users and their target resources, supporting both IAM credentials and OAuth-based authentication flows. Gateway supports MCP's Streamable HTTP transport connection.
+## 개요
+Bedrock AgentCore Gateway를 사용하면 인프라나 호스팅을 관리하지 않고도 기존 API와 Lambda 함수를 완전관리형 MCP 서버로 전환할 수 있습니다. 기존 API의 OpenAPI 사양이나 Smithy 모델을 가져오거나, 도구를 제공하는 Lambda 함수를 추가할 수 있습니다. Gateway는 이러한 모든 도구에 일관된 Model Context Protocol(MCP) 인터페이스를 제공합니다. Gateway는 수신 요청과 대상 리소스로 나가는 연결 모두에 안전한 액세스 제어를 보장하기 위해 이중 인증 모델을 사용합니다. 이 프레임워크는 Gateway 대상에 액세스하려는 사용자를 검증하고 권한을 부여하는 Inbound Auth와, 인증된 사용자를 대신해 Gateway가 백엔드 리소스에 안전하게 연결하도록 지원하는 Outbound Auth라는 두 가지 핵심 구성 요소로 이루어집니다. 이 두 인증 메커니즘은 IAM 자격 증명과 OAuth 기반 인증 흐름을 모두 지원하며, 사용자와 대상 리소스 사이에 안전한 연결을 제공합니다. Gateway는 MCP의 Streamable HTTP 전송 연결을 지원합니다.
 
-![How does it work](images/gateway-end-end-overview.png)
+![작동 방식](images/gateway-end-end-overview.png)
 
-## Defining concepts
+## 주요 개념
 
-Before starting, let us define a couple of important concepts for getting started with Amazon Bedrock AgentCore Gateway:
+시작하기 전에 Amazon Bedrock AgentCore Gateway를 사용하는 데 필요한 몇 가지 주요 개념을 살펴보겠습니다.
 
-* **Amazon Bedrock AgentCore Gateway**: HTTP endpoint that customers can call with an MCP client for executing the standard MCP operations (i.e. listTools and invokeTool). Customers can also invoke this AmazonCore Gateway using an AWS SDK such as boto3.
-* **Bedrock AgentCore Gateway Target**: a resource that customer uses to attach targets to their AmazonCore Gateway. Currently the following types are supported as targets for AgentCore Gateway:
+* **Amazon Bedrock AgentCore Gateway**: 고객이 MCP 클라이언트로 호출하여 표준 MCP 작업(예: listTools, invokeTool)을 실행할 수 있는 HTTP 엔드포인트입니다. boto3와 같은 AWS SDK를 사용해 Amazon Bedrock AgentCore Gateway를 호출할 수도 있습니다.
+* **Bedrock AgentCore Gateway Target**: 고객이 Amazon Bedrock AgentCore Gateway에 대상을 연결할 때 사용하는 리소스입니다. 현재 AgentCore Gateway 대상에는 다음 유형이 지원됩니다.
     * Lambda ARNs
     * API specifications → OpenAPI, Smithy
-* **MCP Transport**: mechanism that defines how messages move between clients (applications using LLMs) and the MCP servers. Currently AgentCore Gateway supports only `Streamable HTTP connections` as transport.
+* **MCP Transport**: 클라이언트(LLM을 사용하는 애플리케이션)와 MCP 서버 간에 메시지가 이동하는 방식을 정의하는 메커니즘입니다. 현재 AgentCore Gateway는 전송 방식으로 `Streamable HTTP connections`만 지원합니다.
 
-## How it works
+## 작동 방식
 
-![How does it work](images/gateway_how_does_it_work.png)
+![작동 방식](images/gateway_how_does_it_work.png)
 
-## Inbound and outbound authorization 
-Bedrock AgentCore Gateway provides secure connections via inbound and outbound authentication. For the inbound authentication, the AgentCore Gateway analyzes the OAuth token passed during invocation to decide allow or deny the access to a tool in the gateway. If a tool needs access to external resources, the AgentCore Gateway can use outbound authentication via API Key, IAM or OAuth Token to allow or deny the access to the external resource.
+## 인바운드 및 아웃바운드 권한 부여
+Bedrock AgentCore Gateway는 인바운드 및 아웃바운드 인증을 통해 안전한 연결을 제공합니다. 인바운드 인증에서는 호출 시 전달된 OAuth 토큰을 AgentCore Gateway가 분석하여 Gateway의 도구에 대한 액세스 허용 여부를 결정합니다. 도구가 외부 리소스에 액세스해야 하는 경우, AgentCore Gateway는 API Key, IAM 또는 OAuth Token을 통한 아웃바운드 인증으로 외부 리소스에 대한 액세스 허용 여부를 결정할 수 있습니다.
 
-During the inbound authorization flow, an agent or the MCP client calls an MCP tool in the AgentCore Gateway adding an OAuth access token (generated from the user’s IdP). AgentCore Gateway then validates the OAuth access token and performs inbound authorization.
+인바운드 권한 부여 흐름에서 에이전트 또는 MCP 클라이언트는 사용자의 IdP에서 생성한 OAuth 액세스 토큰을 추가하여 AgentCore Gateway의 MCP 도구를 호출합니다. 그러면 AgentCore Gateway가 OAuth 액세스 토큰을 검증하고 인바운드 권한 부여를 수행합니다.
 
-If the tool running in AgentCore Gateway needs to access external resources, OAuth will retrieve credentials of downstream resources using the resource credential provider for the Gateway target. AgentCore Gateway pass the authorization credentials to the caller to get access to the downstream API. 
+AgentCore Gateway에서 실행되는 도구가 외부 리소스에 액세스해야 하면 OAuth는 Gateway 대상의 리소스 자격 증명 공급자를 사용해 다운스트림 리소스의 자격 증명을 가져옵니다. AgentCore Gateway는 다운스트림 API에 액세스할 수 있도록 호출자에게 권한 부여 자격 증명을 전달합니다.
 
-![Secure access](images/gateway_secure_access.png)
+![안전한 액세스](images/gateway_secure_access.png)
 
-### MCP authorization and Gateway
+### MCP 권한 부여와 Gateway
 
-Amazon Bedrock AgentCore Gateway complies with the [MCP authorization specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization) for the authorization of incoming MCP tool calls.
+Amazon Bedrock AgentCore Gateway는 수신 MCP 도구 호출의 권한 부여에 관한 [MCP 권한 부여 사양](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization)을 준수합니다.
 
-![Secure access](images/oauth-flow-gateway.png)
+![안전한 액세스](images/oauth-flow-gateway.png)
 
-### AgentCore Gateway and integration with AgentCore Identity
+### AgentCore Gateway와 AgentCore Identity 통합
 
-![AgentCore Identity with Gateway](images/end-end-auth-gateway.png)
+![Gateway와 AgentCore Identity](images/end-end-auth-gateway.png)
 
-### Searching for Tools
-Amazon Bedrock AgentCore Gateway also includes a powerful built-in semantic search capability that helps agents and 
-developers finding the most relevant tools through natural language queries, through **reducing the context** passed to your agent for tool selection. This search functionality is implemented as a prebuilt tool that leverages vector embeddings for semantic matching.  Users can enable this feature during Gateway creation by opting in through the CreateGateway API. Once enabled, any subsequent CreateTarget operations automatically trigger the generation of vector embeddings for the target's tools. During this process, the CreateTarget response STATUS field will indicate "UPDATING" while embeddings are being generated
+### 도구 검색
+Amazon Bedrock AgentCore Gateway에는 에이전트와 개발자가 자연어 쿼리로 가장 관련성 높은 도구를 찾을 수 있도록 지원하는 강력한 내장 semantic search 기능도 포함되어 있습니다. 이 기능은 도구 선택을 위해 에이전트에 전달되는 **컨텍스트를 줄여** 줍니다. 검색 기능은 semantic matching을 위해 벡터 임베딩을 활용하는 사전 구축 도구로 구현됩니다. 사용자는 Gateway를 생성할 때 CreateGateway API를 통해 이 기능을 활성화할 수 있습니다. 기능을 활성화하면 이후의 CreateTarget 작업이 대상 도구의 벡터 임베딩 생성을 자동으로 시작합니다. 임베딩이 생성되는 동안 CreateTarget 응답의 STATUS 필드는 "UPDATING"으로 표시됩니다.
 
-![tool_search](images/gateway_tool_search.png)
+![도구 검색](images/gateway_tool_search.png)
 
-### Tutorial Details
+### 실습 세부 정보
 
 
-| Information          | Details                                                   |
+| 정보                 | 세부 정보                                                 |
 |:---------------------|:----------------------------------------------------------|
-| Tutorial type        | Interactive                                               |
-| AgentCore components | AgentCore Gateway, AgentCore Identity                     |
-| Agentic Framework    | Strands Agents                                            |
-| LLM model            | Anthropic Claude Haiku 4.5, Amazon Nova Pro              |
-| Tutorial components  | Creating AgentCore Gateway and Invoking AgentCore Gateway |
-| Tutorial vertical    | Cross-vertical                                            |
-| Example complexity   | Easy                                                      |
-| SDK used             | boto3                                                     |
+| 실습 유형            | 대화형                                                    |
+| AgentCore 구성 요소  | AgentCore Gateway, AgentCore Identity                     |
+| 에이전트 프레임워크  | Strands Agents                                            |
+| LLM 모델             | Anthropic Claude Haiku 4.5, Amazon Nova Pro              |
+| 실습 구성 요소       | AgentCore Gateway 생성 및 AgentCore Gateway 호출          |
+| 실습 분야            | 산업 공통                                                  |
+| 예제 난이도          | 쉬움                                                       |
+| 사용 SDK             | boto3                                                     |
 
-## Tutorial Architecture
+## 실습 아키텍처
 
-### Tutorial Key Features
+### 실습의 주요 기능
 
-#### Secure Tool Access
+#### 안전한 도구 액세스
 
-Amazon Bedrock AgentCore Gateway complies with the [MCP authorization specification](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization) 
-for the authorization of incoming MCP tool calls. 
-Amazon Bedrock AgentCore Gateway also offers 2 options to support authorization of the outgoing calls from Gateway:
-* using API key or
-* using OAuth access tokens 
-You can configure the authorization using Credentials provider API of the Amazon Bedrock AgentCore Identity and 
-attach them to the AgentCore Gateway Target. 
-Each Target (AWS Lambda, Smithy and OpenAPI) can be attached to a credentials provider.
+Amazon Bedrock AgentCore Gateway는 수신 MCP 도구 호출의 권한 부여에 관한 [MCP 권한 부여 사양](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization)을 준수합니다.
+또한 Amazon Bedrock AgentCore Gateway는 Gateway에서 나가는 호출의 권한 부여를 지원하기 위해 다음 두 가지 옵션을 제공합니다.
+* API key 사용
+* OAuth 액세스 토큰 사용
+Amazon Bedrock AgentCore Identity의 Credentials provider API로 권한 부여를 구성하고 AgentCore Gateway Target에 연결할 수 있습니다.
+각 Target(AWS Lambda, Smithy, OpenAPI)을 자격 증명 공급자에 연결할 수 있습니다.
 
-#### Integration
+#### 통합
 
-Bedrock AgentCore Gateway integrates with 
+Bedrock AgentCore Gateway는 다음 서비스와 통합됩니다.
 * Bedrock AgentCore Identity
 * Bedrock AgentCore Runtime
 
-### Use cases
+### 사용 사례
 
-* Real-time interactive agents calling MCP tools
-* Inbound & outbound authorization using different IdPs
-* MCP-fying the AWS Lambda functions, Open APIs and Smithy models
-* MCP tools discovery
+* MCP 도구를 호출하는 실시간 대화형 에이전트
+* 서로 다른 IdP를 사용하는 인바운드 및 아웃바운드 권한 부여
+* AWS Lambda 함수, OpenAPI 및 Smithy 모델을 MCP 도구로 전환
+* MCP 도구 탐색
 
-### Benefits
+### 이점
 
-* Gateway provides several key benefits that simplify AI agent development and deployment: No infrastructure management
-* Fully managed service with no hosting concerns. Amazon Bedrock AgentCore handles all infrastructure for you automatically.
-* Unified interface: Single MCP protocol for all tools eliminates the complexity of managing multiple API formats and authentication mechanisms in your agent code.
-* Built-in authentication: OAuth and credential management handles token lifecycle, refresh, and secure storage without additional development effort.
-* Automatic scaling: Scales automatically based on demand to handle varying workloads without manual intervention or capacity planning.
-* Enterprise security: Enterprise-grade security features including encryption, access controls, and audit logging ensure secure tool access.
+* 인프라 관리가 필요하지 않아 AI 에이전트 개발과 배포가 간소화됩니다.
+* 호스팅을 신경 쓸 필요가 없는 완전관리형 서비스입니다. Amazon Bedrock AgentCore가 모든 인프라를 자동으로 처리합니다.
+* 통합 인터페이스: 모든 도구에 단일 MCP 프로토콜을 사용하므로 에이전트 코드에서 여러 API 형식과 인증 메커니즘을 관리해야 하는 복잡성이 사라집니다.
+* 내장 인증: 추가 개발 작업 없이 OAuth 및 자격 증명 관리가 토큰 수명 주기, 갱신, 안전한 저장을 처리합니다.
+* 자동 확장: 수요에 따라 자동으로 확장되므로 수동 개입이나 용량 계획 없이 변화하는 워크로드를 처리합니다.
+* 엔터프라이즈 보안: 암호화, 액세스 제어, 감사 로깅을 포함한 엔터프라이즈급 보안 기능으로 안전한 도구 액세스를 보장합니다.
 
-## Tutorials Overview
+## 실습 개요
 
-In these tutorials we will cover the following functionality:
+이 실습에서는 다음 기능을 다룹니다.
 
-- [Transforming AWS Lambda function into MCP tools](01-transform-lambda-into-mcp-tools)
-- [Transforming APIs into MCP tools](02-transform-apis-into-mcp-tools)
-- [Discovering MCP tools](03-discover-mcp-tools)
-- [Inbound Auth Code Flow with Okta](17-inbound-auth-code-flow-okta)
+- [AWS Lambda 함수를 MCP 도구로 전환](01-transform-lambda-into-mcp-tools)
+- [API를 MCP 도구로 전환](02-transform-apis-into-mcp-tools)
+- [MCP 도구 탐색](03-discover-mcp-tools)
+- [Okta를 사용한 Inbound Auth Code Flow](17-inbound-auth-code-flow-okta)

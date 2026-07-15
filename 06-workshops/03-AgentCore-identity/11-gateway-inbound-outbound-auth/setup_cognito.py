@@ -1,11 +1,11 @@
 """
-Setup script: Creates a Cognito User Pool for AgentCore Gateway inbound JWT auth.
+설정 스크립트: AgentCore Gateway 인바운드 JWT 인증용 Cognito User Pool을 생성합니다.
 
-Usage:
+사용법:
     python setup_cognito.py
 
-Outputs:
-    cognito_config.json  - Cognito configuration used by subsequent scripts
+출력:
+    cognito_config.json  - 후속 스크립트에서 사용하는 Cognito 구성
 """
 
 import boto3
@@ -31,14 +31,14 @@ def setup_cognito():
     pool_id = pool["UserPool"]["Id"]
     print(f"  Pool ID: {pool_id}")
 
-    # Domain is required for the client_credentials (M2M) token endpoint
+    # client_credentials(M2M) 토큰 엔드포인트에는 도메인이 필요
     domain_prefix = f"gateway-demo-{pool_id.split('_')[1].lower()}"
     print(f"Creating Cognito domain '{domain_prefix}'...")
     cognito.create_user_pool_domain(UserPoolId=pool_id, Domain=domain_prefix)
     token_endpoint = f"https://{domain_prefix}.auth.{region}.amazoncognito.com/oauth2/token"
     print(f"  Token endpoint: {token_endpoint}")
 
-    # Resource server (required for client_credentials scopes)
+    # 리소스 서버(client_credentials scope에 필요)
     print("Creating resource server...")
     cognito.create_resource_server(
         UserPoolId=pool_id,
@@ -57,7 +57,7 @@ def setup_cognito():
     user_client_id = user_client["UserPoolClient"]["ClientId"]
     print(f"  User Client ID: {user_client_id}")
 
-    # Agent client for authenticating with the gateway (client_credentials grant)
+    # Gateway 인증용 에이전트 클라이언트(client_credentials 권한 부여)
     print("Creating App Client (agent-facing, with client secret)...")
     agent_client = cognito.create_user_pool_client(
         UserPoolId=pool_id,

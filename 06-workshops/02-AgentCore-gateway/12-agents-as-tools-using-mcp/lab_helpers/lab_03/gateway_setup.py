@@ -1,16 +1,16 @@
 """
-Lab 03: AgentCore Gateway and Runtime Target Setup
+Lab 03: AgentCore Gateway 및 Runtime 대상 설정
 
-Creates Gateway infrastructure and registers the remediation Runtime as a target.
+Gateway 인프라를 생성하고 remediation Runtime을 대상으로 등록합니다.
 
-Based on Lab-02 patterns + gateway-to-runtime M2M authentication.
+Lab-02 패턴과 Gateway-to-Runtime M2M 인증을 기반으로 합니다.
 
-Features:
-- Creates Gateway service role with proper trust policies
-- Creates AgentCore Gateway with IAM authentication
-- Registers remediation Runtime as MCP target
-- Supports M2M OAuth2 authentication (optional)
-- Configuration stored in Parameter Store
+기능:
+- 적절한 신뢰 정책이 포함된 Gateway 서비스 역할 생성
+- IAM 인증을 사용하는 AgentCore Gateway 생성
+- remediation Runtime을 MCP 대상으로 등록
+- M2M OAuth2 인증 지원(선택 사항)
+- Parameter Store에 구성 저장
 """
 
 import json
@@ -20,13 +20,13 @@ import logging
 from typing import Dict, Optional, List
 from botocore.exceptions import ClientError
 
-# Import centralized configuration
+# 중앙 집중식 구성 가져오기
 from lab_helpers.config import AWS_REGION
 
 logger = logging.getLogger(__name__)
 
-# Configuration
-REGION = AWS_REGION  # Use centralized region from config.py
+# 구성
+REGION = AWS_REGION  # config.py의 중앙 집중식 리전 사용
 PREFIX = "aiml301"
 GATEWAY_NAME = f"{PREFIX}-remediation-gateway"
 GATEWAY_ROLE_NAME = f"{PREFIX}-remediation-gateway-role"
@@ -34,28 +34,28 @@ GATEWAY_POLICY_NAME = f"{PREFIX}-gateway-runtime-policy"
 
 
 class AgentCoreGatewaySetup:
-    """Setup helper for AgentCore Gateway with Runtime targets"""
+    """Runtime 대상이 포함된 AgentCore Gateway 설정 헬퍼입니다."""
 
     def __init__(self, region: str = REGION, prefix: str = PREFIX, verbose: bool = True):
         """
-        Initialize gateway setup helper.
+        Gateway 설정 헬퍼를 초기화합니다.
 
-        Args:
-            region: AWS region
-            prefix: Resource naming prefix
-            verbose: Enable logging
+        인자:
+            region: AWS 리전
+            prefix: 리소스 명명 접두사
+            verbose: 로깅 활성화 여부
         """
         self.region = region
         self.prefix = prefix
         self.verbose = verbose
 
-        # AWS clients
+        # AWS 클라이언트
         self.iam = boto3.client("iam", region_name=region)
         self.agentcore = boto3.client("bedrock-agentcore-control", region_name=region)
         self.ssm = boto3.client("ssm", region_name=region)
         self.sts = boto3.client("sts", region_name=region)
 
-        # Get account ID
+        # 계정 ID 조회
         self.account_id = self.sts.get_caller_identity()["Account"]
 
         if verbose:
@@ -63,32 +63,32 @@ class AgentCoreGatewaySetup:
             logger.setLevel(logging.INFO)
 
     def _log(self, message: str):
-        """Log message"""
+        """메시지를 기록합니다."""
         print(f"✓ {message}")
         logger.info(message)
 
     def _error(self, message: str):
-        """Log error"""
+        """오류를 기록합니다."""
         print(f"✗ {message}")
         logger.error(message)
 
     def create_gateway_service_role(self) -> Dict:
         """
-        Create IAM service role for Gateway to invoke Runtime targets.
+        Gateway에서 Runtime 대상을 호출하는 데 사용할 IAM 서비스 역할을 생성합니다.
 
-        Gateway needs permissions to:
-        1. Invoke Runtime targets
-        2. Access CloudWatch logs
-        3. Manage AgentCore resources
-        4. Access OAuth credentials (for M2M auth)
+        Gateway에는 다음 권한이 필요합니다.
+        1. Runtime 대상 호출
+        2. CloudWatch 로그 접근
+        3. AgentCore 리소스 관리
+        4. OAuth 자격 증명 접근(M2M 인증용)
 
-        Returns:
-            Dict with role ARN, role name, and metadata
+        반환:
+            역할 ARN, 역할 이름 및 메타데이터가 포함된 딕셔너리
         """
         self._log("Creating IAM role for Gateway...")
 
-        # Trust policy: Allow bedrock-agentcore service to assume role
-        # Restricted to Gateway ARNs in this account and region
+        # 신뢰 정책: bedrock-agentcore 서비스가 역할을 수임하도록 허용
+        # 이 계정 및 리전의 Gateway ARN으로 제한
         trust_policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -106,8 +106,8 @@ class AgentCoreGatewaySetup:
             ],
         }
 
-        # Permissions policy: Gateway operations, Runtime invocation, CloudWatch logs
-        # Updated to match working riv301 deployment with WorkloadIdentity and correct OAuth2/Secrets patterns
+        # 권한 정책: Gateway 작업, Runtime 호출, CloudWatch 로그
+        # WorkloadIdentity 및 올바른 OAuth2/Secrets 패턴을 사용하는 riv301 배포에 맞게 업데이트
         permissions_policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -172,18 +172,18 @@ class AgentCoreGatewaySetup:
         }
 
         try:
-            # Check if role already exists
+            # 역할이 이미 존재하는지 확인
             try:
                 role = self.iam.get_role(RoleName=GATEWAY_ROLE_NAME)
                 self._log(f"Gateway service role already exists: {GATEWAY_ROLE_NAME}")
                 role_arn = role["Role"]["Arn"]
 
-                # Update trust policy to ensure it has gamma service principals
+                # gamma 서비스 보안 주체가 포함되도록 신뢰 정책 업데이트
                 self.iam.update_assume_role_policy(RoleName=GATEWAY_ROLE_NAME, PolicyDocument=json.dumps(trust_policy))
                 self._log("Trust policy updated")
 
             except self.iam.exceptions.NoSuchEntityException:
-                # Create new role
+                # 새 역할 생성
                 response = self.iam.create_role(
                     RoleName=GATEWAY_ROLE_NAME,
                     AssumeRolePolicyDocument=json.dumps(trust_policy),
@@ -192,10 +192,10 @@ class AgentCoreGatewaySetup:
                 role_arn = response["Role"]["Arn"]
                 self._log(f"Gateway service role created: {GATEWAY_ROLE_NAME}")
 
-                # Wait for role to propagate
+                # 역할 전파 대기
                 time.sleep(10)
 
-            # Attach permissions policy
+            # 권한 정책 연결
             self.iam.put_role_policy(
                 RoleName=GATEWAY_ROLE_NAME,
                 PolicyName=GATEWAY_POLICY_NAME,
@@ -203,7 +203,7 @@ class AgentCoreGatewaySetup:
             )
             self._log(f"Permissions policy attached: {GATEWAY_POLICY_NAME}")
 
-            # Store in Parameter Store
+            # Parameter Store에 저장
             self.ssm.put_parameter(
                 Name=f"/{self.prefix}/lab-03/gateway-role-arn",
                 Value=role_arn,
@@ -234,22 +234,22 @@ class AgentCoreGatewaySetup:
         authorizer_configuration: Optional[Dict] = None,
     ) -> Dict:
         """
-        Create AgentCore Gateway.
+        AgentCore Gateway를 생성합니다.
 
-        Args:
-            gateway_name: Name for the gateway
-            role_arn: Service role ARN (fetches from Parameter Store if not provided)
-            protocol_type: Gateway protocol (MCP, HTTP, etc.)
-            authorizer_type: Inbound auth type (AWS_IAM, CUSTOM_JWT)
-            authorizer_configuration: JWT authorizer config (required for CUSTOM_JWT)
-                Format: {"customJWTAuthorizer": {"discoveryUrl": "...", "allowedClients": [...]}}
+        인자:
+            gateway_name: Gateway 이름
+            role_arn: 서비스 역할 ARN(제공하지 않으면 Parameter Store에서 조회)
+            protocol_type: Gateway 프로토콜(MCP, HTTP 등)
+            authorizer_type: 인바운드 인증 유형(AWS_IAM, CUSTOM_JWT)
+            authorizer_configuration: JWT authorizer 구성(CUSTOM_JWT에 필요)
+                형식: {"customJWTAuthorizer": {"discoveryUrl": "...", "allowedClients": [...]}}
 
-        Returns:
-            Dict with gateway ID, URL, and metadata
+        반환:
+            Gateway ID, URL 및 메타데이터가 포함된 딕셔너리
         """
         self._log("Creating AgentCore Gateway...")
 
-        # Get role ARN if not provided
+        # 제공되지 않은 경우 역할 ARN 조회
         if not role_arn:
             try:
                 response = self.ssm.get_parameter(Name=f"/{self.prefix}/lab-03/gateway-role-arn")
@@ -261,7 +261,7 @@ class AgentCoreGatewaySetup:
                 role_arn = role_info["role_arn"]
 
         try:
-            # Build create_gateway API call parameters
+            # create_gateway API 호출 파라미터 구성
             create_params = {
                 "name": gateway_name,
                 "roleArn": role_arn,
@@ -269,11 +269,11 @@ class AgentCoreGatewaySetup:
                 "authorizerType": authorizer_type,
             }
 
-            # Add authorizer configuration if provided (required for CUSTOM_JWT)
+            # 제공된 경우 authorizer 구성 추가(CUSTOM_JWT에 필요)
             if authorizer_configuration:
                 create_params["authorizerConfiguration"] = authorizer_configuration
 
-            # Create gateway
+            # Gateway 생성
             response = self.agentcore.create_gateway(**create_params)
 
             gateway_id = response["gatewayId"]
@@ -291,7 +291,7 @@ class AgentCoreGatewaySetup:
                 "region": self.region,
             }
 
-            # Store in Parameter Store
+            # Parameter Store에 저장
             self.ssm.put_parameter(
                 Name=f"/{self.prefix}/lab-03/gateway-config",
                 Value=json.dumps(gateway_info, indent=2),
@@ -306,14 +306,14 @@ class AgentCoreGatewaySetup:
         except ClientError as e:
             if "AlreadyExists" in str(e) or "already" in str(e).lower():
                 self._log(f"Gateway already exists: {gateway_name}")
-                # Try to retrieve existing gateway
+                # 기존 Gateway 조회 시도
                 return self._get_gateway_by_name(gateway_name)
             else:
                 self._error(f"Failed to create gateway: {e}")
                 raise
 
     def _get_gateway_by_name(self, gateway_name: str) -> Dict:
-        """Retrieve existing gateway by name"""
+        """이름으로 기존 Gateway를 조회합니다."""
         try:
             response = self.agentcore.list_gateways()
             for gw in response.get("gateways", []):
@@ -337,21 +337,21 @@ class AgentCoreGatewaySetup:
         credentials_type: str = "GATEWAY_IAM_ROLE",
     ) -> Dict:
         """
-        Register Runtime as a target on the Gateway.
+        Runtime을 Gateway의 대상으로 등록합니다.
 
-        Args:
-            gateway_id: Gateway identifier
-            runtime_arn: Runtime ARN to register as target
-            target_name: Name for the target
-            tool_schema: Tool schema definition (optional)
-            credentials_type: Credential provider type (GATEWAY_IAM_ROLE, OAUTH2)
+        인자:
+            gateway_id: Gateway 식별자
+            runtime_arn: 대상으로 등록할 Runtime ARN
+            target_name: 대상 이름
+            tool_schema: 도구 스키마 정의(선택 사항)
+            credentials_type: Credential provider 유형(GATEWAY_IAM_ROLE, OAUTH2)
 
-        Returns:
-            Dict with target ID and metadata
+        반환:
+            대상 ID와 메타데이터가 포함된 딕셔너리
         """
         self._log(f"Registering Runtime as Gateway target: {target_name}...")
 
-        # Default tool schema if not provided
+        # 제공되지 않은 경우 기본 도구 스키마 사용
         if not tool_schema:
             tool_schema = [
                 {
@@ -371,15 +371,15 @@ class AgentCoreGatewaySetup:
             ]
 
         try:
-            # Construct MCP endpoint URL from Runtime ARN
-            # Format: https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{encoded_arn}/invocations?qualifier=DEFAULT
+            # Runtime ARN에서 MCP 엔드포인트 URL 구성
+            # 형식: https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{encoded_arn}/invocations?qualifier=DEFAULT
             encoded_arn = runtime_arn.replace(":", "%3A").replace("/", "%2F")
             mcp_endpoint_url = f"https://bedrock-agentcore.{self.region}.amazonaws.com/runtimes/{encoded_arn}/invocations?qualifier=DEFAULT"
 
             self._log(f"MCP Endpoint URL: {mcp_endpoint_url}")
 
-            # Register Runtime as MCP target
-            # Use correct structure: "mcp" wrapper with "mcpServer" using "endpoint" (not "runtimeArn")
+            # Runtime을 MCP 대상으로 등록
+            # "runtimeArn"이 아닌 "endpoint"를 사용하는 "mcpServer"를 "mcp"로 감싼 올바른 구조 사용
             response = self.agentcore.create_gateway_target(
                 gatewayIdentifier=gateway_id,
                 name=target_name,
@@ -403,7 +403,7 @@ class AgentCoreGatewaySetup:
                 "tool_schema": tool_schema,
             }
 
-            # Store in Parameter Store
+            # Parameter Store에 저장
             self.ssm.put_parameter(
                 Name=f"/{self.prefix}/lab-03/gateway-runtime-target",
                 Value=json.dumps(target_info, indent=2),
@@ -420,7 +420,7 @@ class AgentCoreGatewaySetup:
             raise
 
     def list_gateway_targets(self, gateway_id: str) -> List[Dict]:
-        """List all targets registered on the Gateway"""
+        """Gateway에 등록된 모든 대상을 나열합니다."""
         try:
             response = self.agentcore.list_gateway_targets(gatewayIdentifier=gateway_id)
             targets = response.get("targets", [])
@@ -431,7 +431,7 @@ class AgentCoreGatewaySetup:
             return []
 
     def get_gateway_status(self, gateway_id: str) -> Dict:
-        """Get Gateway status"""
+        """Gateway 상태를 조회합니다."""
         try:
             response = self.agentcore.get_gateway(gatewayIdentifier=gateway_id)
             gateway = response["gateway"]
@@ -451,11 +451,11 @@ class AgentCoreGatewaySetup:
             return {"status": "UNKNOWN"}
 
     def get_stored_config(self) -> Dict:
-        """Retrieve stored gateway and runtime target configuration from Parameter Store"""
+        """Parameter Store에서 저장된 Gateway 및 Runtime 대상 구성을 조회합니다."""
         try:
             config = {}
 
-            # Get gateway config
+            # Gateway 구성 조회
             try:
                 response = self.ssm.get_parameter(Name=f"/{self.prefix}/lab-03/gateway-config")
                 config["gateway"] = json.loads(response["Parameter"]["Value"])
@@ -463,7 +463,7 @@ class AgentCoreGatewaySetup:
             except ClientError:
                 self._log("Gateway configuration not found in Parameter Store")
 
-            # Get runtime target config
+            # Runtime 대상 구성 조회
             try:
                 response = self.ssm.get_parameter(Name=f"/{self.prefix}/lab-03/gateway-runtime-target")
                 config["runtime_target"] = json.loads(response["Parameter"]["Value"])
@@ -479,13 +479,13 @@ class AgentCoreGatewaySetup:
 
     def cleanup(self, force: bool = False) -> bool:
         """
-        Clean up Lab-03 Gateway resources.
+        Lab-03 Gateway 리소스를 정리합니다.
 
-        Args:
-            force: Force deletion without confirmation
+        인자:
+            force: 확인 없이 강제 삭제할지 여부
 
-        Returns:
-            True if cleanup successful
+        반환:
+            정리에 성공하면 True
         """
         self._log("Starting Gateway cleanup...")
 
@@ -496,7 +496,7 @@ class AgentCoreGatewaySetup:
                 return False
 
         try:
-            # Get gateway ID from Parameter Store
+            # Parameter Store에서 Gateway ID 조회
             try:
                 response = self.ssm.get_parameter(Name=f"/{self.prefix}/lab-03/gateway-config")
                 config = json.loads(response["Parameter"]["Value"])
@@ -508,7 +508,7 @@ class AgentCoreGatewaySetup:
             except ClientError:
                 pass
 
-            # Delete IAM role and policies
+            # IAM 역할 및 정책 삭제
             try:
                 self.iam.delete_role_policy(RoleName=GATEWAY_ROLE_NAME, PolicyName=GATEWAY_POLICY_NAME)
                 self._log(f"Deleted role policy: {GATEWAY_POLICY_NAME}")
@@ -521,7 +521,7 @@ class AgentCoreGatewaySetup:
             except ClientError:
                 pass
 
-            # Delete Parameter Store entries
+            # Parameter Store 항목 삭제
             try:
                 self.ssm.delete_parameter(Name=f"/{self.prefix}/lab-03/gateway-role-arn")
                 self._log("Deleted Parameter Store entry: gateway-role-arn")

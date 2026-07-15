@@ -1,28 +1,27 @@
 """
-AgentCore Episodic Memory - Meeting Notes Assistant
+AgentCore Episodic Memory - 회의록 어시스턴트
 
-This tutorial demonstrates how to build a meeting notes assistant using
-Strands agents integrated with AgentCore Episodic Memory. The agent learns
-from past meetings, remembering decisions made, action items assigned, and
-participant preferences, enabling it to provide context-aware assistance
-across recurring meetings.
+이 튜토리얼에서는 AgentCore Episodic Memory와 통합된 Strands agent를 사용하여
+회의록 어시스턴트를 구축하는 방법을 설명합니다. Agent는 과거 회의에서 학습하고
+결정 사항, 할당된 작업 항목, 참가자 선호도를 기억하여 반복되는 회의 전반에 걸쳐
+컨텍스트를 인식하는 지원을 제공할 수 있습니다.
 
-Tutorial Details:
-- Tutorial type: Long term Episodic
-- Agent type: Meeting Notes Assistant
+튜토리얼 세부 정보:
+- 튜토리얼 유형: Long term Episodic
+- Agent 유형: 회의록 어시스턴트
 - Agentic Framework: Strands Agents
-- LLM model: Anthropic Claude Haiku 4.5
-- Components: AgentCore Episodic Memory with Reflections
+- LLM 모델: Anthropic Claude Haiku 4.5
+- 구성 요소: Reflections가 포함된 AgentCore Episodic Memory
 
-You'll learn to:
-- Set up AgentCore Memory with the Episodic strategy
-- Create memory hooks for automatic episode capture
-- Retrieve past meeting episodes and reflections
-- Build an agent that learns meeting patterns and participant preferences
+학습 내용:
+- Episodic Strategy를 사용한 AgentCore Memory 설정
+- 자동 에피소드 캡처를 위한 Memory hook 생성
+- 과거 회의 에피소드와 Reflection 검색
+- 회의 패턴과 참가자 선호도를 학습하는 Agent 구축
 """
 
 # %% [markdown]
-# ## Step 1: Install Dependencies and Setup
+# ## 1단계: 종속성 설치 및 설정
 
 # %%
 # !pip install -qr requirements.txt
@@ -49,24 +48,24 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger("meeting-notes-assistant")
 
 # %%
-# Configuration
+# 구성
 REGION = "us-west-2"
 PARTICIPANT_ID = "participant_001"
 SESSION_ID = f"meeting_{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
 # %% [markdown]
-# ## Step 2: Create Memory Resource with Episodic Strategy
+# ## 2단계: Episodic Strategy를 사용한 Memory 리소스 생성
 #
-# The episodic strategy automatically:
-# - Detects when episodes complete within conversations
-# - Extracts structured episode records (situation, intent, assessment, justification)
-# - Generates reflections that identify patterns across episodes
+# Episodic Strategy는 다음을 자동으로 수행합니다.
+# - 대화에서 에피소드가 완료되는 시점 감지
+# - 구조화된 에피소드 레코드(상황, 의도, 평가, 근거) 추출
+# - 에피소드 전반의 패턴을 식별하는 Reflection 생성
 
 # %%
 client = MemoryClient(region_name=REGION)
 memory_name = "MeetingNotesEpisodicMemory"
 
-# Define episodic memory strategy
+# Episodic Memory Strategy 정의
 strategies = [
     {
         StrategyType.EPISODIC.value: {
@@ -78,13 +77,13 @@ strategies = [
     }
 ]
 
-# Create memory resource
+# Memory 리소스 생성
 try:
     memory = client.create_memory_and_wait(
         name=memory_name,
         strategies=strategies,
         description="Episodic memory for meeting notes assistant",
-        event_expiry_days=180,  # Keep episodes for 6 months
+        event_expiry_days=180,  # 에피소드를 6개월 동안 보관
     )
     memory_id = memory["id"]
     logger.info(f"✅ Created memory: {memory_id}")
@@ -100,12 +99,12 @@ except Exception as e:
     raise
 
 # %%
-# Verify episodic strategy is configured
+# Episodic Strategy 구성 확인
 strategies = client.get_memory_strategies(memory_id)
 print(json.dumps(strategies, indent=2, default=str))
 
 # %% [markdown]
-# ## Step 3: Create Meeting Management Tools
+# ## 3단계: 회의 관리 도구 생성
 
 
 # %%
@@ -128,7 +127,7 @@ def capture_action_item(task: str, owner: str, due_date: str) -> str:
         "testing": "Complete user testing for new feature - assigned to QA team, due end of sprint",
     }
 
-    # Simulate action item storage
+    # 작업 항목 저장 시뮬레이션
     for keyword, stored_item in action_items.items():
         if keyword in task.lower():
             return f"✅ ACTION ITEM CAPTURED:\n{stored_item}\n\nNote: {task}"
@@ -154,7 +153,7 @@ def identify_decision(decision: str, context: str) -> str:
         "process": "Adopted agile sprint methodology for project management",
     }
 
-    # Simulate decision recording
+    # 결정 사항 기록 시뮬레이션
     for keyword, stored_decision in decisions.items():
         if keyword in decision.lower():
             return f"📌 DECISION RECORDED:\n{stored_decision}\n\nRationale: {context}"
@@ -173,7 +172,7 @@ def summarize_discussion(topic: str, key_points: str) -> str:
     Returns:
         Structured summary of the discussion
     """
-    # Simulate discussion summarization
+    # 토론 요약 시뮬레이션
     return f"""📝 DISCUSSION SUMMARY:
 
 Topic: {topic}
@@ -195,7 +194,7 @@ def track_followup(previous_item: str, status: str) -> str:
     Returns:
         Follow-up status with details
     """
-    # Simulate follow-up tracking
+    # 후속 조치 추적 시뮬레이션
     statuses = {
         "completed": "✅ COMPLETED",
         "in-progress": "🔄 IN PROGRESS",
@@ -214,17 +213,17 @@ Last Updated: {datetime.now().strftime("%Y-%m-%d")}"""
 logger.info("✅ Meeting management tools ready")
 
 # %% [markdown]
-# ## Step 4: Create Episodic Memory Hook Provider
+# ## 4단계: Episodic Memory Hook Provider 생성
 #
-# The hook provider:
-# - Retrieves relevant past meeting episodes and reflections before processing queries
-# - Saves meeting interactions as events for episode extraction
-# - Episodes are automatically detected and extracted by AgentCore
+# Hook Provider는 다음을 수행합니다.
+# - 쿼리를 처리하기 전에 관련된 과거 회의 에피소드와 Reflection 검색
+# - 에피소드 추출을 위해 회의 상호 작용을 이벤트로 저장
+# - AgentCore가 에피소드를 자동으로 감지하고 추출
 
 
 # %%
 def get_namespaces(mem_client: MemoryClient, memory_id: str) -> Dict:
-    """Get namespace mapping for memory strategies."""
+    """Memory Strategy의 네임스페이스 매핑을 가져옵니다."""
     strategies = mem_client.get_memory_strategies(memory_id)
     result = {}
     for strategy in strategies:
@@ -237,7 +236,7 @@ def get_namespaces(mem_client: MemoryClient, memory_id: str) -> Dict:
 
 
 class EpisodicMemoryHooks(HookProvider):
-    """Memory hooks for episodic memory with reflections."""
+    """Reflection이 포함된 Episodic Memory용 Memory hook입니다."""
 
     def __init__(self, memory_id: str, client: MemoryClient):
         self.memory_id = memory_id
@@ -245,7 +244,7 @@ class EpisodicMemoryHooks(HookProvider):
         self.namespaces = get_namespaces(self.client, self.memory_id)
 
     def retrieve_episodes_and_reflections(self, event: MessageAddedEvent):
-        """Retrieve relevant episodes and reflections before processing."""
+        """처리 전에 관련 에피소드와 Reflection을 검색합니다."""
         messages = event.agent.messages
         if messages[-1]["role"] != "user" or "toolResult" in messages[-1]["content"][0]:
             return
@@ -261,13 +260,13 @@ class EpisodicMemoryHooks(HookProvider):
             all_context = []
             episodic_config = self.namespaces.get("EPISODIC", {})
 
-            # Retrieve relevant episodes (indexed by "intent")
+            # 관련 에피소드 검색("intent"로 인덱싱됨)
             for namespace_template in episodic_config.get("namespaces", []):
                 namespace = namespace_template.format(actorId=actor_id)
                 episodes = self.client.retrieve_memories(
                     memory_id=self.memory_id,
                     namespace=namespace,
-                    query=user_query,  # Episodes indexed by intent
+                    query=user_query,  # 에피소드는 intent로 인덱싱됨
                     top_k=3,
                 )
 
@@ -279,13 +278,13 @@ class EpisodicMemoryHooks(HookProvider):
                             if text:
                                 all_context.append(f"[PAST EPISODE] {text}")
 
-            # Retrieve reflections (indexed by "use case")
+            # Reflection 검색("use case"로 인덱싱됨)
             for namespace_template in episodic_config.get("reflectionNamespaces", []):
                 namespace = namespace_template.format(actorId=actor_id)
                 reflections = self.client.retrieve_memories(
                     memory_id=self.memory_id,
                     namespace=namespace,
-                    query=user_query,  # Reflections indexed by use case
+                    query=user_query,  # Reflection은 use case로 인덱싱됨
                     top_k=2,
                 )
 
@@ -297,7 +296,7 @@ class EpisodicMemoryHooks(HookProvider):
                             if text:
                                 all_context.append(f"[REFLECTION] {text}")
 
-            # Inject context into query
+            # 쿼리에 컨텍스트 주입
             if all_context:
                 context_text = "\n".join(all_context)
                 original_text = messages[-1]["content"][0]["text"]
@@ -310,13 +309,13 @@ class EpisodicMemoryHooks(HookProvider):
             logger.error(f"Failed to retrieve episodes: {e}")
 
     def save_meeting_interaction(self, event: AfterInvocationEvent):
-        """Save meeting interaction for episode extraction."""
+        """에피소드 추출을 위해 회의 상호 작용을 저장합니다."""
         try:
             messages = event.agent.messages
             if len(messages) < 2 or messages[-1]["role"] != "assistant":
                 return
 
-            # Collect the full interaction including tool uses
+            # 도구 사용을 포함한 전체 상호 작용 수집
             interaction_messages = []
             for msg in messages:
                 role = msg["role"].upper()
@@ -327,7 +326,7 @@ class EpisodicMemoryHooks(HookProvider):
                         if "text" in item:
                             interaction_messages.append((item["text"], role))
                         elif "toolUse" in item:
-                            # Include tool usage for better episode extraction
+                            # 더 나은 에피소드 추출을 위해 도구 사용 내역 포함
                             tool_info = item["toolUse"]
                             tool_text = f"[TOOL: {tool_info.get('name', 'unknown')}]"
                             interaction_messages.append((tool_text, "TOOL"))
@@ -343,7 +342,7 @@ class EpisodicMemoryHooks(HookProvider):
                     logger.warning("Missing actor_id or session_id")
                     return
 
-                # Save event - AgentCore will automatically detect episode completion
+                # 이벤트 저장 - AgentCore가 에피소드 완료를 자동으로 감지
                 self.client.create_event(
                     memory_id=self.memory_id,
                     actor_id=actor_id,
@@ -356,14 +355,14 @@ class EpisodicMemoryHooks(HookProvider):
             logger.error(f"Failed to save interaction: {e}")
 
     def register_hooks(self, registry: HookRegistry) -> None:
-        """Register episodic memory hooks."""
+        """Episodic Memory hook을 등록합니다."""
         registry.add_callback(MessageAddedEvent, self.retrieve_episodes_and_reflections)
         registry.add_callback(AfterInvocationEvent, self.save_meeting_interaction)
         logger.info("Episodic memory hooks registered")
 
 
 # %% [markdown]
-# ## Step 5: Create Meeting Notes Agent
+# ## 5단계: 회의록 Agent 생성
 
 # %%
 episodic_hooks = EpisodicMemoryHooks(memory_id, client)
@@ -399,14 +398,14 @@ Always:
 print("✅ Meeting notes agent created with episodic memory")
 
 # %% [markdown]
-# ## Step 6: Seed Past Meeting Episodes
+# ## 6단계: 과거 회의 에피소드 시드
 #
-# Let's add some previous meeting sessions to demonstrate episodic memory.
+# Episodic Memory를 시연하기 위해 이전 회의 세션을 추가합니다.
 
 # %%
-# Seed with previous meeting sessions
+# 이전 회의 세션으로 시드
 past_sessions = [
-    # Session 1: Sprint planning meeting
+    # 세션 1: Sprint 계획 회의
     ("Let's plan the Q3 sprint. We need to prioritize features.", "USER"),
     ("I'll help capture the key decisions and action items.", "ASSISTANT"),
     (
@@ -435,7 +434,7 @@ past_sessions = [
         "Perfect! I've captured that Sarah will implement user authentication by end of sprint.",
         "ASSISTANT",
     ),
-    # Session 2: Budget review meeting
+    # 세션 2: 예산 검토 회의
     (
         "We need to discuss the Q3 marketing budget. Costs are higher than expected.",
         "USER",
@@ -480,27 +479,27 @@ except Exception as e:
     print(f"⚠️ Error seeding history: {e}")
 
 # %% [markdown]
-# ## Step 7: Test Meeting Scenarios
+# ## 7단계: 회의 시나리오 테스트
 #
-# The agent should now leverage past episodes and reflections.
+# 이제 Agent가 과거 에피소드와 Reflection을 활용해야 합니다.
 
 # %%
-# Test 1: Follow-up on previous decision - should reference past episode
+# 테스트 1: 이전 결정에 대한 후속 조치 - 과거 에피소드를 참조해야 함
 response1 = meeting_agent("Let's revisit the Q3 sprint priorities we discussed last week. What was decided?")
 print(f"Agent: {response1}")
 
 # %%
-# Test 2: Action item check - should retrieve past action items
+# 테스트 2: 작업 항목 확인 - 과거 작업 항목을 검색해야 함
 response2 = meeting_agent("Did we assign someone to handle the user authentication feature?")
 print(f"Agent: {response2}")
 
 # %%
-# Test 3: Budget follow-up - should reference past budget discussion
+# 테스트 3: 예산 후속 조치 - 과거 예산 논의를 참조해야 함
 response3 = meeting_agent("What was the outcome of the Q3 marketing budget discussion?")
 print(f"Agent: {response3}")
 
 # %%
-# Test 4: New meeting with multiple actions
+# 테스트 4: 여러 작업 항목이 있는 새 회의
 response4 = meeting_agent("""
 We're having a product launch planning meeting. Key points:
 - Launch date: November 15th
@@ -513,19 +512,19 @@ Can you capture the decisions and action items?
 print(f"Agent: {response4}")
 
 # %%
-# Test 5: Pattern recognition - agent should remember participant preferences
+# 테스트 5: 패턴 인식 - Agent가 참가자 선호도를 기억해야 함
 response5 = meeting_agent("Sarah wants to discuss technical architecture for the new feature. What format works best?")
 print(f"Agent: {response5}")
 
 # %%
-# Test 6: Completely new topic - no past context
+# 테스트 6: 완전히 새로운 주제 - 과거 컨텍스트 없음
 response6 = meeting_agent(
     "We need to discuss the company's sustainability initiative for the first time. Let's brainstorm ideas."
 )
 print(f"Agent: {response6}")
 
 # %% [markdown]
-# ## Step 8: Verify Episode Storage
+# ## 8단계: 에피소드 저장 확인
 
 # %%
 print("\n📚 Episodic Memory Summary:")
@@ -533,7 +532,7 @@ print("=" * 50)
 
 episodic_config = get_namespaces(client, memory_id).get("EPISODIC", {})
 
-# Check episodes
+# 에피소드 확인
 for namespace_template in episodic_config.get("namespaces", []):
     namespace = namespace_template.format(actorId=PARTICIPANT_ID)
 
@@ -556,7 +555,7 @@ for namespace_template in episodic_config.get("namespaces", []):
     except Exception as e:
         print(f"Error retrieving episodes: {e}")
 
-# Check reflections
+# Reflection 확인
 for namespace_template in episodic_config.get("reflectionNamespaces", []):
     namespace = namespace_template.format(actorId=PARTICIPANT_ID)
 
@@ -582,18 +581,18 @@ for namespace_template in episodic_config.get("reflectionNamespaces", []):
 print("\n" + "=" * 50)
 
 # %% [markdown]
-# ## Key Takeaways
+# ## 핵심 요점
 #
-# 1. **Episodic memory captures interaction sequences**, not just facts
-# 2. **Reflections emerge automatically** from analyzing multiple episodes
-# 3. **Include tool results** in events for richer episode extraction
-# 4. **Query by intent** for episodes, **by use case** for reflections
-# 5. **Episode extraction is asynchronous** (~1 minute after conversation ends)
+# 1. **Episodic Memory는 단순한 사실이 아니라 상호 작용 순서를 캡처합니다.**
+# 2. 여러 에피소드를 분석하면 **Reflection이 자동으로 생성됩니다.**
+# 3. 더 풍부한 에피소드 추출을 위해 이벤트에 **도구 결과를 포함합니다.**
+# 4. 에피소드는 **intent로 쿼리**하고, Reflection은 **use case로 쿼리**합니다.
+# 5. **에피소드 추출은 비동기식**입니다(대화 종료 후 약 1분).
 #
-# ## Clean Up
+# ## 정리
 
 # %%
-# Uncomment to delete the memory resource
+# Memory 리소스를 삭제하려면 주석 해제
 # try:
 #     client.delete_memory_and_wait(memory_id=memory_id)
 #     print(f"✅ Deleted memory resource: {memory_id}")

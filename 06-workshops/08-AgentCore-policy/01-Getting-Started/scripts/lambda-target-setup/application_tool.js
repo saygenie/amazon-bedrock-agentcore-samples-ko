@@ -1,15 +1,15 @@
 /**
- * ApplicationTool - Simplified Application Creation
- * Creates insurance applications with applicant region and coverage amount
+ * ApplicationTool - 간소화된 신청서 생성
+ * 신청자 지역과 보장 금액을 사용해 보험 신청서를 생성합니다.
  * 
- * Parameters:
- * - applicant_region: Customer's geographic region
- * - coverage_amount: Requested insurance coverage amount
+ * 매개변수:
+ * - applicant_region: 고객의 지역
+ * - coverage_amount: 요청한 보험 보장 금액
  */
 
 import crypto from 'crypto';
 
-// Simplified application creation function
+// 간소화된 신청서 생성 함수
 function createApplication(args) {
     console.log('Processing application creation:', JSON.stringify(args, null, 2));
     
@@ -18,7 +18,7 @@ function createApplication(args) {
         coverage_amount
     } = args;
     
-    // Validate required parameters
+    // 필수 매개변수 검증
     if (!applicant_region) {
         return {
             status: 'ERROR',
@@ -35,10 +35,10 @@ function createApplication(args) {
         };
     }
     
-    // Generate application ID
+    // 신청서 ID 생성
     const applicationId = `APP-${applicant_region}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
     
-    // Always return success message with the provided values
+    // 제공된 값과 함께 항상 성공 메시지 반환
     return {
         status: 'SUCCESS',
         message: `Application has been successfully created for applicant region ${applicant_region} and coverage amount $${coverage_amount.toLocaleString()}`,
@@ -49,7 +49,7 @@ function createApplication(args) {
     };
 }
 
-// Main Lambda handler following AgentCore MCP protocol
+// AgentCore MCP 프로토콜을 따르는 기본 Lambda 핸들러
 export const handler = async (event) => {
     console.log('Received event:', JSON.stringify(event, null, 2));
     
@@ -57,16 +57,16 @@ export const handler = async (event) => {
         let args;
         let isJsonRpc = false;
         
-        // Check if this is JSON-RPC format or direct parameter format
+        // JSON-RPC 형식인지 직접 매개변수 형식인지 확인
         if (event.method === 'tools/call' && event.params) {
-            // JSON-RPC format
+            // JSON-RPC 형식
             isJsonRpc = true;
             const requestId = event.id || 'unknown';
             const params = event.params || {};
             const functionName = params.name;
             args = params.arguments || {};
             
-            // Validate function name
+            // 함수 이름 검증
             if (functionName !== 'create_application') {
                 return {
                     jsonrpc: '2.0',
@@ -78,16 +78,16 @@ export const handler = async (event) => {
                 };
             }
         } else {
-            // Direct parameter format (gateway sends parameters directly)
+            // 직접 매개변수 형식(Gateway에서 매개변수를 직접 전송)
             args = event;
         }
         
-        // Execute function
+        // 함수 실행
         const result = createApplication(args);
         
-        // Return response in appropriate format
+        // 적절한 형식으로 응답 반환
         if (isJsonRpc) {
-            // JSON-RPC response
+            // JSON-RPC 응답
             const responseText = JSON.stringify(result, null, 2);
             return {
                 jsonrpc: '2.0',
@@ -103,14 +103,14 @@ export const handler = async (event) => {
                 }
             };
         } else {
-            // Direct response (for gateway)
+            // 직접 응답(Gateway용)
             return result;
         }
         
     } catch (error) {
         console.error('Handler error:', error);
         
-        // Return error in appropriate format
+        // 적절한 형식으로 오류 반환
         if (event.method === 'tools/call') {
             return {
                 jsonrpc: '2.0',
@@ -129,8 +129,8 @@ export const handler = async (event) => {
     }
 };
 
-// Test function for local development
-// Uncomment to test locally with: node application_tool.js
+// 로컬 개발용 테스트 함수
+// 로컬에서 테스트하려면 주석 해제: node application_tool.js
 /*
 const testEvent = {
     jsonrpc: '2.0',

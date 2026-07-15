@@ -4,23 +4,23 @@ from mcp import StdioServerParameters, stdio_client
 from strands.tools.mcp import MCPClient
 from bedrock_agentcore.runtime import BedrockAgentCoreApp
 
-# Initialize the BedrockAgentCoreApp
+# BedrockAgentCoreApp 초기화
 app = BedrockAgentCoreApp()
 
 
-# Connect to AWS Documentation MCP server
+# AWS Documentation MCP 서버에 연결
 def create_aws_docs_client():
     return MCPClient(
         lambda: stdio_client(StdioServerParameters(command="uvx", args=["awslabs.aws-documentation-mcp-server@latest"]))
     )
 
 
-# Connect to AWS CDK MCP server
+# AWS CDK MCP 서버에 연결
 def create_cdk_client():
     return MCPClient(lambda: stdio_client(StdioServerParameters(command="uvx", args=["awslabs.cdk-mcp-server@latest"])))
 
 
-# Function to create agent with tools from both MCP servers
+# 두 MCP 서버의 도구를 사용하는 에이전트 생성 함수
 def create_agent():
     model_id = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
     model = BedrockModel(model_id=model_id)
@@ -29,10 +29,10 @@ def create_agent():
     cdk_client = create_cdk_client()
 
     with aws_docs_client, cdk_client:
-        # Get tools from both MCP servers
+        # 두 MCP 서버에서 도구 가져오기
         tools = aws_docs_client.list_tools_sync() + cdk_client.list_tools_sync()
 
-        # Create agent with these tools
+        # 가져온 도구로 에이전트 생성
         agent = Agent(
             model=model,
             tools=tools,
@@ -47,7 +47,7 @@ def create_agent():
 
 @app.entrypoint
 def invoke_agent(payload):
-    """Process the input payload and return the agent's response"""
+    """입력 페이로드를 처리하고 에이전트의 응답을 반환합니다."""
     agent, aws_docs_client, cdk_client = create_agent()
 
     with aws_docs_client, cdk_client:

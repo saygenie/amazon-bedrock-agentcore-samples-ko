@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse
 
 app = FastAPI()
 
-# Set via CLI args at startup
+# 시작 시 CLI 인자로 설정
 user_identifier: dict = {}
 agentcore_client = None
 
@@ -37,7 +37,7 @@ async def callback(request: Request):
             status_code=500,
         )
 
-    # Force exit shortly after response is sent
+        # 응답 전송 직후 강제 종료
     threading.Timer(0.5, lambda: os._exit(0)).start()
 
     return HTMLResponse(

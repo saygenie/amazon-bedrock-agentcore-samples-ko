@@ -1,22 +1,22 @@
 """
-Central registry of all AWS Systems Manager Parameter Store paths
-Used by deployment and retrieval helpers across all labs
+모든 AWS Systems Manager Parameter Store 경로의 중앙 레지스트리
+전체 Lab의 배포 및 조회 헬퍼에서 사용합니다.
 
-This ensures parameter naming is consistent, discoverable, and version-controlled.
-No hardcoded values in notebooks or helper functions.
+파라미터 이름을 일관되고 검색 및 버전 관리가 가능하게 유지합니다.
+Notebook이나 헬퍼 함수에 값을 하드코딩하지 않습니다.
 """
 
-# Workshop-wide naming convention
+# Workshop 전체 이름 지정 규칙
 WORKSHOP_NAME = "aiml301-sre-agentcore"
 WORKSHOP_PREFIX = "/aiml301"
 
-# Parameter Store path structure
+# Parameter Store 경로 구조
 PARAMETER_PATHS = {
     "workshop": {
         "account_id": "/aiml301/workshop/account-id",
         "region": "/aiml301/workshop/region",
     },
-    # Lab 1: Prerequisites - Cognito Setup (for Labs 3-5 authentication)
+    # Lab 1: 사전 요구 사항 - Cognito 설정(Lab 3~5 인증용)
     "cognito": {
         "user_pool_id": "/aiml301/cognito/user-pool-id",
         "user_pool_name": "/aiml301/cognito/user-pool-name",
@@ -35,13 +35,13 @@ PARAMETER_PATHS = {
         "approver_user_email": "/aiml301/cognito/approver-user-email",
         "approver_user_password": "/aiml301/cognito/approver-user-password",
     },
-    # Lab 1.5: Memory Setup (created after Cognito, used by Labs 2-5)
+    # Lab 1.5: Memory 설정(Cognito 이후 생성, Lab 2~5에서 사용)
     "memory": {
         "memory_id": "/aiml301/memory/id",
         "memory_name_prefix": "SREAgent_STM",
         "default_session_id": "/aiml301/memory/default-session-id",
     },
-    # Lab 2: Diagnostics Agent
+    # Lab 2: 진단 에이전트
     "lab_02": {
         "ecr_repository_uri": "/aiml301/lab-02/ecr-repository-uri",
         "ecr_repository_name": "/aiml301/lab-02/ecr-repository-name",
@@ -52,113 +52,113 @@ PARAMETER_PATHS = {
         "gateway_url": "/aiml301/lab-02/gateway-url",
         "gateway_role_arn": "/aiml301/lab-02/gateway-role-arn",
     },
-    # Lab 3: Remediation Agent (AgentCore Runtime + Gateway with M2M Auth)
+    # Lab 3: 교정 에이전트(M2M 인증을 사용하는 AgentCore Runtime + Gateway)
     "lab_03": {
-        # Code Interpreter Configuration
+        # Code Interpreter 구성
         "code_interpreter_id": "/aiml301_sre_agentcore/lab-03/code-interpreter-id",
         "code_interpreter_arn": "/aiml301_sre_agentcore/lab-03/code-interpreter-arn",
         "code_interpreter_role_arn": "/aiml301_sre_agentcore/lab-03/code-interpreter-role-arn",
-        # Runtime Configuration
+        # Runtime 구성
         "runtime_role_arn": "/aiml301_sre_agentcore/lab-03/runtime-role-arn",
         "runtime_id": "/aiml301_sre_agentcore/lab-03/runtime-id",
         "runtime_arn": "/aiml301_sre_agentcore/lab-03/runtime-arn",
         "runtime_config": "/aiml301_sre_agentcore/lab-03/runtime-config",
-        # Gateway Configuration
+        # Gateway 구성
         "gateway_role_arn": "/aiml301_sre_agentcore/lab-03/gateway-role-arn",
         "gateway_id": "/aiml301_sre_agentcore/lab-03/gateway-id",
         "gateway_config": "/aiml301_sre_agentcore/lab-03/gateway-config",
-        # OAuth2 M2M Authentication
+        # OAuth2 M2M 인증
         "oauth2_provider_arn": "/aiml301/lab-03/oauth2-provider-arn",
         "oauth2_secret_arn": "/aiml301/lab-03/oauth2-secret-arn",
         "oauth2_config": "/aiml301/lab-03/oauth2-config",
-        # Gateway Target (Runtime)
+        # Gateway 대상(Runtime)
         "gateway_runtime_target": "/aiml301_sre_agentcore/lab-03/gateway-runtime-target",
         "gateway_m2m_target": "/aiml301/lab-03/gateway-m2m-target",
         "m2m_auth_config": "/aiml301/lab-03/m2m-auth-complete-config",
     },
-    # Lab 3B: Remediation Agent with Fine-Grained Access Control
+    # Lab 3B: 세분화된 접근 제어를 사용하는 교정 에이전트
     "lab_03b": {
         "interceptor_function_arn": "/aiml301/lab-03b/interceptor-function-arn",
         "gateway_id": "/aiml301/lab-03b/gateway-id",
         "gateway_url": "/aiml301/lab-03b/gateway-url",
     },
-    # Lab 4: Prevention Agent (AgentCore Runtime + Gateway with M2M Auth)
+    # Lab 4: 예방 에이전트(M2M 인증을 사용하는 AgentCore Runtime + Gateway)
     "lab_04": {
-        # Runtime Configuration
+        # Runtime 구성
         "runtime_role_arn": "/aiml301_sre_agentcore/lab-04/runtime-role-arn",
         "runtime_id": "/aiml301_sre_agentcore/lab-04/runtime-id",
         "runtime_arn": "/aiml301_sre_agentcore/lab-04/runtime-arn",
         "runtime_config": "/aiml301_sre_agentcore/lab-04/runtime-config",
-        # Gateway Configuration
+        # Gateway 구성
         "gateway_role_arn": "/aiml301_sre_agentcore/lab-04/gateway-role-arn",
         "gateway_id": "/aiml301_sre_agentcore/lab-04/gateway-id",
         "gateway_config": "/aiml301_sre_agentcore/lab-04/gateway-config",
-        # OAuth2 M2M Authentication
+        # OAuth2 M2M 인증
         "oauth2_provider_arn": "/aiml301/lab-04/oauth2-provider-arn",
         "oauth2_secret_arn": "/aiml301/lab-04/oauth2-secret-arn",
         "oauth2_config": "/aiml301/lab-04/oauth2-config",
-        # Gateway Target (Runtime)
+        # Gateway 대상(Runtime)
         "gateway_runtime_target": "/aiml301_sre_agentcore/lab-04/gateway-runtime-target",
         "gateway_m2m_target": "/aiml301/lab-04/gateway-m2m-target",
         "m2m_auth_config": "/aiml301/lab-04/m2m-auth-complete-config",
     },
-    # Lab 5: Multi-Agent Orchestration (Supervisor Agent)
+    # Lab 5: 멀티 에이전트 오케스트레이션(Supervisor 에이전트)
     "lab_05": {
-        # Runtime Configuration
+        # Runtime 구성
         "runtime_role_arn": "/aiml301_sre_agentcore/lab-05/runtime-role-arn",
         "runtime_id": "/aiml301_sre_agentcore/lab-05/runtime-id",
         "runtime_arn": "/aiml301_sre_agentcore/lab-05/runtime-arn",
         "runtime_config": "/aiml301_sre_agentcore/lab-05/runtime-config",
-        # Gateway Configuration
+        # Gateway 구성
         "gateway_role_arn": "/aiml301_sre_agentcore/lab-05/gateway-role-arn",
         "gateway_id": "/aiml301_sre_agentcore/lab-05/gateway-id",
         "gateway_url": "/aiml301_sre_agentcore/lab-05/gateway-url",
         "gateway_config": "/aiml301_sre_agentcore/lab-05/gateway-config",
-        # Gateway Target (Supervisor Runtime)
+        # Gateway 대상(Supervisor Runtime)
         "gateway_runtime_target": "/aiml301_sre_agentcore/lab-05/gateway-runtime-target",
     },
-    # Lab 6: Custom Interceptor (Optional)
+    # Lab 6: 사용자 지정 인터셉터(선택 사항)
     "lab_06": {
         "interceptor_role_arn": "/aiml301/lab-06/interceptor-role-arn",
     },
-    # Lab 7: Memory Integration (Optional)
+    # Lab 7: Memory 통합(선택 사항)
     "lab_07": {
         "memory_store_arn": "/aiml301/lab-07/memory-store-arn",
     },
 }
 
-# Lambda function configuration (constant specs)
+# Lambda 함수 구성(고정 사양)
 LAMBDA_CONFIG = {
-    "memory_size": 2048,  # MB (2GB for Strands agent + model inference)
-    "timeout": 300,  # seconds (5 minutes for Strands agent reasoning)
+    "memory_size": 2048,  # MB(Strands 에이전트 + 모델 추론용 2GB)
+    "timeout": 300,  # 초(Strands 에이전트 추론용 5분)
     "ephemeral_storage": 512,  # MB (/tmp)
 }
 
-# ECR image configuration
+# ECR 이미지 구성
 ECR_CONFIG = {
     "base_image": "public.ecr.aws/lambda/python:3.12",
     "image_tag": "latest",
 }
 
-# IAM policy constants
+# IAM policy 상수
 IAM_POLICIES = {
     "cloudwatch_logs_policy": "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
 }
 
-# Bedrock-specific constants
+# Bedrock 관련 상수
 BEDROCK_CONFIG = {
     "invoke_policy_action": "bedrock:InvokeModel",
-    # MODEL_ID is maintained in config.py and imported by deployers as needed
+    # MODEL_ID는 config.py에서 관리하며 필요할 때 deployer에서 가져옴
 }
 
-# S3 configuration for ZIP-based Lambda deployment
+# ZIP 기반 Lambda 배포용 S3 구성
 S3_CONFIG = {
     "bucket_name": "aiml301-lambda-packages",
     "lambda_packages_prefix": "lambda-packages/",
     "default_object_prefix": "lambda-packages/diagnostic-agent.zip",
 }
 
-# Deployment method options
+# 배포 방식 옵션
 DEPLOYMENT_METHODS = {
     "docker": {
         "description": "Docker image → ECR → Lambda (original approach)",

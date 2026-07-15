@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# Enable strict error handling
+# 엄격한 오류 처리 활성화
 set -euo pipefail
 
-# ----- Config -----
+# ----- 구성 -----
 BUCKET_NAME=${1:-asanaintegrationdemo111}
 INFRA_STACK_NAME=${2:-AsanaIntegrationStackInfra}
 COGNITO_STACK_NAME=${3:-AsanaIntegrationStackCognito}
@@ -12,7 +12,7 @@ COGNITO_TEMPLATE_FILE="cognito.yaml"
 REGION=$(aws configure get region 2>/dev/null || echo "us-east-1")
 
 
-# Get AWS Account ID with proper error handling
+# 적절한 오류 처리와 함께 AWS Account ID 가져오기
 echo "🔍 Getting AWS Account ID..."
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>&1)
 if [ $? -ne 0 ] || [ -z "$ACCOUNT_ID" ] || [ "$ACCOUNT_ID" = "None" ]; then
@@ -28,8 +28,8 @@ WEB_APP_CLIENT_NAME="AsanaIntegrationGWWebClient"
 
 echo "Region: $REGION"
 echo "Account ID: $ACCOUNT_ID"
-# ----- 1. Create S3 bucket -----
-# ----- 4. Deploy CloudFormation -----
+# ----- 1. S3 bucket 생성 -----
+# ----- 4. CloudFormation 배포 -----
 deploy_stack() {
   set +e
 
@@ -65,7 +65,7 @@ deploy_stack() {
   fi
 }
 
-# ----- Run both stacks -----
+# ----- 두 스택 모두 실행 -----
 echo "🔧 Starting deployment of infrastructure stack"
 deploy_stack "$INFRA_STACK_NAME" "$INFRA_TEMPLATE_FILE"
 infra_exit_code=$?

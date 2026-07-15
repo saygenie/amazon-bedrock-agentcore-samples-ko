@@ -8,12 +8,12 @@ from botocore.exceptions import ClientError
 import requests
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# .env 파일에서 환경 변수 불러오기
 load_dotenv()
 
 
 def wait_for_iam_role_propagation(iam_client, role_name, max_retries=30, delay=2):
-    """Wait for IAM role to be available after creation."""
+    """생성 후 IAM 역할을 사용할 수 있을 때까지 기다립니다."""
     for i in range(max_retries):
         try:
             iam_client.get_role(RoleName=role_name)
@@ -30,17 +30,17 @@ def setup_cognito_user_pool():
     boto_session = Session()
     region = boto_session.region_name
 
-    # Initialize Cognito client
+    # Cognito 클라이언트 초기화
     cognito_client = boto3.client("cognito-idp", region_name=region)
 
     try:
-        # Create User Pool
+        # User Pool 생성
         user_pool_response = cognito_client.create_user_pool(
             PoolName="MCPServerPool", Policies={"PasswordPolicy": {"MinimumLength": 8}}
         )
         pool_id = user_pool_response["UserPool"]["Id"]
 
-        # Create App Client
+        # App Client 생성
         app_client_response = cognito_client.create_user_pool_client(
             UserPoolId=pool_id,
             ClientName="MCPServerPoolClient",
@@ -49,12 +49,12 @@ def setup_cognito_user_pool():
         )
         client_id = app_client_response["UserPoolClient"]["ClientId"]
 
-        # Get credentials from environment variables
+        # 환경 변수에서 자격 증명 가져오기
         username = os.getenv("COGNITO_USERNAME", "testuser")
         temp_password = os.getenv("COGNITO_TEMP_PASSWORD", "Temp123!")
         password = os.getenv("COGNITO_PASSWORD", "MyPassword123!")
 
-        # Create User
+        # 사용자 생성
         cognito_client.admin_create_user(
             UserPoolId=pool_id,
             Username=username,
@@ -62,10 +62,10 @@ def setup_cognito_user_pool():
             MessageAction="SUPPRESS",
         )
 
-        # Set Permanent Password
+        # 영구 암호 설정
         cognito_client.admin_set_user_password(UserPoolId=pool_id, Username=username, Password=password, Permanent=True)
 
-        # Authenticate User and get Access Token
+        # 사용자를 인증하고 액세스 토큰 가져오기
         auth_response = cognito_client.initiate_auth(
             ClientId=client_id,
             AuthFlow="USER_PASSWORD_AUTH",
@@ -73,13 +73,13 @@ def setup_cognito_user_pool():
         )
         bearer_token = auth_response["AuthenticationResult"]["AccessToken"]
 
-        # Output the required values
+        # 필요한 값 출력
         print(f"Pool id: {pool_id}")
         print(f"Discovery URL: https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/openid-configuration")
         print("Client ID: <redacted>")
         print("Bearer Token: <redacted>")
 
-        # Return values if needed for further processing
+        # 추가 처리에 필요한 경우 값 반환
         return {
             "pool_id": pool_id,
             "client_id": client_id,
@@ -99,7 +99,7 @@ def get_or_create_user_pool(cognito, USER_POOL_NAME):
             user_pool_id = pool["Id"]
             response = cognito.describe_user_pool(UserPoolId=user_pool_id)
 
-            # Get the domain from user pool description
+    # User Pool 설명에서 도메인 가져오기
             user_pool = response.get("UserPool", {})
             domain = user_pool.get("Domain")
 
@@ -122,7 +122,7 @@ def get_or_create_user_pool(cognito, USER_POOL_NAME):
 def get_or_create_oauth2_credential_provider(region, identity_provider_name, runtime_cognito):
     cognito_provider_arn = ""
     identity_client = boto3.client("bedrock-agentcore-control", region_name=region)
-    # Create OAuth2 credential provider
+    # OAuth2 자격 증명 공급자 생성
     try:
         cognito_provider = identity_client.create_oauth2_credential_provider(
             name=identity_provider_name,
@@ -183,7 +183,7 @@ def get_or_create_agentcore_gateway(region, iam_role, auth_config, gw_config):
 
 
 def get_or_create_agentcore_gateway_target(region, target_creation_params):
-    # Create gateway target
+    # Gateway 대상 생성
     gw_target_info = {}
     try:
         gateway_client = boto3.client("bedrock-agentcore-control", region_name=region)
@@ -247,7 +247,7 @@ def get_or_create_m2m_client(cognito, user_pool_id, CLIENT_NAME, RESOURCE_SERVER
             return client["ClientId"], describe["UserPoolClient"]["ClientSecret"]
     print("creating new m2m client")
 
-    # Default scopes if not provided (for backward compatibility)
+    # 제공되지 않은 경우 기본 scope 사용(하위 호환성)
     if SCOPES is None:
         SCOPES = [
             f"{RESOURCE_SERVER_ID}/gateway:read",
@@ -390,14 +390,14 @@ def create_agentcore_role(agent_name, region=None):
 
     assume_role_policy_document_json = json.dumps(assume_role_policy_document)
     role_policy_document = json.dumps(role_policy)
-    # Create IAM Role for the Lambda function
+    # Lambda 함수용 IAM 역할 생성
     try:
         agentcore_iam_role = iam_client.create_role(
             RoleName=agentcore_role_name,
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-        # Wait for role to be available
+    # 역할을 사용할 수 있을 때까지 대기
         if not wait_for_iam_role_propagation(iam_client, agentcore_role_name):
             print(f"Warning: Role {agentcore_role_name} may not be fully propagated")
     except iam_client.exceptions.EntityAlreadyExistsException:
@@ -414,7 +414,7 @@ def create_agentcore_role(agent_name, region=None):
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-    # Attach the AWSLambdaBasicExecutionRole policy
+    # AWSLambdaBasicExecutionRole 정책 연결
     print(f"attaching role policy {agentcore_role_name}")
     try:
         iam_client.put_role_policy(
@@ -472,14 +472,14 @@ def create_agentcore_gateway_role(gateway_name, region=None):
     assume_role_policy_document_json = json.dumps(assume_role_policy_document)
 
     role_policy_document = json.dumps(role_policy)
-    # Create IAM Role for the Lambda function
+    # Lambda 함수용 IAM 역할 생성
     try:
         agentcore_iam_role = iam_client.create_role(
             RoleName=agentcore_gateway_role_name,
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-        # Wait for role to be available
+    # 역할을 사용할 수 있을 때까지 대기
         if not wait_for_iam_role_propagation(iam_client, agentcore_gateway_role_name):
             print(f"Warning: Role {agentcore_gateway_role_name} may not be fully propagated")
     except iam_client.exceptions.EntityAlreadyExistsException:
@@ -496,7 +496,7 @@ def create_agentcore_gateway_role(gateway_name, region=None):
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-    # Attach the AWSLambdaBasicExecutionRole policy
+    # AWSLambdaBasicExecutionRole 정책 연결
     print(f"attaching role policy {agentcore_gateway_role_name}")
     try:
         iam_client.put_role_policy(
@@ -555,14 +555,14 @@ def create_agentcore_gateway_role_s3_smithy(gateway_name, region=None):
     assume_role_policy_document_json = json.dumps(assume_role_policy_document)
 
     role_policy_document = json.dumps(role_policy)
-    # Create IAM Role for the Lambda function
+    # Lambda 함수용 IAM 역할 생성
     try:
         agentcore_iam_role = iam_client.create_role(
             RoleName=agentcore_gateway_role_name,
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-        # Wait for role to be available
+    # 역할을 사용할 수 있을 때까지 대기
         if not wait_for_iam_role_propagation(iam_client, agentcore_gateway_role_name):
             print(f"Warning: Role {agentcore_gateway_role_name} may not be fully propagated")
     except iam_client.exceptions.EntityAlreadyExistsException:
@@ -579,7 +579,7 @@ def create_agentcore_gateway_role_s3_smithy(gateway_name, region=None):
             AssumeRolePolicyDocument=assume_role_policy_document_json,
         )
 
-    # Attach the AWSLambdaBasicExecutionRole policy
+    # AWSLambdaBasicExecutionRole 정책 연결
     print(f"attaching role policy {agentcore_gateway_role_name}")
     try:
         iam_client.put_role_policy(
@@ -599,7 +599,7 @@ def create_gateway_lambda(lambda_function_code_path) -> dict[str, int]:
 
     return_resp = {"lambda_function_arn": "Pending", "exit_code": 1}
 
-    # Initialize Cognito client
+    # Cognito 클라이언트 초기화
     lambda_client = boto3.client("lambda", region_name=region)
     iam_client = boto3.client("iam", region_name=region)
 
@@ -641,7 +641,7 @@ def create_gateway_lambda(lambda_function_code_path) -> dict[str, int]:
         )
 
         print(f"Role '{role_name}' created successfully: {role_arn}")
-        # Wait for role to be available
+    # 역할을 사용할 수 있을 때까지 대기
         if not wait_for_iam_role_propagation(iam_client, role_name):
             print(f"Warning: Role {role_name} may not be fully propagated")
     except botocore.exceptions.ClientError as error:
@@ -656,7 +656,7 @@ def create_gateway_lambda(lambda_function_code_path) -> dict[str, int]:
 
     if role_arn != "":
         print("Creating lambda function")
-        # Create lambda function
+    # Lambda 함수 생성
         try:
             lambda_response = lambda_client.create_function(
                 FunctionName=lambda_function_name,
@@ -691,7 +691,7 @@ def delete_gateway_target(gateway_client, gatewayId):
         targetId = item["targetId"]
         print("Deleting target ", targetId)
         gateway_client.delete_gateway_target(gatewayIdentifier=gatewayId, targetId=targetId)
-        # Brief pause for gateway target deletion
+    # Gateway 대상 삭제를 위해 잠시 대기
         time.sleep(1)
 
 
@@ -718,19 +718,19 @@ def get_current_role_arn():
 
 
 def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
-    # Normalize current_arn
+    # current_arn 정규화
     if isinstance(current_arn, (list, set, tuple)):
         current_arn = list(current_arn)[0]
     current_arn = str(current_arn)
 
-    # AWS clients
+    # AWS 클라이언트
     boto_session = Session()
     region = boto_session.region_name
     iam_client = boto3.client("iam", region_name=region)
     sts_client = boto3.client("sts")
     account_id = sts_client.get_caller_identity()["Account"]
 
-    # --- Trust policy (AssumeRolePolicyDocument) ---
+    # --- 신뢰 정책(AssumeRolePolicyDocument) ---
     assume_role_policy_document = {
         "Version": "2012-10-17",
         "Statement": [
@@ -750,7 +750,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
     }
     assume_role_policy_json = json.dumps(assume_role_policy_document)
 
-    # ---  Inline role policy (Bedrock gateway invoke) ---
+    # --- 인라인 역할 정책(Bedrock Gateway 호출) ---
     role_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -763,13 +763,13 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
     }
     role_policy_json = json.dumps(role_policy)
 
-    # --- Create or update IAM role ---
+    # --- IAM 역할 생성 또는 업데이트 ---
     try:
         agentcoregw_iam_role = iam_client.create_role(
             RoleName=role_name, AssumeRolePolicyDocument=assume_role_policy_json
         )
         print(f"Created new role: {role_name}")
-        # Wait for role to be available
+    # 역할을 사용할 수 있을 때까지 대기
         if not wait_for_iam_role_propagation(iam_client, role_name):
             print(f"Warning: Role {role_name} may not be fully propagated")
     except iam_client.exceptions.EntityAlreadyExistsException:
@@ -779,7 +779,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
             iam_client.delete_role_policy(RoleName=role_name, PolicyName=policy_name)
         agentcoregw_iam_role = iam_client.get_role(RoleName=role_name)
 
-    # Attach inline role policy (gateway invoke)
+    # 인라인 역할 정책 연결(Gateway 호출)
     iam_client.put_role_policy(
         RoleName=role_name,
         PolicyName="AgentCorePolicy",
@@ -788,7 +788,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
 
     role_arn = agentcoregw_iam_role["Role"]["Arn"]
 
-    # ---  Ensure current_arn can assume role (with retry) ---
+    # --- current_arn이 역할을 수임할 수 있는지 확인(재시도 포함) ---
     arn_parts = current_arn.split(":")
     resource_type, resource_name = arn_parts[5].split("/", 1)
 
@@ -797,7 +797,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
         "Statement": [{"Effect": "Allow", "Action": "sts:AssumeRole", "Resource": role_arn}],
     }
 
-    # Attach assume-role policy if user/role
+    # 사용자/역할인 경우 역할 수임 정책 연결
     try:
         if resource_type == "user":
             iam_client.put_user_policy(
@@ -815,7 +815,7 @@ def create_gateway_invoke_tool_role(role_name, gateway_id, current_arn):
         print(f"Unable to attach assume-role policy: {e}")
         print("Make sure the caller has iam:PutUserPolicy or iam:PutRolePolicy permission.")
 
-    # Retry loop for eventual consistency
+    # 최종 일관성을 위한 재시도 루프
     max_retries = 5
     for i in range(max_retries):
         try:

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Update demo data dates to match the current week and upload to S3.
+데모 데이터의 날짜를 현재 주차에 맞게 업데이트하고 S3에 업로드합니다.
 
-This script dynamically updates all dates in the demo_data directory to reflect
-the current week, making the demo data always appear fresh and relevant, then
-uploads the updated data to an S3 bucket.
+이 스크립트는 demo_data 디렉터리의 모든 날짜에 현재 주차가 반영되도록
+동적으로 업데이트하여 데모 데이터가 항상 최신으로 보이게 한 다음,
+업데이트된 데이터를 S3 버킷에 업로드합니다.
 """
 
 import json
@@ -17,24 +17,24 @@ import boto3
 from botocore.exceptions import ClientError
 
 
-# Detect if running on Windows to disable emojis
+# 이모지를 비활성화하기 위해 Windows에서 실행 중인지 감지
 IS_WINDOWS = platform.system() == "Windows"
 
 
 def get_symbol(emoji, fallback):
-    """Return emoji on non-Windows systems, fallback text on Windows."""
+    """Windows가 아닌 시스템에서는 이모지를, Windows에서는 대체 텍스트를 반환합니다."""
     return fallback if IS_WINDOWS else emoji
 
 
 def get_current_week_info():
-    """Get current week number and date range."""
+    """현재 주차 번호와 날짜 범위를 가져옵니다."""
     today = datetime.now()
     week_num = today.isocalendar()[1]
 
-    # Get Monday of current week
+    # 현재 주의 월요일 가져오기
     monday = today - timedelta(days=today.weekday())
 
-    # Generate dates for the week (Mon-Fri)
+    # 해당 주의 날짜 생성(월요일~금요일)
     week_dates = {
         "monday": monday,
         "tuesday": monday + timedelta(days=1),
@@ -49,16 +49,16 @@ def get_current_week_info():
 
 
 def update_json_dates(file_path, week_dates):
-    """Update dates in JSON files."""
+    """JSON 파일의 날짜를 업데이트합니다."""
     with open(file_path, "r") as f:
         data = json.load(f)
 
-    # Recursively update all date fields
+    # 모든 날짜 필드를 재귀적으로 업데이트
     def update_dates_recursive(obj):
         if isinstance(obj, dict):
             for key, value in obj.items():
                 if isinstance(value, str) and re.match(r"\d{4}-\d{2}-\d{2}", value):
-                    # Map old dates to new dates based on day of week
+                    # 요일을 기준으로 이전 날짜를 새 날짜에 매핑
                     old_date = datetime.strptime(value, "%Y-%m-%d")
                     day_name = old_date.strftime("%A").lower()
                     if day_name in week_dates:
@@ -78,11 +78,11 @@ def update_json_dates(file_path, week_dates):
 
 
 def update_markdown_dates(file_path, week_dates):
-    """Update dates in Markdown files."""
+    """Markdown 파일의 날짜를 업데이트합니다."""
     with open(file_path, "r") as f:
         content = f.read()
 
-    # Update YYYY-MM-DD format dates
+    # YYYY-MM-DD 형식의 날짜 업데이트
     def replace_date(match):
         old_date = datetime.strptime(match.group(0), "%Y-%m-%d")
         day_name = old_date.strftime("%A").lower()
@@ -92,7 +92,7 @@ def update_markdown_dates(file_path, week_dates):
 
     content = re.sub(r"\d{4}-\d{2}-\d{2}", replace_date, content)
 
-    # Update "Week of Month Day" format
+    # "Week of Month Day" 형식 업데이트
     monday = week_dates["monday"]
     week_of_pattern = r"Week of \w+ \d{1,2}"
     content = re.sub(week_of_pattern, f"Week of {monday.strftime('%B %d')}", content)
@@ -104,13 +104,13 @@ def update_markdown_dates(file_path, week_dates):
 
 
 def update_csv_dates(file_path, week_dates):
-    """Update dates in CSV files."""
+    """CSV 파일의 날짜를 업데이트합니다."""
     with open(file_path, "r") as f:
         lines = f.readlines()
 
     updated_lines = []
     for line in lines:
-        # Update YYYY-MM-DD format dates
+        # YYYY-MM-DD 형식의 날짜 업데이트
         def replace_date(match):
             old_date = datetime.strptime(match.group(0), "%Y-%m-%d")
             day_name = old_date.strftime("%A").lower()
@@ -128,10 +128,10 @@ def update_csv_dates(file_path, week_dates):
 
 
 def rename_files_with_week(demo_data_path, week_num, week_dates):
-    """Rename files to match current week number and dates."""
+    """현재 주차 번호와 날짜에 맞게 파일 이름을 변경합니다."""
     monday = week_dates["monday"]
 
-    # Patterns to update
+    # 업데이트할 패턴
     patterns = [
         (r"_week_\d{2}\.", f"_week_{week_num:02d}."),
         (
@@ -154,7 +154,7 @@ def rename_files_with_week(demo_data_path, week_num, week_dates):
 
 
 def upload_to_s3(demo_data_path, bucket_name, prefix="demo_data"):
-    """Upload all demo data files to S3 bucket."""
+    """모든 데모 데이터 파일을 S3 버킷에 업로드합니다."""
     s3_client = boto3.client("s3")
 
     print(f"\nUploading to S3 bucket: {bucket_name}")
@@ -164,12 +164,12 @@ def upload_to_s3(demo_data_path, bucket_name, prefix="demo_data"):
 
     for file_path in demo_data_path.rglob("*"):
         if file_path.is_file():
-            # Calculate relative path from demo_data directory itself (not parent)
+            # 상위 디렉터리가 아닌 demo_data 디렉터리 자체를 기준으로 상대 경로 계산
             relative_path = file_path.relative_to(demo_data_path)
             s3_key = f"{prefix}/{relative_path.as_posix()}" if prefix else relative_path.as_posix()
 
             try:
-                # Determine content type
+                # 콘텐츠 유형 결정
                 content_type = "text/plain"
                 if file_path.suffix == ".json":
                     content_type = "application/json"
@@ -194,7 +194,7 @@ def upload_to_s3(demo_data_path, bucket_name, prefix="demo_data"):
 
 
 def update_tools_config(bucket_name):
-    """Update S3_BUCKET configuration in tools.py file."""
+    """tools.py 파일의 S3_BUCKET 구성을 업데이트합니다."""
     script_dir = Path(__file__).parent
     tools_file = script_dir / "agent" / "tools.py"
 
@@ -203,11 +203,11 @@ def update_tools_config(bucket_name):
         return False
 
     try:
-        # Read the file
+        # 파일 읽기
         with open(tools_file, "r") as f:
             content = f.read()
 
-        # Update S3_BUCKET line - match simple assignment
+        # S3_BUCKET 줄 업데이트 - 단순 할당과 일치
         bucket_pattern = r"S3_BUCKET = ['\"][^'\"]*['\"]"
         bucket_replacement = f"S3_BUCKET = '{bucket_name}'"
 
@@ -215,7 +215,7 @@ def update_tools_config(bucket_name):
             content = re.sub(bucket_pattern, bucket_replacement, content)
             print(f"{get_symbol('✓', '+')} Updated S3_BUCKET in tools.py to: {bucket_name}")
 
-            # Write back
+            # 파일에 다시 쓰기
             with open(tools_file, "w") as f:
                 f.write(content)
 
@@ -230,7 +230,7 @@ def update_tools_config(bucket_name):
 
 
 def main():
-    """Main function to update all demo data and upload to S3."""
+    """모든 데모 데이터를 업데이트하고 S3에 업로드하는 메인 함수입니다."""
     parser = argparse.ArgumentParser(
         description="Update demo data dates and upload to S3",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -270,13 +270,13 @@ Examples:
     print(f"   Week {week_num} of {monday.year}")
     print(f"   Week of {monday.strftime('%B %d, %Y')}\n")
 
-    # First, rename files to match current week
+    # 먼저 현재 주차에 맞게 파일 이름 변경
     print("Renaming files...")
     rename_files_with_week(demo_data_path, week_num, week_dates)
 
     print("\nUpdating file contents...")
 
-    # Update all files in demo_data
+    # demo_data의 모든 파일 업데이트
     for file_path in demo_data_path.rglob("*"):
         if file_path.is_file() and file_path.name != "README.md":
             if file_path.suffix == ".json":
@@ -289,13 +289,13 @@ Examples:
     print(f"\n{get_symbol('✅', 'SUCCESS:')} Demo data updated successfully!")
     print(f"   All dates now reflect week {week_num} ({monday.strftime('%B %d - %B %d, %Y')})")
 
-    # Upload to S3 if bucket specified
+    # 버킷이 지정되었으면 S3에 업로드
     if args.bucket:
-        # Update tools.py configuration with the bucket name
+        # 버킷 이름으로 tools.py 구성 업데이트
         print(f"\n{get_symbol('📝', 'NOTE:')} Updating tools.py configuration...")
         update_tools_config(args.bucket)
 
-        # Upload demo data
+        # 데모 데이터 업로드
         upload_to_s3(demo_data_path, args.bucket, args.prefix)
     else:
         print(f"\n{get_symbol('💡', 'TIP:')} Use --bucket to upload data to S3 for AgentCore deployment")

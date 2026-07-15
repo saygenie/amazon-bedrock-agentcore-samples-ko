@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Bedrock-agentcore Browser Live Viewer with proper display sizing support and DCV debugging.
+적절한 화면 크기 조절과 DCV 디버깅을 지원하는 Bedrock-agentcore Browser Live Viewer.
 """
 
 import os
@@ -21,44 +21,44 @@ console = Console()
 
 
 class BrowserViewerServer:
-    """Server for viewing Bedrock-agentcore Browser sessions with configurable display size."""
+    """화면 크기를 설정하여 Bedrock-agentcore Browser 세션을 보는 서버."""
 
     def __init__(self, browser_client: BrowserClient, port: int = 8000):
-        """Initialize the viewer server."""
+        """뷰어 서버를 초기화한다."""
         self.browser_client = browser_client
         self.port = port
         self.app = FastAPI(title="Bedrock-agentcore Browser Viewer")
         self.server_thread = None
         self.is_running = False
-        self.has_control = False  # Add control state tracking
+        self.has_control = False  # 제어 상태 추적 추가
 
-        # Setup directory structure
+        # 디렉터리 구조 설정
         self.package_dir = Path(__file__).parent
         self.static_dir = self.package_dir.parent / "static"
         self.js_dir = self.static_dir / "js"
         self.css_dir = self.static_dir / "css"
         self.dcv_dir = self.static_dir / "dcvjs"
 
-        # Create all directories
+        # 모든 디렉터리 생성
         for directory in [self.static_dir, self.js_dir, self.css_dir, self.dcv_dir]:
             directory.mkdir(parents=True, exist_ok=True)
 
-        # Create the JS and CSS files
+        # JS 및 CSS 파일 생성
         self._create_static_files()
 
-        # Check for DCV SDK
+        # DCV SDK 확인
         self._check_dcv_sdk()
 
-        # Mount static files
+        # 정적 파일 마운트
         self.app.mount("/static", StaticFiles(directory=str(self.static_dir)), name="static")
 
-        # Setup routes
+        # 라우트 설정
         self._setup_routes()
 
     def _create_static_files(self):
-        """Create the JavaScript and CSS files included with the SDK."""
+        """SDK에 포함된 JavaScript 및 CSS 파일을 생성한다."""
 
-        # Create bedrock-agentcore-browser-viewer.js with enhanced debugging
+        # 향상된 디버깅 기능을 포함한 bedrock-agentcore-browser-viewer.js 생성
         js_content = """// Bedrock-agentcore Browser Viewer Module with Enhanced Debugging
 import dcv from "../../dcvjs/dcv.js";
 export class BedrockAgentcoreLiveViewer {
@@ -215,7 +215,7 @@ export class BedrockAgentcoreLiveViewer {
         with open(js_file, "w") as f:
             f.write(js_content)
 
-        # Create viewer.css with added control button styles
+        # 제어 버튼 스타일이 추가된 viewer.css 생성
         css_content = """/* Bedrock-agentcore Browser Viewer Styles */
 body { 
     margin: 0; 
@@ -382,7 +382,7 @@ button.active {
             f.write(css_content)
 
     def _check_dcv_sdk(self):
-        """Check if DCV SDK is present."""
+        """DCV SDK가 있는지 확인한다."""
         dcv_dir = self.static_dir / "dcvjs"
         dcv_dir.mkdir(parents=True, exist_ok=True)
 
@@ -411,9 +411,9 @@ button.active {
             console.print("       └── lz4/")
             console.print("\n[red]The viewer will not work until DCV SDK is installed![/red]\n")
         else:
-            # Check if it's a real DCV file or placeholder
+            # 실제 DCV 파일인지 플레이스홀더인지 확인
             file_size = dcv_js_path.stat().st_size
-            if file_size < 10000:  # Real DCV SDK is much larger
+            if file_size < 10000:  # 실제 DCV SDK는 훨씬 크다
                 console.print("\n[bold yellow]⚠️  DCV SDK file appears to be a placeholder[/bold yellow]")
                 console.print(f"File size: {file_size} bytes (expected > 100KB)")
                 console.print("Please replace with the real DCV SDK files\n")
@@ -421,18 +421,18 @@ button.active {
                 console.print(f"[green]✅ DCV SDK found ({file_size:,} bytes)[/green]")
 
     def _setup_routes(self):
-        """Setup FastAPI routes."""
+        """FastAPI 라우트를 설정한다."""
 
         @self.app.get("/", response_class=HTMLResponse)
         async def root():
-            """Serve the main viewer page."""
+            """기본 뷰어 페이지를 제공한다."""
             if not self.browser_client.session_id:
                 raise HTTPException(status_code=400, detail="No active browser session")
 
             try:
                 presigned_url = self.browser_client.generate_live_view_url(expires=300)
 
-                # Debug logging
+                # 디버그 로깅
                 console.print("\n[cyan]Generated presigned URL:[/cyan]")
                 console.print(f"[dim]{presigned_url}[/dim]\n")
 
@@ -442,10 +442,10 @@ button.active {
                 console.print(f"[red]Error generating viewer: {str(e)}[/red]")
                 raise HTTPException(status_code=500, detail=str(e))
 
-        # ADD TAKE CONTROL ROUTE
+        # 제어권 획득 라우트 추가
         @self.app.post("/api/take-control")
         async def take_control():
-            """Take control of the browser session."""
+            """브라우저 세션의 제어권을 획득한다."""
             try:
                 self.browser_client.take_control()
                 self.has_control = True
@@ -468,10 +468,10 @@ button.active {
                     status_code=500,
                 )
 
-        # ADD RELEASE CONTROL ROUTE
+        # 제어권 해제 라우트 추가
         @self.app.post("/api/release-control")
         async def release_control():
-            """Release control of the browser session."""
+            """브라우저 세션의 제어권을 해제한다."""
             try:
                 self.browser_client.release_control()
                 self.has_control = False
@@ -496,7 +496,7 @@ button.active {
 
         @self.app.get("/api/session-info")
         async def session_info():
-            """Get session information."""
+            """세션 정보를 가져온다."""
             return {
                 "session_id": self.browser_client.session_id,
                 "identifier": self.browser_client.identifier,
@@ -512,7 +512,7 @@ button.active {
 
         @self.app.get("/api/debug-info")
         async def debug_info():
-            """Get debug information."""
+            """디버그 정보를 가져온다."""
             return {
                 "dcv_files": self._check_dcv_files(),
                 "session": {
@@ -527,12 +527,12 @@ button.active {
                 },
             }
 
-        # After starting session
+            # 세션 시작 후
         print(f"Session using browser: {self.browser_client.identifier}")
         print(f"Session ID: {self.browser_client.session_id}")
 
     def _check_dcv_files(self):
-        """Check which DCV files are present."""
+        """어떤 DCV 파일이 있는지 확인한다."""
         dcv_files = {}
         dcv_dir = self.static_dir / "dcvjs"
 
@@ -557,9 +557,9 @@ button.active {
         return dcv_files
 
     def _generate_html(self, presigned_url: str) -> str:
-        """Generate the viewer HTML with enhanced debugging."""
+        """향상된 디버깅 기능을 포함한 뷰어 HTML을 생성한다."""
 
-        # Basic HTML structure
+        # 기본 HTML 구조
         html_head = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -570,7 +570,7 @@ button.active {
 </head>
 <body>"""
 
-        # Container structure
+        # 컨테이너 구조
         html_container = f"""
     <div class="container">
         <div class="header">
@@ -607,7 +607,7 @@ button.active {
     <!-- Debug info panel -->
     <div id="debug-info"></div>"""
 
-        # DCV Configuration (ESM-based)
+        # DCV 구성(ESM 기반)
         html_dcv_config = """\
     <!-- Load DCV SDK as ESM and configure -->
     <script type="module">
@@ -622,7 +622,7 @@ button.active {
         console.log('[Main] ✅ DCV SDK imported as default export:', dcv);
     </script>"""
 
-        # Main viewer script - Part 1: Class definition
+        # 기본 뷰어 스크립트 - 1부: 클래스 정의
         html_script_part1 = """
     <!-- Main viewer logic -->
     <script>
@@ -674,7 +674,7 @@ button.active {
                 }
             }"""
 
-        # Main viewer script - Part 2: Connect methods
+        # 기본 뷰어 스크립트 - 2부: 연결 메서드
         html_script_part2 = """
             async connect() {
                 return new Promise((resolve, reject) => {
@@ -726,7 +726,7 @@ button.active {
                 });
             }"""
 
-        # Main viewer script - Part 3: Session connect methods
+        # 기본 뷰어 스크립트 - 3부: 세션 연결 메서드
         html_script_part3 = """
             connectToSession(sessionId, authToken, resolve, reject) {
                 console.log('[BedrockAgentcoreLiveViewer] Connecting to session:', sessionId);
@@ -781,7 +781,7 @@ button.active {
             }
         }"""
 
-        # Main viewer script - Part 4: Main script logic
+        # 기본 뷰어 스크립트 - 4부: 기본 스크립트 로직
         html_script_part4 = f"""
         // Debug logging
         const debugInfo = document.getElementById('debug-info');
@@ -812,7 +812,7 @@ button.active {
             log('[Main] ERROR: DCV SDK not found!');
         }}"""
 
-        # Main viewer script - Part 5: Control functions
+        # 기본 뷰어 스크립트 - 5부: 제어 함수
         html_script_part5 = """
         // Control functions
         window.takeControl = async function() {
@@ -859,7 +859,7 @@ button.active {
             }
         };"""
 
-        # Main viewer script - Part 6: Size functions and initialization
+        # 기본 뷰어 스크립트 - 6부: 크기 조절 함수 및 초기화
         html_script_part6 = f"""
         // Size control function
         window.setSize = function(width, height) {{
@@ -929,7 +929,7 @@ button.active {
 </body>
 </html>"""
 
-        # Combine all parts
+        # 모든 부분 결합
         return (
             html_head
             + html_container
@@ -943,7 +943,7 @@ button.active {
         )
 
     def start(self, open_browser: bool = True) -> str:
-        """Start the viewer server."""
+        """뷰어 서버를 시작한다."""
 
         def run_server():
             uvicorn.run(self.app, host="0.0.0.0", port=self.port, log_level="error")  # nosec B104

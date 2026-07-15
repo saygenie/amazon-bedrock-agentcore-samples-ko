@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import logging
 import time
 
-# Configure logging
+# 로깅 구성
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def invocations():
     try:
         logger.info("Received invocations request")
 
-        # Get the JSON payload from the request
+        # 요청에서 JSON 페이로드 가져오기
         payload = request.get_json()
 
         if not payload:
@@ -37,8 +37,8 @@ def invocations():
 
         logger.info(f"Processing payload: {payload}")
 
-        # Process the request (placeholder logic)
-        # In a real implementation, this would call your agent/model
+        # 요청 처리(자리 표시자 로직)
+        # 실제 구현에서는 Agent/모델을 호출함
         response = {
             "status": "success",
             "message": "Request processed successfully",
@@ -63,6 +63,6 @@ def invocations():
 
 
 if __name__ == "__main__":
-    # Run on port 8080
+    # 8080 포트에서 실행
     logger.info("Starting Flask application on port 8080")
     app.run(host="0.0.0.0", port=8080, debug=False)  # nosec  nosemgrep

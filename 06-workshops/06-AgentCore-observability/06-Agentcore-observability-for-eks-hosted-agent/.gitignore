@@ -20,7 +20,7 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
+# 가상 환경
 .env
 .venv
 env/
@@ -38,13 +38,13 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Local development
+# 로컬 개발
 *.log
 *.local
 
-# Temporary files
+# 임시 파일
 *.tmp
 *.bak
 
-# Dockerfile backup (created by deploy.ipynb)
+# Dockerfile 백업(deploy.ipynb에서 생성)
 docker/Dockerfile.backup

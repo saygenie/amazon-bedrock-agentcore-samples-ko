@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-WebSocket Helper Functions for AWS Bedrock AgentCore
+AWS Bedrock AgentCore용 WebSocket 도우미 함수
 
-This module provides utilities for creating WebSocket connections to AWS Bedrock AgentCore
-with various authentication methods (SigV4 headers, SigV4 query parameters, OAuth).
+이 모듈은 다양한 인증 방식(SigV4 헤더, SigV4 쿼리 파라미터, OAuth)으로
+AWS Bedrock AgentCore에 WebSocket 연결을 생성하는 유틸리티를 제공합니다.
 """
 
 import secrets
@@ -16,7 +16,7 @@ from botocore.awsrequest import AWSRequest
 
 
 def create_signed_headers(url, region=None, service="bedrock-agentcore"):
-    """Create AWS SigV4 signed headers for WebSocket connection"""
+    """WebSocket 연결용 AWS SigV4 서명 헤더를 생성합니다."""
     if region is None:
         region = os.getenv("AWS_REGION", "us-west-2")
     session = boto3.Session()
@@ -29,7 +29,7 @@ def create_signed_headers(url, region=None, service="bedrock-agentcore"):
 
 
 def create_presigned_url(url, region=None, service="bedrock-agentcore", expires=300):
-    """Create AWS SigV4 presigned URL for WebSocket connection"""
+    """WebSocket 연결용 AWS SigV4 사전 서명 URL을 생성합니다."""
     if region is None:
         region = os.getenv("AWS_REGION", "us-west-2")
     session = boto3.Session()
@@ -45,7 +45,7 @@ def create_presigned_url(url, region=None, service="bedrock-agentcore", expires=
 
 
 def create_websocket_headers(session_id):
-    """Create WebSocket-specific headers"""
+    """WebSocket 전용 헤더를 생성합니다."""
     return {
         "Connection": "Upgrade",
         "Upgrade": "websocket",
@@ -57,7 +57,7 @@ def create_websocket_headers(session_id):
 
 
 def prepare_connection(runtime_arn, auth_type="headers", session_id=None):
-    """Prepare WebSocket URI and headers for connection"""
+    """연결에 사용할 WebSocket URI와 헤더를 준비합니다."""
     region = os.getenv("AWS_REGION", "us-east-1")
 
     if session_id is None:

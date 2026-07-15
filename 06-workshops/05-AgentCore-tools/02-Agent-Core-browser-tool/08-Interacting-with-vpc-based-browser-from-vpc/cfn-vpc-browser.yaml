@@ -1,35 +1,35 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Complete AgentCore deployment with VPC isolation and browser automation capabilities"
 
-# This CloudFormation template deploys a complete Amazon Bedrock AgentCore
-# environment with the following key features:
+# 이 CloudFormation 템플릿은 다음 주요 기능을 갖춘 완전한
+# Amazon Bedrock AgentCore 환경을 배포합니다.
 #
-# 1. VPC ISOLATION: Secure private network with VPC endpoints for AWS services
-# 2. BROWSER AUTOMATION: AgentCore browser tool for web interaction tasks
-# 3. CONTAINER DEPLOYMENT: ECR repository with automated image building
-# 4. SECURITY: IAM roles with least-privilege access patterns
-# 5. MONITORING: CloudWatch integration for logging and observability
-# 6. TESTING INFRASTRUCTURE: Development EC2 instance and sample web server
+# 1. VPC 격리: AWS 서비스용 VPC 엔드포인트가 있는 안전한 프라이빗 네트워크
+# 2. Browser 자동화: 웹 상호 작용 작업을 위한 AgentCore Browser 도구
+# 3. 컨테이너 배포: 이미지 자동 빌드를 지원하는 ECR 리포지토리
+# 4. 보안: 최소 권한 액세스 패턴을 적용한 IAM 역할
+# 5. 모니터링: 로깅 및 관찰성을 위한 CloudWatch 통합
+# 6. 테스트 인프라: 개발용 EC2 인스턴스 및 샘플 웹 서버
 #
-# Architecture Components:
-# - Private VPC (10.1.0.0/16) with isolated subnets for AgentCore runtime
-# - VPC endpoints for secure AWS service communication (no internet access)
-# - ECR repository for container image storage with automated CodeBuild
-# - AgentCore runtime with browser tool integration in private subnet
-# - Development EC2 instance in public subnet for testing and validation
-# - Sample web server for browser automation testing scenarios
-# - S3 bucket for browser session recordings and audit trails
+# 아키텍처 구성 요소:
+# - AgentCore Runtime용 격리 서브넷이 있는 프라이빗 VPC(10.1.0.0/16)
+# - 안전한 AWS 서비스 통신을 위한 VPC 엔드포인트(인터넷 액세스 없음)
+# - CodeBuild 자동화를 지원하는 컨테이너 이미지 저장용 ECR 리포지토리
+# - 프라이빗 서브넷에서 Browser 도구가 통합된 AgentCore Runtime
+# - 테스트 및 검증을 위한 퍼블릭 서브넷의 개발용 EC2 인스턴스
+# - Browser 자동화 테스트 시나리오용 샘플 웹 서버
+# - Browser 세션 녹화 및 감사 추적용 S3 버킷
 #
-# Security Features:
-# - Network isolation with security groups and NACLs
-# - IAM roles with minimal required permissions
-# - VPC endpoints prevent internet traffic for production workloads
-# - Container image scanning and vulnerability assessment
+# 보안 기능:
+# - 보안 그룹 및 NACL을 통한 네트워크 격리
+# - 최소 필수 권한을 적용한 IAM 역할
+# - 프로덕션 워크로드의 인터넷 트래픽을 차단하는 VPC 엔드포인트
+# - 컨테이너 이미지 스캔 및 취약성 평가
 #
-# Deployment Time: ~15-20 minutes
-# Supported Regions: us-east-1, us-west-2 (where AgentCore is available)
+# 배포 시간: 약 15~20분
+# 지원 리전: us-east-1, us-west-2(AgentCore 사용 가능 리전)
 
-# PARAMETERS
+# 파라미터
 Parameters:
   ImageTag:
     Type: String
@@ -44,7 +44,7 @@ Parameters:
     AllowedPattern: "^[a-z0-9-_]+$"
     ConstraintDescription: "Must be lowercase alphanumeric with hyphens and underscores only"
 
-# RESOURCES
+# 리소스
 
 Resources:
   # ECR
@@ -79,7 +79,7 @@ Resources:
         - Key: StackName
           Value: !Ref AWS::StackName
 
-  # IAM - Agent Execution Role
+  # IAM - 에이전트 실행 역할
   AgentExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -181,7 +181,7 @@ Resources:
         - Key: Module
           Value: IAM
 
-  # CodeBuild Role
+  # CodeBuild 역할
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
@@ -227,7 +227,7 @@ Resources:
         - Key: Module
           Value: IAM
 
-  # Lambda Custom Resource Role
+  # Lambda 사용자 지정 리소스 역할
   CustomResourceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -281,7 +281,7 @@ Resources:
         - Key: Module
           Value: IAM
 
-  # LAMBDA - CodeBuild Trigger Function
+  # Lambda - CodeBuild 트리거 함수
   CodeBuildTriggerFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -316,10 +316,10 @@ Resources:
                   logger.info(f"Attempting to start CodeBuild project: {project_name}")
                   logger.info(f"Wait for completion: {wait_for_completion}")
                   
-                  # Start the CodeBuild project
+                  # CodeBuild 프로젝트 시작
                   codebuild = boto3.client('codebuild')
                   
-                  # First, verify the project exists
+                  # 먼저 프로젝트 존재 여부 확인
                   try:
                       project_info = codebuild.batch_get_projects(names=[project_name])
                       if not project_info['projects']:
@@ -341,8 +341,8 @@ Resources:
                       })
                       return
                   
-                  # Wait for the build to complete
-                  max_wait_time = context.get_remaining_time_in_millis() / 1000 - 30  # Leave 30s buffer
+                  # 빌드 완료 대기
+                  max_wait_time = context.get_remaining_time_in_millis() / 1000 - 30  # 30초 여유 시간 확보
                   start_time = time.time()
                   
                   while True:
@@ -366,7 +366,7 @@ Resources:
                           error_message = f"Build {build_id} failed with status: {build_status}"
                           logger.error(error_message)
                           
-                          # Get build logs for debugging
+                          # 디버깅용 빌드 로그 가져오기
                           try:
                               logs_info = build_response['builds'][0].get('logs', {})
                               if logs_info.get('groupName') and logs_info.get('streamName'):
@@ -381,7 +381,7 @@ Resources:
                           return
                       
                       logger.info(f"Build {build_id} status: {build_status}")
-                      time.sleep(30)  # Check every 30 seconds
+                      time.sleep(30)  # 30초마다 확인
                   
               except Exception as e:
                   logger.error('Error: %s', str(e))
@@ -396,7 +396,7 @@ Resources:
         - Key: Module
           Value: Lambda
 
-  # CODEBUILD
+  # CodeBuild
   AgentImageBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -435,7 +435,7 @@ Resources:
                 - echo Build started on `date`
                 - echo Building the Docker image for default agent ARM64...
 
-                # Create requirements.txt
+                # requirements.txt 생성
                 - |
                   cat > requirements.txt << 'EOF'
                   # strands-agents
@@ -449,7 +449,7 @@ Resources:
                   # rich
                   EOF
 
-                # Create my_agent.py
+                # my_agent.py 생성
                 - |
                   cat > my_agent.py << 'EOF'
 
@@ -476,7 +476,7 @@ Resources:
 
                   def patch_browser_use():
 
-                      # Auto-detect file path
+                      # 파일 경로 자동 감지
                       file_path = find_browser_use_path()
                       if not file_path:
                           return False
@@ -487,7 +487,7 @@ Resources:
                       
                       print(f"📁 Found browser_use at: {file_path}")
                       
-                      # Create backup
+                      # 백업 생성
                       backup_path = file_path + ".backup"
                       if not os.path.exists(backup_path):
                           shutil.copy2(file_path, backup_path)
@@ -495,11 +495,11 @@ Resources:
                       else:
                           print(f"📋 Backup already exists: {backup_path}")
                       
-                      # Read file
+                      # 파일 읽기
                       with open(file_path, 'r') as f:
                           content = f.read()
                       
-                      # Replacement 1: Add headers check after cdp_url check
+                      # 변경 1: cdp_url 확인 다음에 headers 확인 추가
                       old1 = "if not cdp_url:\n\t\t\tprofile_kwargs['is_local'] = True"
                       new1 = "if not cdp_url:\n\t\t\tprofile_kwargs['is_local'] = True\n\n\t\tif headers:\n\t\t\tprofile_kwargs['headers'] = headers"
                       
@@ -511,7 +511,7 @@ Resources:
                       else:
                           print("⚠️ Headers check pattern not found")
                       
-                      # Replacement 2: Add headers to CDPClient
+                      # 변경 2: CDPClient에 headers 추가
                       old2 = "self._cdp_client_root = CDPClient(self.cdp_url)"
                       new2 = "self._cdp_client_root = CDPClient(self.cdp_url,  additional_headers=self.browser_profile.headers)"
                       
@@ -523,7 +523,7 @@ Resources:
                       else:
                           print("⚠️ CDPClient pattern not found")
                       
-                      # Write back
+                      # 파일에 다시 쓰기
                       with open(file_path, 'w') as f:
                           f.write(content)
                       
@@ -532,7 +532,7 @@ Resources:
 
                   patch_browser_use()
 
-                  # Load the updated libraries 
+                  # 업데이트된 라이브러리 불러오기
                   from browser_use.llm import ChatAnthropicBedrock, ChatAWSBedrock
                   from browser_use import Agent
                   from browser_use import Browser, BrowserProfile
@@ -548,7 +548,7 @@ Resources:
 
                   async def run_browser_task(browser_session: Browser, bedrock_chat: ChatAnthropicBedrock, task: str) -> None:
                       try:
-                          # Create and run the agent
+                          # 에이전트 생성 및 실행
                           agent = Agent(
                               task=task,
                               llm=bedrock_chat,
@@ -562,7 +562,7 @@ Resources:
                   @app.async_task
                   async def async_main(query): 
 
-                      # Create persistent browser session and model
+                      # 지속형 Browser 세션 및 모델 생성
                       browser_session = None
                       bedrock_chat = None
                       client = BrowserClient(region)
@@ -574,34 +574,34 @@ Resources:
                               client.start()
                           print("Browser session started successfully!")
 
-                          # Extract ws_url and headers
+                          # ws_url 및 headers 추출
                           ws_url, headers = client.generate_ws_headers()
                           print(ws_url)
                           # print(headers)
 
-                          # Create browser profile with headers and timeout 
+                          # headers 및 제한 시간이 적용된 Browser 프로필 생성
                           browser_profile = BrowserProfile(
                               headers=headers,
-                              timeout=1500000,  # 150 seconds timeout
+                              timeout=1500000,  # 제한 시간 150초
                           )
 
-                          # Create a browser session with CDP URL and keep_alive=True for persistence
+                          # 지속성을 위해 CDP URL 및 keep_alive=True로 Browser 세션 생성
                           browser_session = Browser(
                               cdp_url=ws_url,
                               browser_profile=browser_profile,
                               keep_alive=True
                           )
 
-                          # Initialize the browser session
+                          # Browser 세션 초기화
                           await browser_session.start()
 
-                          # Create ChatBedrockConverse once
+                          # ChatBedrockConverse를 한 번만 생성
                           bedrock_chat = ChatAnthropicBedrock(
                               model='global.anthropic.claude-haiku-4-5-20251001-v1:0',
                               aws_region=AWS_REGION
                           )
 
-                          task = f"Access {WEB_SERVER} over http at port 8080 to check what are holidays in November " ## Modify the task to run other tasks
+                          task = f"Access {WEB_SERVER} over http at port 8080 to check what are holidays in November " ## 다른 작업을 실행하려면 task 수정
 
                           if query:
                               task = query
@@ -609,7 +609,7 @@ Resources:
                           await run_browser_task(browser_session, bedrock_chat, task)
 
                       finally:
-                          # Close the browser session
+                          # Browser 세션 종료
                           client.stop()
                           print("✅ Browser session closed")
 
@@ -617,7 +617,7 @@ Resources:
                   @app.entrypoint
                   async def invoke(payload=None):
                       try:
-                          # change
+                          # 변경
                           query = payload.get("prompt")
 
                           asyncio.create_task(async_main(query))
@@ -641,7 +641,7 @@ Resources:
                   EOF
 
 
-                # Step 1.3: Create Dockerfile
+                # 1.3단계: Dockerfile 생성
                 - |
                   cat > Dockerfile << 'EOF'
                   FROM public.ecr.aws/docker/library/python:3.13-slim
@@ -650,7 +650,7 @@ Resources:
                   COPY requirements.txt requirements.txt
                   RUN pip install -r requirements.txt
 
-                  # Create non-root user
+                  # 루트가 아닌 사용자 생성
                   # RUN useradd -m -u 1000 bedrock_agentcore
                   # USER bedrock_agentcore
                   USER root
@@ -664,7 +664,7 @@ Resources:
 
                   EOF
 
-                # Step 1.5: Build the image
+                # 1.5단계: 이미지 빌드
                 - echo Building ARM64 image...
                 - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
                 - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
@@ -681,17 +681,17 @@ Resources:
         - Key: StackName
           Value: !Ref AWS::StackName
 
-  # CUSTOM RESOURCE - Trigger Container Image Build
+  # 사용자 지정 리소스 - 컨테이너 이미지 빌드 시작
   TriggerImageBuild:
     Type: Custom::CodeBuildTrigger
     DependsOn:
-      - ECRRepository # Ensure ECR repository exists first
-      - AgentImageBuildProject # Ensure CodeBuild project is ready
-      - CodeBuildTriggerFunction # Ensure Lambda function is deployed
+      - ECRRepository # ECR 리포지토리가 먼저 존재하는지 확인
+      - AgentImageBuildProject # CodeBuild 프로젝트가 준비되었는지 확인
+      - CodeBuildTriggerFunction # Lambda 함수가 배포되었는지 확인
     Properties:
       ServiceToken: !GetAtt CodeBuildTriggerFunction.Arn
       ProjectName: !Ref AgentImageBuildProject
-      WaitForCompletion: "true" # Wait for build to complete before proceeding
+      WaitForCompletion: "true" # 계속하기 전에 빌드 완료 대기
 
   # VPC
 
@@ -711,7 +711,7 @@ Resources:
         - Key: Name
           Value: vpc-client
 
-  # Private subnet to host the AgentCore Application
+  # AgentCore 애플리케이션을 호스팅할 프라이빗 서브넷
   ClientPrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -724,18 +724,18 @@ Resources:
         - Key: Type
           Value: Private
 
-  # Security Group for AgentCore Runtime - Controls network access for agent instances
+  # AgentCore Runtime용 보안 그룹 - 에이전트 인스턴스의 네트워크 액세스 제어
   AgentCoreRuntimeSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: "Security group for AgentCore Runtime - allows outbound HTTPS to VPC endpoints only"
       VpcId: !Ref ClientVPC
-      # No egress rules initially
+      # 초기 송신 규칙 없음
       Tags:
         - Key: Name
           Value: agentcore-runtime-sg
 
-  # Security Group for VPC Endpoints - Controls access to AWS services via VPC endpoints
+  # VPC 엔드포인트용 보안 그룹 - VPC 엔드포인트를 통한 AWS 서비스 액세스 제어
   VPCEndpointSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -749,7 +749,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-vpc-endpoint-sg"
 
-  # Security Group for Browser tool
+  # Browser 도구용 보안 그룹
   BrowserToolSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -759,9 +759,9 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-browser-tool-sg"
 
-  # VPC ENDPOINTS
+  # VPC 엔드포인트
 
-  # AgentCore VPC Endpoint
+  # AgentCore VPC 엔드포인트
   AgentCoreVPCEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -784,7 +784,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-agentcore-endpoint"
 
-  # VPC Endpoint for ECR API - Enables container registry API access
+  # ECR API용 VPC 엔드포인트 - 컨테이너 레지스트리 API 액세스 지원
   ECRAPIVPCEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -807,7 +807,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-ecr-api-endpoint"
 
-  # VPC Endpoint for ECR Docker Registry - Enables container image downloads
+  # ECR Docker Registry용 VPC 엔드포인트 - 컨테이너 이미지 다운로드 지원
   ECRDKRVPCEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -830,7 +830,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-ecr-dkr-endpoint"
 
-  # VPC Endpoint for CloudWatch Logs - Enables logging from AgentCore runtime
+  # CloudWatch Logs용 VPC 엔드포인트 - AgentCore Runtime 로깅 지원
   CloudLogVPCEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -853,7 +853,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-cloudwatch-logs-endpoint"
 
-  # VPC Endpoint for Bedrock Runtime - Enables LLM model inference
+  # Bedrock Runtime용 VPC 엔드포인트 - LLM 모델 추론 지원
   BedrockRuntimeVPCEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -876,9 +876,9 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-bedrock-runtime-endpoint"
 
-  # SECURITY GROUP RULES
+  # 보안 그룹 규칙
 
-  # AgentCore to VPC endpoints HTTPS
+  # AgentCore에서 VPC 엔드포인트로의 HTTPS
   AgentCoreRuntimeEgressRule:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
@@ -889,7 +889,7 @@ Resources:
       DestinationSecurityGroupId: !Ref VPCEndpointSG
       Description: "Allow outbound HTTPS from AgentCore Runtime to VPC endpoints"
 
-  # Allow HTTPS Traffic from AgentCore Runtime to Browser
+  # AgentCore Runtime에서 Browser로의 HTTPS 트래픽 허용
   AgentCoreRuntimeEgressRule1:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
@@ -900,7 +900,7 @@ Resources:
       DestinationSecurityGroupId: !Ref BrowserToolSG
       Description: "Allow outbound HTTPS from AgentCore Runtime to Browser Tool"
 
-  # Allow VPC endpoints to receive HTTPS traffic from AgentCore Runtime
+  # VPC 엔드포인트가 AgentCore Runtime의 HTTPS 트래픽을 수신하도록 허용
   VPCEndpointIngressRule:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -911,7 +911,7 @@ Resources:
       SourceSecurityGroupId: !Ref AgentCoreRuntimeSG
       Description: "Allow inbound HTTPS from AgentCore runtime to VPC endpoints"
 
-    # Allow Browser Tool to receive HTTPS traffic from AgentCore Runtime
+    # Browser 도구가 AgentCore Runtime의 HTTPS 트래픽을 수신하도록 허용
   BrowserToolIngressRule:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -922,7 +922,7 @@ Resources:
       SourceSecurityGroupId: !Ref AgentCoreRuntimeSG
       Description: "Allow inbound HTTPS from AgentCore runtime to VPC endpoints"
 
-  # Allow Browser Tool to reach webserver
+  # Browser 도구의 웹 서버 접근 허용
   BrowserToolEgressRule:
     Type: AWS::EC2::SecurityGroupEgress
     Properties:
@@ -933,9 +933,9 @@ Resources:
       DestinationSecurityGroupId: !Ref WebServerSecurityGroup
       Description: "Allow inbound HTTPS from AgentCore runtime to VPC endpoints"
 
-  # WEB APPLICATION
+  # 웹 애플리케이션
 
-  # Web Server Security Group
+  # 웹 서버 보안 그룹
   WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Metadata:
@@ -965,7 +965,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-webserver-sg"
 
-  # Web Server EC2 Instance in Private Subnet
+  # 프라이빗 서브넷의 웹 서버 EC2 인스턴스
   WebServerInstance:
     Type: AWS::EC2::Instance
     Properties:
@@ -977,7 +977,7 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
-          # Use Python's built-in web server (no installation needed)
+          # Python 기본 제공 웹 서버 사용(설치 불필요)
           mkdir -p /var/www/html
           cd /var/www/html
           cat > index.html << 'EOF'
@@ -1019,19 +1019,19 @@ Resources:
 
           chmod -R 755 /var/www/html
 
-          # Set proper ownership and permissions
+          # 적절한 소유권 및 권한 설정
           chown -R ec2-user:ec2-user /var/www/html
 
-          # Start Python web server on port 8080 as ec2-user (no root required)
+          # ec2-user로 8080 포트에서 Python 웹 서버 시작(루트 권한 불필요)
           cd /var/www/html
           su - ec2-user -c "cd /var/www/html && nohup python3 -m http.server 8080 > /home/ec2-user/webserver.log 2>&1 &"
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-webserver"
 
-  # EC2 TESTING
+  # EC2 테스트
 
-  # Public Subnet for EC2
+  # EC2용 퍼블릭 서브넷
   ClientPublicSubnet1:
     Type: AWS::EC2::Subnet
     Metadata:
@@ -1042,16 +1042,16 @@ Resources:
               Public subnet requires MapPublicIpOnLaunch for tutorial accessibility; disable in production
     Properties:
       VpcId: !Ref ClientVPC
-      CidrBlock: "10.1.100.0/28" # Small subnet (16 IPs) for testing instances
-      AvailabilityZone: !Select [0, !GetAZs ""] # Use first AZ
-      MapPublicIpOnLaunch: true # Auto-assign public IPs for internet access
+      CidrBlock: "10.1.100.0/28" # 테스트 인스턴스용 소규모 서브넷(IP 16개)
+      AvailabilityZone: !Select [0, !GetAZs ""] # 첫 번째 AZ 사용
+      MapPublicIpOnLaunch: true # 인터넷 액세스용 퍼블릭 IP 자동 할당
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-public-subnet-1"
         - Key: Type
           Value: Public
 
-  # Internet Gateway - Provides internet access for public subnet
+  # Internet Gateway - 퍼블릭 서브넷에 인터넷 액세스 제공
   ClientInternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -1059,14 +1059,14 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-igw"
 
-  # Attach Internet Gateway to VPC
+  # VPC에 Internet Gateway 연결
   ClientInternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref ClientVPC
       InternetGatewayId: !Ref ClientInternetGateway
 
-  # Route Table for Public Subnet - Defines routing rules for public traffic
+  # 퍼블릭 서브넷용 라우팅 테이블 - 퍼블릭 트래픽의 라우팅 규칙 정의
   ClientPublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -1075,7 +1075,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-public-rt"
 
-  # Default Route - Directs all internet traffic through Internet Gateway
+  # 기본 경로 - 모든 인터넷 트래픽을 Internet Gateway로 전달
   ClientPublicRoute:
     Type: AWS::EC2::Route
     DependsOn: ClientInternetGatewayAttachment
@@ -1084,14 +1084,14 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref ClientInternetGateway
 
-  # Associate Public Subnet with Route Table
+  # 퍼블릭 서브넷을 라우팅 테이블과 연결
   ClientPublicSubnetRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref ClientPublicSubnet1
       RouteTableId: !Ref ClientPublicRouteTable
 
-  # IAM Role for EC2 Development Instance
+  # 개발용 EC2 인스턴스의 IAM 역할
   EC2InstanceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1132,7 +1132,7 @@ Resources:
         - Key: StackName
           Value: !Ref AWS::StackName
 
-  # Instance Profile - Attaches IAM role to EC2 instance
+  # 인스턴스 프로필 - IAM 역할을 EC2 인스턴스에 연결
   EC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -1140,7 +1140,7 @@ Resources:
       Roles:
         - !Ref EC2InstanceRole
 
-  # Security Group for Development EC2 Instance
+  # 개발용 EC2 인스턴스의 보안 그룹
   EC2InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Metadata:
@@ -1159,26 +1159,26 @@ Resources:
       GroupDescription: "Security group for development EC2 instance - allows SSH and outbound HTTPS"
       VpcId: !Ref ClientVPC
       SecurityGroupIngress:
-        # SSH Access - For development and troubleshooting
+        # SSH 액세스 - 개발 및 문제 해결용
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: 0.0.0.0/0 # Note: In production, restrict to specific IP ranges
+          CidrIp: 0.0.0.0/0 # 참고: 프로덕션에서는 특정 IP 범위로 제한
           Description: "Allow SSH access for development and troubleshooting"
       SecurityGroupEgress:
-        # VPC Endpoint Access - For AWS service communication
+        # VPC 엔드포인트 액세스 - AWS 서비스 통신용
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
           DestinationSecurityGroupId: !Ref VPCEndpointSG
           Description: "Allow outbound HTTPS to VPC endpoints from EC2 Instance"
-        # AgentCore Runtime Access - For testing agent invocation
+        # AgentCore Runtime 액세스 - 에이전트 호출 테스트용
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
           DestinationSecurityGroupId: !Ref AgentCoreRuntimeSG
           Description: "Allow outbound HTTPS to AgentCore Runtime from EC2 Instance"
-        # Internet Access - For package downloads and updates
+        # 인터넷 액세스 - 패키지 다운로드 및 업데이트용
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
@@ -1195,7 +1195,7 @@ Resources:
         - Key: Purpose
           Value: "Development Instance Security"
 
-  # Additional Security Group Rule - Allow EC2 to access VPC endpoints
+  # 추가 보안 그룹 규칙 - EC2의 VPC 엔드포인트 액세스 허용
   VPCEndpointIngressFromEC2Rule:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -1206,30 +1206,30 @@ Resources:
       SourceSecurityGroupId: !Ref EC2InstanceSecurityGroup
       Description: "Allow inbound HTTPS from EC2 Instance to VPC endpoints"
 
-  # Development EC2 Instance - For testing AgentCore integration
+  # 개발용 EC2 인스턴스 - AgentCore 통합 테스트용
   DevelopmentInstance:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64}}" # Latest Amazon Linux 2023 ARM64
-      InstanceType: "t4g.small" # ARM64 instance type for cost efficiency
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-arm64}}" # 최신 Amazon Linux 2023 ARM64
+      InstanceType: "t4g.small" # 비용 효율적인 ARM64 인스턴스 타입
       IamInstanceProfile: !Ref EC2InstanceProfile
       SecurityGroupIds:
         - !Ref EC2InstanceSecurityGroup
       SubnetId: !Ref ClientPublicSubnet1
-      KeyName: !Ref "AWS::NoValue" # No SSH key - use SSM Session Manager instead
+      KeyName: !Ref "AWS::NoValue" # SSH 키 없이 SSM Session Manager 사용
 
       Tags:
         - Key: Name
           Value: !Sub "${AWS::StackName}-dev-instance"
 
-  # AGENTCORE
+  # AgentCore
 
   # AgentCore Runtime
   AgentRuntime:
     Type: AWS::BedrockAgentCore::Runtime
     DependsOn:
-      - TriggerImageBuild # Ensure container image is built first
-      - BrowserTool # Ensure browser tool is available
+      - TriggerImageBuild # 컨테이너 이미지가 먼저 빌드되었는지 확인
+      - BrowserTool # Browser 도구를 사용할 수 있는지 확인
       - WebServerInstance
     Properties:
       AgentRuntimeName: !Sub
@@ -1237,19 +1237,19 @@ Resources:
         - StackNameUnderscore: !Join ["_", !Split ["-", !Ref "AWS::StackName"]]
       AgentRuntimeArtifact:
         ContainerConfiguration:
-          ContainerUri: !Sub "${ECRRepository.RepositoryUri}:${ImageTag}" # Use built container image
+          ContainerUri: !Sub "${ECRRepository.RepositoryUri}:${ImageTag}" # 빌드된 컨테이너 이미지 사용
       RoleArn: !GetAtt AgentExecutionRole.Arn
       NetworkConfiguration:
-        NetworkMode: "VPC" # Deploy in VPC for security isolation
+        NetworkMode: "VPC" # 보안 격리를 위해 VPC에 배포
         NetworkModeConfig:
           Subnets:
-            - !Ref ClientPrivateSubnet1 # Private subnet with no internet access
+            - !Ref ClientPrivateSubnet1 # 인터넷 액세스가 없는 프라이빗 서브넷
           SecurityGroups:
-            - !Ref AgentCoreRuntimeSG # Restricted security group
+            - !Ref AgentCoreRuntimeSG # 제한된 보안 그룹
       Description: !Sub "AgentCore runtime with browser automation for ${AWS::StackName}"
       EnvironmentVariables:
-        BROWSER_ID: !GetAtt BrowserTool.BrowserId # Connect to browser tool
-        AWS_REGION: !Sub "${AWS::Region}" # AWS region for service calls
+        BROWSER_ID: !GetAtt BrowserTool.BrowserId # Browser 도구에 연결
+        AWS_REGION: !Sub "${AWS::Region}" # 서비스 호출용 AWS 리전
         WEB_SERVER: !GetAtt WebServerInstance.PrivateIp
 
   RecordingBucket:
@@ -1274,7 +1274,7 @@ Resources:
         - Key: StackName
           Value: !Ref AWS::StackName
 
-  # Browser Tool - Provides web automation capabilities
+  # Browser 도구 - 웹 자동화 기능 제공
   BrowserTool:
     Type: AWS::BedrockAgentCore::BrowserCustom
     Properties:
@@ -1284,7 +1284,7 @@ Resources:
       Description: !Sub "Browser tool for ${AWS::StackName} - enables web automation and scraping"
       ExecutionRoleArn: !GetAtt AgentExecutionRole.Arn
       NetworkConfiguration:
-        NetworkMode: "VPC" # Deploy in VPC for security isolation
+        NetworkMode: "VPC" # 보안 격리를 위해 VPC에 배포
         VpcConfig:
           Subnets:
             - !Ref ClientPrivateSubnet1
@@ -1296,7 +1296,7 @@ Resources:
           "Bucket": !Ref RecordingBucket
           "Prefix": recordings
 
-# OUTPUTS
+# 출력
 Outputs:
 
   AgentRuntimeArn:
@@ -1305,7 +1305,7 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-AgentRuntimeArn"
 
-  # DEVELOPMENT MODULE OUTPUTS
+  # 개발 모듈 출력
   DevelopmentInstanceId:
     Description: "Instance ID of the development EC2 instance for testing"
     Value: !Ref DevelopmentInstance
@@ -1319,7 +1319,7 @@ Outputs:
       Name: !Sub "${AWS::StackName}-WebServerPrivateIp"
 
 
-  # MONITORING AND TROUBLESHOOTING
+  # 모니터링 및 문제 해결
   CloudWatchLogGroup:
     Description: "CloudWatch log group for AgentCore runtime logs"
     Value: !Sub "/aws/bedrock-agentcore/runtimes/${AgentRuntime.AgentRuntimeId}"

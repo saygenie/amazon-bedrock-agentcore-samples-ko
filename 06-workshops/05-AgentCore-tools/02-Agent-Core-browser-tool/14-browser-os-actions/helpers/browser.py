@@ -21,7 +21,7 @@ def get_credentials(profile=None):
 
 
 def signed_request(method, url, *, headers=None, body=None, region, credentials):
-    """Send a SigV4-signed request and return the response."""
+    """SigV4로 서명한 요청을 보내고 응답을 반환한다."""
     hdrs = {"Content-Type": "application/json"}
     if headers:
         hdrs.update(headers)
@@ -42,7 +42,7 @@ def invoke(
     browser_id="aws.browser.v1",
     extra_headers=None,
 ):
-    """Call InvokeBrowser with the given action payload."""
+    """주어진 작업 페이로드로 InvokeBrowser를 호출한다."""
     url = f"{base_url}/browsers/{browser_id}/sessions/invoke"
     hdrs = {SESSION_HEADER: session_id}
     if extra_headers:
@@ -58,7 +58,7 @@ def invoke(
 
 
 def start_session(base_url, browser_id, *, region, credentials):
-    """Start a managed browser session and return the session ID."""
+    """관리형 브라우저 세션을 시작하고 세션 ID를 반환한다."""
     url = f"{base_url}/browsers/{browser_id}/sessions/start"
     body = {
         "name": "bugbash-invoke-test",
@@ -73,7 +73,7 @@ def start_session(base_url, browser_id, *, region, credentials):
 
 
 def stop_session(base_url, session_id, browser_id, *, region, credentials):
-    """Stop a browser session."""
+    """브라우저 세션을 중지한다."""
     url = f"{base_url}/browsers/{browser_id}/sessions/stop?sessionId={session_id}"
     resp = signed_request("PUT", url, body="", region=region, credentials=credentials)
     print(f"  → Session stop status: {resp.status_code}")

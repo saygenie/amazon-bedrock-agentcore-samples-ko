@@ -20,31 +20,31 @@ def invoke_endpoint_streaming(
     bearer_token: str,
     endpoint_name: str = "DEFAULT",
 ):
-    """Invoke agent endpoint and yield streaming response chunks."""
-    # Escape agent ARN for URL
+    """에이전트 엔드포인트를 호출하고 스트리밍 응답 청크를 생성한다."""
+    # URL에 사용할 에이전트 ARN 이스케이프
     escaped_arn = urllib.parse.quote(agent_arn, safe="")
 
-    # Build URL
+    # URL 구성
     # url = f"{self.dp_endpoint}/runtimes/{escaped_arn}/invocations"
     url = f"https://bedrock-agentcore.{st.session_state['region']}.amazonaws.com/runtimes/{escaped_arn}/invocations"
 
-    # Headers
+    # 헤더
     headers = {
         "Authorization": f"Bearer {bearer_token}",
         "Content-Type": "application/json",
         "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id": session_id,
     }
 
-    # Parse the payload string back to JSON object to send properly
+    # 올바르게 전송할 수 있도록 페이로드 문자열을 다시 JSON 객체로 파싱
     try:
         body = json.loads(payload) if isinstance(payload, str) else payload
     except json.JSONDecodeError:
-        # Fallback for non-JSON strings - wrap in payload object
+        # JSON이 아닌 문자열은 페이로드 객체로 감싸서 처리
         print("Failed to parse payload as JSON, wrapping in payload object")
         body = {"payload": payload}
 
     try:
-        # Make streaming request
+        # 스트리밍 요청 전송
         response = requests.post(
             url,
             params={"qualifier": endpoint_name},
@@ -55,16 +55,16 @@ def invoke_endpoint_streaming(
         )
         response.raise_for_status()
 
-        # Check if response is streaming
+        # 스트리밍 응답인지 확인
         if "text/event-stream" in response.headers.get("content-type", ""):
-            # Handle streaming response
+            # 스트리밍 응답 처리
             for line in response.iter_lines(chunk_size=1, decode_unicode=True):
                 if line and line.startswith("data: "):
-                    chunk = line[6:]  # Remove "data: " prefix
-                    if chunk.strip():  # Only yield non-empty chunks
+                    chunk = line[6:]  # "data: " 접두사 제거
+                    if chunk.strip():  # 비어 있지 않은 청크만 생성
                         yield chunk
         else:
-            # Non-streaming response, yield entire content
+            # 스트리밍이 아닌 응답은 전체 콘텐츠 생성
             if response.content:
                 yield response.text
 
@@ -75,15 +75,15 @@ def invoke_endpoint_streaming(
 
 class ChatManager:
     def format_response_text(self, text):
-        """Format response text by unescaping quotes and newlines"""
+        """따옴표와 줄 바꿈의 이스케이프를 해제해 응답 텍스트의 형식을 지정한다."""
         if not text:
             return text
 
-        # Remove outer quotes if present
+        # 바깥쪽 따옴표가 있으면 제거
         if text.startswith('"') and text.endswith('"'):
             text = text[1:-1]
 
-        # Unescape common escape sequences
+        # 일반적인 이스케이프 시퀀스 해제
         text = text.replace("\\n", "\n")
         text = text.replace('\\"', '"')
         text = text.replace("\\t", "\t")
@@ -98,7 +98,7 @@ class ChatManager:
         self._init_session_state()
 
     def _init_session_state(self):
-        """Initialize session state variables"""
+        """세션 상태 변수를 초기화한다."""
         if "session_id" not in st.session_state:
             st.session_state["session_id"] = str(uuid.uuid4())
 
@@ -123,7 +123,7 @@ class ChatManager:
         bearer_token: Optional[str],
         endpoint_name: str = "DEFAULT",
     ) -> Any:
-        """Invoke agent endpoint using HTTP request with bearer token."""
+        """Bearer 토큰이 포함된 HTTP 요청으로 에이전트 엔드포인트를 호출한다."""
         escaped_arn = urllib.parse.quote(agent_arn, safe="")
         url = f"https://bedrock-agentcore.{st.session_state['region']}.amazonaws.com/runtimes/{escaped_arn}/invocations"
 
@@ -162,7 +162,7 @@ class ChatManager:
         bearer_token: Optional[str],
         endpoint_name: str = "DEFAULT",
     ) -> Any:
-        """Invoke agent endpoint using HTTP request with bearer token."""
+        """Bearer 토큰이 포함된 HTTP 요청으로 에이전트 엔드포인트를 호출한다."""
         escaped_arn = urllib.parse.quote(agent_arn, safe="")
         url = f"https://bedrock-agentcore.{st.session_state['region']}.amazonaws.com/runtimes/{escaped_arn}/invocations"
 
@@ -206,7 +206,7 @@ class ChatManager:
             raise
 
     def display_chat_history(self):
-        """Display chat messages from history"""
+        """기록에 있는 채팅 메시지를 표시한다."""
         messages_to_show = st.session_state.messages[:]
 
         if (
@@ -241,7 +241,7 @@ class ChatManager:
                         )
 
     def process_user_message(self, prompt: str, actor_id: str, bearer_token: str):
-        """Process a user message and get assistant response"""
+        """사용자 메시지를 처리하고 어시스턴트 응답을 가져온다."""
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with st.chat_message("user"):
@@ -311,7 +311,7 @@ class ChatManager:
             st.session_state["pending_assistant"] = False
 
     def initialize_default_conversation(self, email, actor_id, bearer_token: str):
-        """Initialize the conversation with a default message"""
+        """기본 메시지로 대화를 초기화한다."""
         if not st.session_state.messages:
             default_prompt = f"Hi my email is {email}"
             st.session_state.messages = [{"role": "user", "content": default_prompt}]

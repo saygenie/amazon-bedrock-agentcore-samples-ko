@@ -1,45 +1,45 @@
-# Amazon ECS with AgentCore Identity and 3LO
+# Amazon ECS에서 AgentCore Identity 및 3LO 사용
 
-This sample demonstrates how to build an AI agent on Amazon ECS Fargate that uses **[Amazon Bedrock AgentCore Identity](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-getting-started.html)** for the **Authorization Code Grant (3-legged OAuth) Flow**. The agent can securely access external services (like GitHub) on behalf of authenticated users.
+이 샘플에서는 **Authorization Code Grant(3-legged OAuth) 흐름**에 **[Amazon Bedrock AgentCore Identity](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-getting-started.html)**를 사용하는 AI 에이전트를 Amazon ECS Fargate에서 구축하는 방법을 보여 줍니다. 에이전트는 인증된 사용자를 대신해 GitHub 같은 외부 서비스에 안전하게 액세스할 수 있습니다.
 
-## Architecture
+## 아키텍처
 
-![Architecture Diagram](sample-agent-3lo-architecture.drawio.png)
-
-
-1. The requests arrive at the Amazon Application Load Balancer, which authenticates the user using the [ALB OIDC authentication flow](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html) with [Microsoft Entra ID](https://learn.microsoft.com/en-gb/entra/fundamentals/what-is-entra) as the Identity Provider, though any OIDC-compliant Identity Provider is supported. The traffic is encrypted using HTTPS, which requires a public hosted zone on Amazon Route 53 and a certificate from Amazon Certificate Manager. An A record (alias) in the hosted zone routes the traffic to the load balancer. The load balancer fronts the ECS cluster with two services: the Agentic Workload and the Session Binding Service. The load balancer passes the `x-amzn-oidc-data` header, which contains the user claims in JSON Web Token (JWT) format, allowing the unique identification of the user through the `sub` field.
-2. The Agentic Workload is a [FastAPI](https://fastapi.tiangolo.com/) server with the `/invocations` method, which takes a `sessionId` and `message` as input and passes them to an agent implemented using Strands Agents, though any agent SDK such as LangChain or LangGraph can be used, as the request intake is handled by the FastAPI server independently of the agent SDK. The agent invokes the LLM on Amazon Bedrock, stores the session in an Amazon S3 bucket using the user's `sub` claim as a key prefix to ensure session isolation between users, and has tools to perform actions on the user's behalf on GitHub, which requires the user's access token.
-3. Amazon Bedrock AgentCore Identity (AC Identity) provides a workload identity for the agentic workload and the OAuth provider configuration for GitHub, which includes the well-known configuration of GitHub and the credentials for the registered app on GitHub. This allows the agent to retrieve the access token from the AC Identity Token Vault. If the access token is not available, has expired, or has been revoked, AC Identity returns an authorization URL for the user to authorize access with the Authorization Server, along with a session URI to identify the flow.
-4. The session binding service processes the callback URL once the authorization by the user has been granted in GitHub. It takes the session id from the callback URL and the `sub` from the `x-amzn-oidc-data` header to complete OAuth flow.
-5. The end user invokes the agentic workload through the `/docs` endpoint, which renders the OpenAPI spec as HTML, serving as a minimal UI sufficient for demo purposes.
-
-Logs are captured in Amazon CloudWatch, and access logs for both the load balancer and the S3 bucket are stored in a dedicated S3 bucket. The container images for the ECS services are stored in and pulled from Amazon ECR. A set of basic AWS WAF rules is attached to the load balancer to provide baseline protection against common web exploits. All data is encrypted using an Amazon KMS customer managed key (CMK), except for the access logs bucket, which uses Amazon S3 managed encryption (SSE-S3) as required by the service
+![아키텍처 다이어그램](sample-agent-3lo-architecture.drawio.png)
 
 
-### Authorization Code Grant Flow
+1. 요청은 Amazon Application Load Balancer에 도착합니다. 로드 밸런서는 [ALB OIDC 인증 흐름](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html)을 통해 사용자를 인증합니다. Identity Provider로는 [Microsoft Entra ID](https://learn.microsoft.com/en-gb/entra/fundamentals/what-is-entra)를 사용하지만, 모든 OIDC 호환 Identity Provider를 지원합니다. 트래픽은 HTTPS로 암호화되며, 이를 위해 Amazon Route 53의 퍼블릭 호스팅 영역과 Amazon Certificate Manager의 인증서가 필요합니다. 호스팅 영역의 A 레코드(별칭)가 트래픽을 로드 밸런서로 라우팅합니다. 로드 밸런서는 Agentic Workload와 Session Binding Service라는 두 서비스로 구성된 ECS 클러스터의 프런트엔드 역할을 합니다. 로드 밸런서는 JSON Web Token(JWT) 형식의 사용자 claim이 포함된 `x-amzn-oidc-data` 헤더를 전달하며, `sub` 필드를 통해 사용자를 고유하게 식별할 수 있습니다.
+2. Agentic Workload는 `/invocations` 메서드를 제공하는 [FastAPI](https://fastapi.tiangolo.com/) 서버입니다. 이 메서드는 `sessionId`와 `message`를 입력으로 받아 Strands Agents로 구현된 에이전트에 전달합니다. 요청 수신은 에이전트 SDK와 독립적으로 FastAPI 서버에서 처리되므로 LangChain이나 LangGraph 같은 다른 에이전트 SDK도 사용할 수 있습니다. 에이전트는 Amazon Bedrock의 LLM을 호출하고, 사용자 간 세션을 격리하도록 사용자의 `sub` claim을 키 접두사로 사용해 Amazon S3 버킷에 세션을 저장합니다. 또한 사용자의 액세스 토큰을 사용하여 GitHub에서 사용자를 대신해 작업을 수행하는 도구를 제공합니다.
+3. Amazon Bedrock AgentCore Identity(AC Identity)는 Agentic Workload에 워크로드 ID를 제공하고 GitHub의 OAuth 공급자 구성을 제공합니다. 이 구성에는 GitHub의 well-known 구성과 GitHub에 등록된 앱의 자격 증명이 포함됩니다. 이를 통해 에이전트는 AC Identity Token Vault에서 액세스 토큰을 가져올 수 있습니다. 액세스 토큰이 없거나 만료 또는 취소된 경우 AC Identity는 사용자가 Authorization Server에서 액세스를 승인할 수 있는 권한 부여 URL과 흐름을 식별하는 세션 URI를 반환합니다.
+4. 사용자가 GitHub에서 권한 부여를 완료하면 Session Binding Service가 콜백 URL을 처리합니다. 콜백 URL의 세션 ID와 `x-amzn-oidc-data` 헤더의 `sub`를 가져와 OAuth 흐름을 완료합니다.
+5. 최종 사용자는 OpenAPI 명세를 HTML로 렌더링하는 `/docs` 엔드포인트를 통해 Agentic Workload를 호출합니다. 이 엔드포인트는 데모에 충분한 최소한의 UI 역할을 합니다.
 
-When the agent needs to access an external service on behalf of a user, see [OAuth 2.0 authorization URL session binding](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/oauth2-authorization-url-session-binding.html):
+로그는 Amazon CloudWatch에 캡처되며, 로드 밸런서와 S3 버킷의 액세스 로그는 전용 S3 버킷에 저장됩니다. ECS 서비스의 컨테이너 이미지는 Amazon ECR에 저장되고 여기에서 가져옵니다. 일반적인 웹 공격에 대한 기본 보호를 제공하도록 로드 밸런서에 기본 AWS WAF 규칙 세트가 연결됩니다. 서비스 요구 사항에 따라 Amazon S3 관리형 암호화(SSE-S3)를 사용하는 액세스 로그 버킷을 제외한 모든 데이터는 Amazon KMS 고객 관리형 키(CMK)로 암호화됩니다.
 
-1. Agent requests an access token from AgentCore Identity
-2. If no valid token exists, AgentCore returns an authorization URL
-3. User clicks the URL and authenticates with the external service (e.g., GitHub)
-4. External service redirects to the Session Binding Service endpoint
-5. Session Binding Service completes the flow by calling `complete_resource_token_auth()` to bind the token to the user
-6. Subsequent agent requests automatically receive the user's access token
 
-## Key Concepts
+### Authorization Code Grant 흐름
 
-- **Workload Access Token**: A token (workloadIdentityToken) used for authentication that represents the workload identity and the user
-- **Session URI**: Tracks the authorization flow state across multiple requests and responses during the OAuth2 authentication process
-- **Token Vault**: Secure storage where OAuth tokens are stored
-- **Session Binding Service**: Confirms the user authentication session for obtaining OAuth2.0 tokens for a resource
+에이전트가 사용자를 대신해 외부 서비스에 액세스해야 하는 경우 [OAuth 2.0 권한 부여 URL 세션 바인딩](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/oauth2-authorization-url-session-binding.html)을 참조하세요.
 
-## Flow Phases
+1. 에이전트가 AgentCore Identity에 액세스 토큰을 요청합니다.
+2. 유효한 토큰이 없으면 AgentCore가 권한 부여 URL을 반환합니다.
+3. 사용자가 URL을 클릭하고 외부 서비스(예: GitHub)로 인증합니다.
+4. 외부 서비스가 Session Binding Service 엔드포인트로 리디렉션합니다.
+5. Session Binding Service가 `complete_resource_token_auth()`를 호출하여 토큰을 사용자에게 바인딩하고 흐름을 완료합니다.
+6. 이후 에이전트 요청에서는 사용자의 액세스 토큰을 자동으로 받습니다.
 
-1. **Get workload access token**: The workload obtains a token from AgentCore Identity that represents both the workload and the user
-2. **Request OAuth authorization**: The workload requests an OAuth token, receiving an authorization URL
-3. **User authorizes with OAuth provider**: The user grants permission for the workload to access their resources on the 3rd party tool
-4. **Complete authorization via session binding**: The session binding service confirms the user authentication session and completes the token binding
+## 핵심 개념
+
+- **워크로드 액세스 토큰**: 워크로드 ID와 사용자를 나타내며 인증에 사용하는 토큰(workloadIdentityToken)
+- **세션 URI**: OAuth2 인증 프로세스 중 여러 요청과 응답에 걸쳐 권한 부여 흐름 상태 추적
+- **Token Vault**: OAuth 토큰이 저장되는 안전한 저장소
+- **Session Binding Service**: 리소스의 OAuth2.0 토큰을 얻기 위해 사용자 인증 세션 확인
+
+## 흐름 단계
+
+1. **워크로드 액세스 토큰 가져오기**: 워크로드가 자신과 사용자를 모두 나타내는 토큰을 AgentCore Identity에서 가져옵니다.
+2. **OAuth 권한 부여 요청**: 워크로드가 OAuth 토큰을 요청하고 권한 부여 URL을 받습니다.
+3. **사용자가 OAuth 공급자에서 권한 부여**: 사용자가 서드 파티 도구의 리소스에 워크로드가 액세스하도록 권한을 부여합니다.
+4. **세션 바인딩을 통해 권한 부여 완료**: Session Binding Service가 사용자 인증 세션을 확인하고 토큰 바인딩을 완료합니다.
 
 ```mermaid
 sequenceDiagram
@@ -80,56 +80,56 @@ sequenceDiagram
     Callback-->>User: Authorization complete
 ```
 
-For more detailed flow diagrams, see:
-- [Inbound Authentication Flow](docs/inbound.md) - ALB OIDC authentication with Entra ID
-- [Outbound Authorization Flow](docs/outbound.md) - GitHub OAuth with AgentCore Identity
+더 자세한 흐름 다이어그램은 다음 문서를 참조하세요.
+- [인바운드 인증 흐름](docs/inbound.md) - Entra ID를 사용한 ALB OIDC 인증
+- [아웃바운드 권한 부여 흐름](docs/outbound.md) - AgentCore Identity를 사용한 GitHub OAuth
 
-## Prerequisites
+## 사전 요구 사항
 
-Before deploying this sample, ensure you have:
+이 샘플을 배포하기 전에 다음 항목을 준비하세요.
 
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) v2.27+ configured with appropriate credentials
-- [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting-started.html) v2 installed (`npm install -g aws-cdk`)
+- 적절한 자격 증명으로 구성된 [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) v2.27+
+- 설치된 [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting-started.html) v2(`npm install -g aws-cdk`)
 - [uv](https://docs.astral.sh/uv/)
 - [Python 3.12+](https://www.python.org/downloads/)
-- [Docker](https://docs.docker.com/get-docker/) for building container images
-- An [Amazon Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/Welcome.html) hosted zone for your domain
-- Access to [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html) with the Claude model enabled
-- An OIDC-compliant Identity Provider (IdP) for user authentication
+- 컨테이너 이미지 빌드용 [Docker](https://docs.docker.com/get-docker/)
+- 도메인의 [Amazon Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/Welcome.html) 호스팅 영역
+- Claude 모델이 활성화된 [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html) 액세스 권한
+- 사용자 인증을 위한 OIDC 호환 Identity Provider(IdP)
 
 ### OIDC Identity Provider
 
-This sample requires OIDC credentials to work correctly.
+이 샘플이 올바르게 작동하려면 OIDC 자격 증명이 필요합니다.
 
-#### Optional: Create an Entra ID OAuth Application if you don't have a OIDC Identity Provider at hand
+#### 선택 사항: 사용할 OIDC Identity Provider가 없는 경우 Entra ID OAuth 애플리케이션 생성
 
-Create an OAuth application in your Entra ID (Azure AD) tenant:
+Entra ID(Azure AD) 테넌트에 OAuth 애플리케이션을 생성합니다.
 
-1. **Open Entra ID**: Go to [portal.azure.com](https://portal.azure.com) and search for "Microsoft Entra ID"
-2. **App Registrations**: On the left sidebar, click Manage > App registrations
-3. **New Registration**: Click on New registration
-4. **Configure the registration**:
-   - **Name**: `AWS-ALB-SingleTenant` (or your preferred name)
-   - **Supported Account Types**: Select "Single tenant only"
+1. **Entra ID 열기**: [portal.azure.com](https://portal.azure.com)으로 이동하여 "Microsoft Entra ID"를 검색합니다.
+2. **앱 등록**: 왼쪽 사이드바에서 Manage > App registrations를 클릭합니다.
+3. **새 등록**: New registration을 클릭합니다.
+4. **등록 구성**:
+   - **Name**: `AWS-ALB-SingleTenant`(또는 원하는 이름)
+   - **Supported Account Types**: "Single tenant only" 선택
    - **Redirect URI**:
-     - Select "Web" from the dropdown
-     - Enter: `https://agent-3lo.<your-domain>/oauth2/idpresponse`
-5. **Register**: Click the Register button at the bottom
+     - 드롭다운에서 "Web" 선택
+     - 입력: `https://agent-3lo.<your-domain>/oauth2/idpresponse`
+5. **등록**: 하단의 Register 버튼을 클릭합니다.
 
-6. After registration, go to Certificates & secrets
-7. Click on New client secret
-8. Add a description and set expiration
-9. Click Add and copy the secret value immediately (you won't be able to see it again)
+6. 등록 후 Certificates & secrets로 이동합니다.
+7. New client secret을 클릭합니다.
+8. 설명을 추가하고 만료 기간을 설정합니다.
+9. Add를 클릭하고 보안 암호 값을 즉시 복사합니다. 이후에는 다시 볼 수 없습니다.
 
-At the end, you should have a TENANT_ID, a CLIENT_ID, and a CLIENT_SECRET.
+완료하면 TENANT_ID, CLIENT_ID 및 CLIENT_SECRET이 있어야 합니다.
 
-Note that the OIDC Identity Provider endpoints depend on your Tenant ID. The exact pattern is provided by the [Well Known Configuration of Entra ID](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration). For more details follow the guide [Find your app's OpenID configuration document URI](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc#find-your-apps-openid-configuration-document-uri)
+OIDC Identity Provider 엔드포인트는 Tenant ID에 따라 달라집니다. 정확한 패턴은 [Entra ID의 Well Known Configuration](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration)에서 확인할 수 있습니다. 자세한 내용은 [앱의 OpenID 구성 문서 URI 찾기](https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc#find-your-apps-openid-configuration-document-uri) 가이드를 참조하세요.
 
-You may use this in configuration step below.
+아래 구성 단계에서 이 정보를 사용할 수 있습니다.
 
-##### Store OIDC Client Credentials
+##### OIDC 클라이언트 자격 증명 저장
 
-Store the client secret and id from the previous step in AWS Secrets Manager:
+이전 단계의 클라이언트 보안 암호와 ID를 AWS Secrets Manager에 저장합니다.
 
 ```shell
 aws secretsmanager create-secret --name "agent-oauth/credentials" \
@@ -137,26 +137,26 @@ aws secretsmanager create-secret --name "agent-oauth/credentials" \
 --region <your-deployment-region>
 ```
 
-### GitHub OAuth App (for AgentCore Identity)
+### GitHub OAuth App(AgentCore Identity용)
 
-Create a GitHub OAuth App and register it with AgentCore Identity by following the [GitHub identity provider setup guide](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-idp-github.html).
+[GitHub Identity Provider 설정 가이드](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/identity-idp-github.html)에 따라 GitHub OAuth App을 생성하고 AgentCore Identity에 등록합니다.
 
-## Configuration
+## 구성
 
-Some defaults are set in `config.py`. The DNS and OIDC credentials are configured via the `.env` file as explained below.
+일부 기본값은 `config.py`에 설정되어 있습니다. DNS 및 OIDC 자격 증명은 아래 설명과 같이 `.env` 파일을 통해 구성합니다.
 
-`config.py` key settings:
+`config.py` 주요 설정:
 
-| Parameter | Description | Default |
+| 파라미터 | 설명 | 기본값 |
 |-----------|-------------|---------|
-| `aws_region` | Region for main stack (ECS, ALB) | `eu-west-1` |
-| `identity_aws_region` | Region for AgentCore Identity | `eu-central-1` |
-| `suffix` | Suffix for resource naming | `sample` |
-| `inference_profile_id` | Bedrock inference profile | `eu.anthropic.claude-haiku-4-5-20251001-v1:0` |
+| `aws_region` | 기본 스택(ECS, ALB)의 리전 | `eu-west-1` |
+| `identity_aws_region` | AgentCore Identity의 리전 | `eu-central-1` |
+| `suffix` | 리소스 이름의 접미사 | `sample` |
+| `inference_profile_id` | Bedrock 추론 프로필 | `eu.anthropic.claude-haiku-4-5-20251001-v1:0` |
 
-### OIDC Configuration
+### OIDC 구성
 
-Create a `.env` file in the project root with your IdP's endpoints. These values can be found in your IdP's `.well-known/openid-configuration` endpoint:
+프로젝트 루트에 IdP 엔드포인트가 포함된 `.env` 파일을 생성합니다. 이 값은 IdP의 `.well-known/openid-configuration` 엔드포인트에서 확인할 수 있습니다.
 
 ```shell
 cat <<EOF > .env
@@ -170,9 +170,9 @@ EOF
 ```
 
 <details>
-<summary>Example: Entra ID (Azure AD) configuration</summary>
+<summary>예제: Entra ID(Azure AD) 구성</summary>
 
-Replace `<TENANT_ID>` with your Entra ID tenant ID:
+`<TENANT_ID>`를 Entra ID 테넌트 ID로 바꾸세요.
 
 ```shell
 cat <<EOF > .env
@@ -187,9 +187,9 @@ EOF
 
 </details>
 
-### Amazon Route 53 Hosted Zone
+### Amazon Route 53 호스팅 영역
 
-You need an [Amazon Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/Welcome.html) hosted zone for your domain. Add the following to your `.env` file:
+도메인에 대한 [Amazon Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/Welcome.html) 호스팅 영역이 필요합니다. `.env` 파일에 다음 내용을 추가합니다.
 
 ```shell
 cat <<EOF >> .env
@@ -199,53 +199,53 @@ EOF
 ```
 
 
-## Deployment
+## 배포
 
-Use the deployment script which validates prerequisites and deploys the stacks:
+사전 요구 사항을 검증하고 스택을 배포하는 배포 스크립트를 사용합니다.
 
 ```shell
-# Install dependencies
+# 종속성 설치
 uv sync --all-groups
 
-# Run deployment script
+# 배포 스크립트 실행
 ./deploy_sample.sh
 ```
 
-After deployment, access your agent at `https://agent-3lo.<your-domain>`
+배포 후 `https://agent-3lo.<your-domain>`에서 에이전트에 액세스합니다.
 
-## Testing 
+## 테스트
 
-We provide a couple of tests in [tests](./tests/). Note that we use [Moto](https://docs.getmoto.org/en/latest/) to mock [boto3](https://docs.aws.amazon.com/boto3/latest/) API calls. Note that we patch certain API calls ourselves as they are not implemented in Moto yet, see `mock_bedrock_api_call` in the [conftest.py](./tests/conftest.py).
+[tests](./tests/)에 몇 가지 테스트가 제공됩니다. [Moto](https://docs.getmoto.org/en/latest/)를 사용해 [boto3](https://docs.aws.amazon.com/boto3/latest/) API 호출을 모의합니다. 아직 Moto에 구현되지 않은 일부 API 호출은 직접 패치합니다. [conftest.py](./tests/conftest.py)의 `mock_bedrock_api_call`을 참조하세요.
 
-You can run the test with the command `uv run pytest tests`.
+`uv run pytest tests` 명령으로 테스트를 실행할 수 있습니다.
 
-## Security
+## 보안
 
-- All secrets are stored in AWS Secrets Manager with dynamic references
-- HTTPS is enforced via ALB with ACM certificates
-- OIDC IdP handles user authentication via ALB
-- AgentCore Identity manages OAuth tokens securely per user
-- AWS KMS encryption for Amazon CloudWatch Logs and sensitive data
-- Amazon VPC with private subnets for Amazon ECS tasks
+- 모든 보안 암호는 동적 참조를 사용하여 AWS Secrets Manager에 저장
+- ACM 인증서를 사용하는 ALB를 통해 HTTPS 적용
+- OIDC IdP가 ALB를 통해 사용자 인증 처리
+- AgentCore Identity가 사용자별 OAuth 토큰을 안전하게 관리
+- Amazon CloudWatch Logs 및 민감한 데이터에 AWS KMS 암호화 적용
+- Amazon ECS 작업에 프라이빗 서브넷이 있는 Amazon VPC 사용
 
-## Additional Security Considerations
+## 추가 보안 고려 사항
 
-See [Security Considerations](security_considerations.md)
+[보안 고려 사항](security_considerations.md)을 참조하세요.
 
-## Cleanup
+## 정리
 
-To remove all deployed resources:
+배포된 모든 리소스를 제거하려면 다음 명령을 실행합니다.
 
 ```shell
 uv run cdk destroy --all
 ```
 
-**Note:** You may need to manually delete:
+**참고:** 다음 항목은 수동으로 삭제해야 할 수 있습니다.
 
-- Amazon S3 bucket contents (if not empty)
-- Amazon CloudWatch log groups
-- AWS Secrets Manager secrets
+- Amazon S3 버킷 콘텐츠(비어 있지 않은 경우)
+- Amazon CloudWatch 로그 그룹
+- AWS Secrets Manager 보안 암호
 
-## License
+## 라이선스
 
-This library is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file.
+이 라이브러리는 MIT-0 License에 따라 라이선스가 부여됩니다. [LICENSE](LICENSE) 파일을 참조하세요.

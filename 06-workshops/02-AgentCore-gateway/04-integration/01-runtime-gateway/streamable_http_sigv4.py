@@ -1,8 +1,8 @@
 """
-StreamableHTTP Client Transport with AWS SigV4 Signing
+AWS SigV4 서명을 지원하는 StreamableHTTP 클라이언트 전송 계층입니다.
 
-This module extends the MCP StreamableHTTPTransport to add AWS SigV4 request signing
-for authentication with MCP servers that authenticate using AWS IAM.
+이 모듈은 AWS IAM으로 인증하는 MCP 서버와 통신할 수 있도록 MCP
+StreamableHTTPTransport를 확장하여 AWS SigV4 요청 서명을 추가합니다.
 """
 
 from collections.abc import AsyncGenerator
@@ -25,7 +25,7 @@ from mcp.shared.message import SessionMessage
 
 
 class SigV4HTTPXAuth(httpx.Auth):
-    """HTTPX Auth class that signs requests with AWS SigV4."""
+    """AWS SigV4로 요청에 서명하는 HTTPX Auth 클래스입니다."""
 
     def __init__(
         self,
@@ -39,13 +39,13 @@ class SigV4HTTPXAuth(httpx.Auth):
         self.signer = SigV4Auth(credentials, service, region)
 
     def auth_flow(self, request: httpx.Request) -> Generator[httpx.Request, httpx.Response, None]:
-        """Signs the request with SigV4 and adds the signature to the request headers."""
+        """SigV4로 요청에 서명하고 요청 헤더에 서명을 추가합니다."""
 
-        # Create an AWS request
+        # AWS 요청 생성
         headers = dict(request.headers)
-        # Header 'connection' = 'keep-alive' is not used in calculating the request
-        # signature on the server-side, and results in a signature mismatch if included
-        headers.pop("connection", None)  # Remove if present, ignore if not
+        # 'connection' = 'keep-alive' 헤더는 서버 측 요청 서명 계산에 사용되지 않으며
+        # 포함할 경우 서명이 일치하지 않으므로, 있으면 제거하고 없으면 무시
+        headers.pop("connection", None)
 
         aws_request = AWSRequest(
             method=request.method,
@@ -54,10 +54,10 @@ class SigV4HTTPXAuth(httpx.Auth):
             headers=headers,
         )
 
-        # Sign the request with SigV4
+        # SigV4로 요청 서명
         self.signer.add_auth(aws_request)
 
-        # Add the signature header to the original request
+        # 원본 요청에 서명 헤더 추가
         request.headers.update(dict(aws_request.headers))
 
         yield request
@@ -65,10 +65,10 @@ class SigV4HTTPXAuth(httpx.Auth):
 
 class StreamableHTTPTransportWithSigV4(StreamableHTTPTransport):
     """
-    Streamable HTTP client transport with AWS SigV4 signing support.
+    AWS SigV4 서명을 지원하는 Streamable HTTP 클라이언트 전송 계층입니다.
 
-    This transport enables communication with MCP servers that authenticate using AWS IAM,
-    such as servers behind a Lambda function URL or API Gateway.
+    Lambda function URL 또는 API Gateway 뒤의 서버처럼 AWS IAM으로 인증하는
+    MCP 서버와 통신할 수 있습니다.
     """
 
     def __init__(
@@ -81,18 +81,18 @@ class StreamableHTTPTransportWithSigV4(StreamableHTTPTransport):
         timeout: float | timedelta = 30,
         sse_read_timeout: float | timedelta = 60 * 5,
     ) -> None:
-        """Initialize the StreamableHTTP transport with SigV4 signing.
+        """SigV4 서명을 사용하는 StreamableHTTP 전송 계층을 초기화합니다.
 
-        Args:
-            url: The endpoint URL.
-            credentials: AWS credentials for signing.
-            service: AWS service name (e.g., 'lambda').
-            region: AWS region (e.g., 'us-east-1').
-            headers: Optional headers to include in requests.
-            timeout: HTTP timeout for regular operations.
-            sse_read_timeout: Timeout for SSE read operations.
+        인수:
+            url: 엔드포인트 URL
+            credentials: 서명에 사용할 AWS 자격 증명
+            service: AWS 서비스 이름(예: 'lambda')
+            region: AWS 리전(예: 'us-east-1')
+            headers: 요청에 포함할 선택적 헤더
+            timeout: 일반 작업의 HTTP 제한 시간
+            sse_read_timeout: SSE 읽기 작업의 제한 시간
         """
-        # Initialize parent class with SigV4 auth handler
+        # SigV4 인증 핸들러로 부모 클래스 초기화
         super().__init__(
             url=url,
             headers=headers,
@@ -126,16 +126,16 @@ async def streamablehttp_client_with_sigv4(
     None,
 ]:
     """
-    Client transport for Streamable HTTP with SigV4 auth.
+    SigV4 인증을 사용하는 Streamable HTTP 클라이언트 전송 계층입니다.
 
-    This transport enables communication with MCP servers that authenticate using AWS IAM,
-    such as servers behind a Lambda function URL or API Gateway.
+    Lambda function URL 또는 API Gateway 뒤의 서버처럼 AWS IAM으로 인증하는
+    MCP 서버와 통신할 수 있습니다.
 
-    Yields:
-        Tuple containing:
-            - read_stream: Stream for reading messages from the server
-            - write_stream: Stream for sending messages to the server
-            - get_session_id_callback: Function to retrieve the current session ID
+    생성값:
+        다음 항목을 포함하는 튜플:
+            - read_stream: 서버 메시지를 읽는 스트림
+            - write_stream: 서버에 메시지를 보내는 스트림
+            - get_session_id_callback: 현재 세션 ID를 가져오는 함수
     """
 
     async with streamablehttp_client(

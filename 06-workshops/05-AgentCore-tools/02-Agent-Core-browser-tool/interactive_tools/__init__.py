@@ -1,1 +1,1 @@
-"""Examples for Bedrock AgentCore SDK Tools."""
+"""Bedrock AgentCore SDK Tools 예제."""

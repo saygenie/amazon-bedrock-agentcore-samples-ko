@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Session Replay Viewer for Bedrock Agentcore Browser Sessions
+Bedrock Agentcore Browser 세션용 Session Replay Viewer
 
-Views session recordings stored in standard rrweb-{timestamp}-{sessionid} format.
-Supports both local sample recordings and S3 streaming.
+표준 rrweb-{timestamp}-{sessionid} 형식으로 저장된 세션 녹화를 보여준다.
+로컬 샘플 녹화와 S3 스트리밍을 모두 지원한다.
 """
 
 import os
@@ -31,7 +31,7 @@ console = Console()
 
 
 class SessionReplayHandler(BaseHTTPRequestHandler):
-    """HTTP request handler for session replay viewer"""
+    """세션 재생 뷰어용 HTTP 요청 핸들러"""
 
     def __init__(self, data_source, viewer_path, *args, **kwargs):
         self.data_source = data_source
@@ -39,11 +39,11 @@ class SessionReplayHandler(BaseHTTPRequestHandler):
         super().__init__(*args, **kwargs)
 
     def log_message(self, format, *args):
-        """Override to reduce server logging noise"""
+        """서버 로그 출력을 줄이도록 오버라이드한다."""
         pass
 
     def do_GET(self):
-        """Handle GET requests"""
+        """GET 요청을 처리한다."""
         try:
             path = self.path.split("?")[0]
 
@@ -62,11 +62,11 @@ class SessionReplayHandler(BaseHTTPRequestHandler):
             self.send_error(500, str(e))
 
     def serve_file(self, file_path):
-        """Serve static files"""
+        """정적 파일을 제공한다."""
         full_path = self.viewer_path / file_path
 
         if not full_path.exists():
-            # Create index.html on the fly
+            # index.html을 즉석에서 생성
             if file_path == "index.html":
                 self._create_index_html(full_path)
             else:
@@ -88,13 +88,13 @@ class SessionReplayHandler(BaseHTTPRequestHandler):
         self.wfile.write(content)
 
     def _create_index_html(self, path):
-        """Create the viewer HTML interface"""
+        """뷰어 HTML 인터페이스를 생성한다."""
         print("\n======= DEBUGGING =======")
         print(f"Creating index.html at: {path}")
         print(f"Path exists: {os.path.exists(path)}")
         print(f"Parent directory exists: {os.path.exists(path.parent)}")
 
-        # Ensure the directory exists
+        # 디렉터리가 있는지 확인
         path.parent.mkdir(parents=True, exist_ok=True)
 
         html_content = r"""<!DOCTYPE html>
@@ -439,7 +439,7 @@ class SessionReplayHandler(BaseHTTPRequestHandler):
         print(f"Original content length: {len(html_content)}")
         print(f"Contains 'DOLLAR': {'DOLLAR' in html_content}")
 
-        # Try to replace DOLLAR with $ just in case
+        # 만일을 위해 DOLLAR를 $로 치환 시도
         if "DOLLAR" in html_content:
             html_content = html_content.replace("DOLLAR", "$")
             print(f"After replacement, contains 'DOLLAR': {'DOLLAR' in html_content}")
@@ -450,11 +450,11 @@ class SessionReplayHandler(BaseHTTPRequestHandler):
             with open(path, "w") as f:
                 f.write(html_content)
 
-            # Verify the file was written correctly
+        # 파일이 올바르게 작성되었는지 확인
             file_size = os.path.getsize(path)
             print(f"File written successfully, size: {file_size} bytes")
 
-            # Verify content in file
+        # 파일 내용 확인
             with open(path, "r") as f:
                 first_100 = f.read(100)
             print(f"First 100 chars of file: {first_100}")
@@ -465,7 +465,7 @@ class SessionReplayHandler(BaseHTTPRequestHandler):
         print("======= END DEBUGGING =======\n")
 
     def serve_recordings_list(self):
-        """Return list of recordings with proper headers"""
+        """적절한 헤더와 함께 녹화 목록을 반환한다."""
         try:
             recordings = self.data_source.list_recordings()
             response = json.dumps(recordings)
@@ -484,7 +484,7 @@ class SessionReplayHandler(BaseHTTPRequestHandler):
             console.print(f"[red]Error in serve_recordings_list: {e}[/red]")
 
             error_response = json.dumps({"error": str(e), "recordings": []})
-            self.send_response(200)  # Use 200 to ensure client gets the error
+            self.send_response(200)  # 클라이언트가 오류를 받도록 200 사용
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(error_response)))
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -492,7 +492,7 @@ class SessionReplayHandler(BaseHTTPRequestHandler):
             self.wfile.write(error_response.encode("utf-8"))
 
     def download_and_serve_recording(self, recording_id):
-        """Download recording and serve it with proper headers"""
+        """녹화를 다운로드하고 적절한 헤더와 함께 제공한다."""
         try:
             recording_data = self.data_source.download_recording(recording_id)
 
@@ -529,7 +529,7 @@ class SessionReplayHandler(BaseHTTPRequestHandler):
             self.wfile.write(error_response.encode("utf-8"))
 
     def do_OPTIONS(self):
-        """Handle OPTIONS requests for CORS preflight"""
+        """CORS 프리플라이트용 OPTIONS 요청을 처리한다."""
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -538,7 +538,7 @@ class SessionReplayHandler(BaseHTTPRequestHandler):
 
 
 class DataSource:
-    """Base class for data sources"""
+    """데이터 소스의 기본 클래스"""
 
     def list_recordings(self):
         raise NotImplementedError
@@ -548,31 +548,31 @@ class DataSource:
 
 
 class LocalDataSource(DataSource):
-    """Local file system data source"""
+    """로컬 파일 시스템 데이터 소스"""
 
     def __init__(self, recordings_dir):
         self.recordings_dir = Path(recordings_dir)
         console.print(f"[cyan]Using local recordings from:[/cyan] {self.recordings_dir}")
 
     def list_recordings(self):
-        """List local recordings"""
+        """로컬 녹화 목록을 반환한다."""
         recordings = []
 
         if not self.recordings_dir.exists():
             return recordings
 
-        # Look for rrweb-* directories
+        # rrweb-* 디렉터리 찾기
         for item in self.recordings_dir.iterdir():
             if item.is_dir() and item.name.startswith("rrweb-"):
                 recording_id = item.name
 
-                # Parse recording ID
+                # 녹화 ID 파싱
                 parts = recording_id.split("-")
                 if len(parts) >= 3:
                     timestamp = parts[1]
                     session_id = "-".join(parts[2:])
 
-                    # Try to get metadata
+                    # 메타데이터 가져오기 시도
                     metadata = {}
                     metadata_file = item / "metadata.json"
                     if metadata_file.exists():
@@ -594,7 +594,7 @@ class LocalDataSource(DataSource):
         return recordings
 
     def download_recording(self, recording_id):
-        """Load recording from local files"""
+        """로컬 파일에서 녹화를 로드한다."""
         recording_dir = self.recordings_dir / recording_id
 
         if not recording_dir.exists():
@@ -603,13 +603,13 @@ class LocalDataSource(DataSource):
         all_events = []
         metadata = {}
 
-        # Load metadata if exists
+        # 메타데이터가 있으면 로드
         metadata_file = recording_dir / "metadata.json"
         if metadata_file.exists():
             with open(metadata_file, "r") as f:
                 metadata = json.load(f)
 
-        # Load batch files
+        # 배치 파일 로드
         batch_files = sorted(recording_dir.glob("batch-*.ndjson.gz"))
 
         for batch_file in batch_files:
@@ -622,7 +622,7 @@ class LocalDataSource(DataSource):
 
 
 class S3DataSource(DataSource):
-    """S3 data source"""
+    """S3 데이터 소스"""
 
     def __init__(self, bucket, prefix=""):
         self.s3_client = boto3.client("s3")
@@ -635,18 +635,18 @@ class S3DataSource(DataSource):
         console.print(f"  Prefix: {prefix}")
 
     def cleanup(self):
-        """Clean up temp files"""
+        """임시 파일을 정리한다."""
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 
     def list_recordings(self):
-        """List recordings from S3"""
+        """S3의 녹화 목록을 반환한다."""
         recordings = []
 
         try:
             paginator = self.s3_client.get_paginator("list_objects_v2")
 
-            # Look for any directories (not just rrweb-*)
+            # rrweb-*뿐 아니라 모든 디렉터리 찾기
             for page in paginator.paginate(Bucket=self.bucket, Prefix=self.prefix, Delimiter="/"):
                 if "CommonPrefixes" in page:
                     console.print(f"Found {len(page['CommonPrefixes'])} directories in prefix {self.prefix}")
@@ -655,11 +655,11 @@ class S3DataSource(DataSource):
                         prefix = prefix_info["Prefix"]
                         recording_id = prefix.rstrip("/").split("/")[-1]
 
-                        # Check if it's a recording directory by looking for metadata.json
+                        # metadata.json을 확인하여 녹화 디렉터리인지 판단
                         metadata = self._get_metadata(recording_id)
                         if metadata:
-                            # This is a valid recording directory
-                            session_id = recording_id  # Use the folder name as the session ID
+                            # 유효한 녹화 디렉터리
+                            session_id = recording_id  # 폴더 이름을 세션 ID로 사용
                             timestamp = int(metadata.get("startTime", time.time() * 1000))
 
                             recordings.append(
@@ -679,17 +679,17 @@ class S3DataSource(DataSource):
                 recordings.sort(key=lambda x: x.get("timestamp", 0), reverse=True)
                 console.print(f"[green]Found {len(recordings)} recordings[/green]")
 
-            # If no recordings found with CommonPrefixes, try a direct list
+            # CommonPrefixes에서 녹화를 찾지 못하면 직접 나열
             if not recordings:
                 console.print("Trying alternative method to find recordings...")
 
-                # Get a flat list of all objects
+                # 모든 객체의 단일 목록 가져오기
                 all_objects = []
                 for page in paginator.paginate(Bucket=self.bucket, Prefix=self.prefix):
                     if "Contents" in page:
                         all_objects.extend(page["Contents"])
 
-                # Extract unique directory names
+                # 고유한 디렉터리 이름 추출
                 dirs = set()
                 for obj in all_objects:
                     key = obj["Key"]
@@ -699,7 +699,7 @@ class S3DataSource(DataSource):
 
                 console.print(f"Found directories: {dirs}")
 
-                # Check each directory for metadata
+                # 각 디렉터리의 메타데이터 확인
                 for dir_name in dirs:
                     metadata = self._get_metadata(dir_name)
                     if metadata:
@@ -729,9 +729,9 @@ class S3DataSource(DataSource):
         return recordings
 
     def _get_metadata(self, recording_id):
-        """Get metadata for a recording"""
+        """녹화의 메타데이터를 가져온다."""
         try:
-            # Try both possible metadata paths
+            # 가능한 두 메타데이터 경로 모두 시도
             keys_to_try = [
                 f"{self.prefix}/{recording_id}/metadata.json",
                 f"{recording_id}/metadata.json",
@@ -755,7 +755,7 @@ class S3DataSource(DataSource):
             return {}
 
     def download_recording(self, recording_id):
-        """Download recording from S3"""
+        """S3에서 녹화를 다운로드한다."""
         console.print(f"[cyan]Downloading recording: {recording_id}[/cyan]")
 
         recording_dir = self.temp_dir / recording_id
@@ -767,7 +767,7 @@ class S3DataSource(DataSource):
                 TextColumn("[progress.description]{task.description}"),
                 console=console,
             ) as progress:
-                # List files for this recording
+                # 이 녹화의 파일 나열
                 prefix = f"{self.prefix}/{recording_id}/" if self.prefix else f"{recording_id}/"
                 console.print(f"Looking for files with prefix: {prefix}")
 
@@ -779,7 +779,7 @@ class S3DataSource(DataSource):
                         for obj in page["Contents"]:
                             files_to_download.append(obj["Key"])
 
-                # Download files
+                # 파일 다운로드
                 console.print(f"Downloading {len(files_to_download)} files")
                 task = progress.add_task(
                     f"Downloading {len(files_to_download)} files...",
@@ -796,7 +796,7 @@ class S3DataSource(DataSource):
                     self.s3_client.download_file(self.bucket, key, str(local_path))
                     progress.advance(task)
 
-                    # Process file
+                    # 파일 처리
                     if filename == "metadata.json":
                         with open(local_path, "r") as f:
                             metadata = json.load(f)
@@ -809,7 +809,7 @@ class S3DataSource(DataSource):
                                     if line.strip():
                                         try:
                                             event_data = json.loads(line)
-                                            # Validate event structure for rrweb
+                                            # rrweb 이벤트 구조 검증
                                             if "type" in event_data and "timestamp" in event_data:
                                                 all_events.append(event_data)
                                             else:
@@ -825,18 +825,18 @@ class S3DataSource(DataSource):
 
             console.print(f"[green]✓ Downloaded {len(all_events)} events[/green]")
 
-            # If no events were parsed, check the files
+            # 파싱된 이벤트가 없으면 파일 확인
             if len(all_events) == 0:
                 console.print("[yellow]Warning: No events were parsed from the batch files[/yellow]")
 
-                # Create sample events to prevent viewer from breaking
+                # 뷰어가 중단되지 않도록 샘플 이벤트 생성
                 console.print("[yellow]Creating sample events to allow viewer to function[/yellow]")
                 timestamp = int(time.time() * 1000)
 
-                # Create a minimal set of events for rrweb
+                # rrweb용 최소 이벤트 집합 생성
                 all_events = [
                     {
-                        "type": 2,  # Meta event
+                        "type": 2,  # 메타 이벤트
                         "timestamp": timestamp,
                         "data": {
                             "href": "https://example.com",
@@ -845,7 +845,7 @@ class S3DataSource(DataSource):
                         },
                     },
                     {
-                        "type": 4,  # DOM snapshot
+                        "type": 4,  # DOM 스냅샷
                         "timestamp": timestamp + 100,
                         "data": {
                             "node": {
@@ -875,7 +875,7 @@ class S3DataSource(DataSource):
                     },
                 ]
 
-                # List downloaded files for debugging
+                # 디버깅을 위해 다운로드된 파일 나열
                 console.print("Downloaded files:")
                 for path in recording_dir.iterdir():
                     console.print(f"  - {path.name} ({path.stat().st_size} bytes)")
@@ -891,7 +891,7 @@ class S3DataSource(DataSource):
 
 
 class SessionReplayViewer:
-    """Main session replay viewer"""
+    """기본 세션 재생 뷰어"""
 
     def __init__(self, data_source, port=8080):
         self.data_source = data_source
@@ -900,7 +900,7 @@ class SessionReplayViewer:
         self.server = None
 
     def find_available_port(self):
-        """Find an available port"""
+        """사용 가능한 포트를 찾는다."""
         for port in range(self.port, self.port + 100):
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -911,21 +911,21 @@ class SessionReplayViewer:
         raise RuntimeError("No available ports found")
 
     def start(self):
-        """Start the replay viewer server"""
-        # Ensure viewer directory exists
+        """재생 뷰어 서버를 시작한다."""
+        # 뷰어 디렉터리가 있는지 확인
         self.viewer_path.mkdir(parents=True, exist_ok=True)
 
-        # Find available port
+        # 사용 가능한 포트 찾기
         port = self.find_available_port()
 
-        # Create request handler
+        # 요청 핸들러 생성
         def handler_factory(*args, **kwargs):
             return SessionReplayHandler(self.data_source, self.viewer_path, *args, **kwargs)
 
-        # Start server
+        # 서버 시작
         self.server = HTTPServer(("", port), handler_factory)
 
-        # Start in thread
+        # 스레드에서 시작
         server_thread = threading.Thread(target=self.server.serve_forever)
         server_thread.daemon = True
         server_thread.start()
@@ -942,10 +942,10 @@ class SessionReplayViewer:
             )
         )
 
-        # Open browser
+        # 브라우저 열기
         webbrowser.open(url)
 
-        # Handle shutdown
+        # 종료 처리
         def signal_handler(sig, frame):
             console.print("\n[yellow]Shutting down...[/yellow]")
             self.server.shutdown()
@@ -955,7 +955,7 @@ class SessionReplayViewer:
 
         signal.signal(signal.SIGINT, signal_handler)
 
-        # Keep running
+        # 실행 상태 유지
         try:
             while True:
                 time.sleep(1)
@@ -967,7 +967,7 @@ class SessionReplayViewer:
 
 
 def main():
-    """Main entry point"""
+    """기본 진입점"""
     import argparse
 
     parser = argparse.ArgumentParser(description="Session Replay Viewer - View browser session recordings")
@@ -980,11 +980,11 @@ def main():
 
     args = parser.parse_args()
 
-    # Create data source
+    # 데이터 소스 생성
     if args.local:
         data_source = LocalDataSource(args.local)
     else:
-        # Parse S3 path
+        # S3 경로 파싱
         if not args.s3.startswith("s3://"):
             console.print("[red]S3 path must start with s3://[/red]")
             sys.exit(1)
@@ -995,7 +995,7 @@ def main():
 
         data_source = S3DataSource(bucket, prefix)
 
-    # Start viewer
+    # 뷰어 시작
     viewer = SessionReplayViewer(data_source, port=args.port)
     viewer.start()
 

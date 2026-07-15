@@ -4,7 +4,7 @@ import os
 import sys
 import time
 
-# Add parent directory to path to import from top-level utils
+# 최상위 utils를 가져올 수 있도록 상위 디렉터리를 경로에 추가
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils.agent import deploy_agent, delete_agent
 from utils.langfuse import run_experiment
@@ -20,7 +20,7 @@ def _parse_bool(value):
 
 
 def main():
-    # Load the configuration file
+    # 구성 파일 로드
     config_path = os.path.join(os.path.dirname(__file__), "hpo_config.json")
 
     parser = argparse.ArgumentParser(description="Hyperparameter optimization runner")
@@ -43,11 +43,11 @@ def main():
     models = config["models"]
     system_prompts = config["system_prompts"]
 
-    # Dictionary to store results
+    # 결과를 저장할 딕셔너리
     results = {}
     deployed_agents = []
 
-    # Phase 1: Deploy all agents
+    # 1단계: 모든 에이전트 배포
     print(f"\n{'=' * 80}")
     print("PHASE 1: DEPLOYING AGENTS")
     print(f"{'=' * 80}\n")
@@ -63,13 +63,13 @@ def main():
             print(f"{'=' * 80}\n")
 
             try:
-                # Execute deploy_agent function
+                # deploy_agent 함수 실행
                 result = deploy_agent(model, prompt, force_redeploy, environment)
 
-                # Extract agent_name, agent_arn, agent_id, and ecr_uri from the result
+                # 결과에서 agent_name, agent_arn, agent_id 및 ecr_uri 추출
                 agent_name = result["agent_name"]
                 launch_result = result["launch_result"]
-                # The launch_result should contain the agent runtime ARN
+                # launch_result에는 에이전트 런타임 ARN이 포함되어야 함
                 agent_arn = launch_result.agent_arn
                 agent_id = launch_result.agent_id
                 ecr_uri = launch_result.ecr_uri
@@ -102,7 +102,7 @@ def main():
                 }
                 print(f"✗ Error deploying {combination_key}: {str(e)}\n")
 
-    # Phase 2: Run experiments on all deployed agents
+    # 2단계: 배포된 모든 에이전트에서 실험 실행
     print(f"\n{'=' * 80}")
     print("PHASE 2: RUNNING EXPERIMENTS")
     print(f"{'=' * 80}\n")
@@ -120,7 +120,7 @@ def main():
         print(f"{'=' * 80}\n")
 
         try:
-            # Run experiment using Langfuse dataset
+            # Langfuse 데이터 세트를 사용하여 실험 실행
             experiment_result = run_experiment(
                 agent_arn=agent_arn,
                 experiment_name=f"hpo_experiment_{combination_key}",
@@ -128,7 +128,7 @@ def main():
                 metadata={"model_id": model_id, "system_prompt_id": system_prompt_id},
             )
 
-            # Update the results with experiment data
+            # 실험 데이터로 결과 업데이트
             results[combination_key]["experiment_result"] = str(experiment_result)
             results[combination_key]["status"] = "success"
             print(f"✓ Successfully ran experiment: {combination_key}\n")
@@ -138,10 +138,10 @@ def main():
             results[combination_key]["status"] = "experiment_error"
             print(f"✗ Error running experiment for {combination_key}: {str(e)}\n")
 
-    # Wait for 2 minutes for the evaluations to complete in Langfuse
+    # Langfuse에서 평가가 완료되도록 2분간 대기
     time.sleep(120)
 
-    # # Phase 3: Delete all deployed agents
+    # # 3단계: 배포된 모든 에이전트 삭제
     print(f"\n{'=' * 80}")
     print("PHASE 3: DELETING AGENTS")
     print(f"{'=' * 80}\n")
@@ -161,7 +161,7 @@ def main():
         try:
             deletion_result = delete_agent(agent_id, ecr_uri)
 
-            # Update the results with deletion data
+            # 삭제 데이터로 결과 업데이트
             results[combination_key]["deletion_result"] = deletion_result
             print(f"✓ Successfully deleted: {combination_key}\n")
 
@@ -169,14 +169,14 @@ def main():
             results[combination_key]["deletion_error"] = str(e)
             print(f"✗ Error deleting {combination_key}: {str(e)}\n")
 
-    # Print final results summary
+    # 최종 결과 요약 출력
     print(f"\n{'=' * 80}")
     print("FINAL RESULTS SUMMARY")
     print(f"{'=' * 80}\n")
 
     print(json.dumps(results, indent=2, default=str))
 
-    # Print statistics
+    # 통계 출력
     successful = sum(1 for r in results.values() if r["status"] == "success")
     failed = sum(1 for r in results.values() if r["status"] == "error")
 

@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 
-"""Health check endpoints."""
+"""상태 확인 엔드포인트."""
 
 from fastapi import APIRouter, Depends
 

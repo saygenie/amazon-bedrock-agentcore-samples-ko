@@ -15,13 +15,13 @@ logger = logging.getLogger()
 
 
 qualifier = "DEFAULT"
-# Configurable context window for chat history
-CONTEXT_WINDOW = 10  # Number of turns (user+assistant pairs) to include in context
+# 채팅 기록에 사용할 컨텍스트 창 크기 설정
+CONTEXT_WINDOW = 10  # 컨텍스트에 포함할 대화 턴 수(사용자+어시스턴트 쌍)
 
 
 def get_streamlit_url():
     try:
-        # Read the JSON file
+        # JSON 파일 읽기
         with open("/opt/ml/metadata/resource-metadata.json", "r") as file:
             data = json.load(file)
             domain_id = data["DomainId"]
@@ -38,7 +38,7 @@ def get_streamlit_url():
         logger.info(f"Error: Required key {e} not found in JSON")
         sys.exit(1)
 
-    # Now you can use domain_id and space_name variables in your code
+    # 이제 코드에서 domain_id와 space_name 변수를 사용할 수 있음
     # logger.info(f"Domain ID: {domain_id}")
     # logger.info(f"Space Name: {space_name}")
     logger.info("Please use the following to login and test the Streamlit Application")
@@ -46,7 +46,7 @@ def get_streamlit_url():
     logger.info("Password:       MyPassword123!")
     if domain_id is not None:
         sagemaker_client = boto3.client("sagemaker")
-        # Replace 'your-space-name' and 'your-domain-id' with your actual values
+        # 'your-space-name'과 'your-domain-id'를 실제 값으로 교체
         response = sagemaker_client.describe_space(DomainId=domain_id, SpaceName=space_name)
 
         streamlit_url = response["Url"] + "/proxy/8501/"
@@ -56,7 +56,7 @@ def get_streamlit_url():
 
 
 def build_context(messages, context_window=CONTEXT_WINDOW):
-    # Only use the last context_window*2 messages (user+assistant pairs)
+    # 최근 context_window*2개 메시지(사용자+어시스턴트 쌍)만 사용
     history = messages[-context_window * 2 :] if len(messages) > context_window * 2 else messages
     context = ""
     for msg in history:
@@ -66,27 +66,27 @@ def build_context(messages, context_window=CONTEXT_WINDOW):
 
 
 def make_urls_clickable(text):
-    """Convert URLs in text to clickable HTML links."""
-    # Comprehensive URL regex pattern
+    """텍스트의 URL을 클릭 가능한 HTML 링크로 변환한다."""
+    # 다양한 URL을 포괄하는 정규식 패턴
     url_pattern = r"https?://(?:[-\w.])+(?:\:[0-9]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:\#(?:[\w.])*)?)?"
 
     def replace_url(match):
         url = match.group(0)
-        # Clean URL and create clickable link with styling to match theme
+        # URL을 정리하고 테마에 맞는 스타일의 클릭 가능한 링크 생성
         return f'<a href="{url}" target="_blank" style="color:#4fc3f7;text-decoration:underline;">{url}</a>'
 
     return re.sub(url_pattern, replace_url, text)
 
 
 def load_bedrock_agentcore_config():
-    """Load configuration from .bedrock_agentcore.yaml file."""
+    """.bedrock_agentcore.yaml 파일에서 설정을 불러온다."""
     config_path = ".bedrock_agentcore.yaml"
 
     try:
         with open(config_path, "r") as file:
             config = yaml.safe_load(file)
 
-        # Get the default agent configuration
+        # 기본 에이전트 설정 가져오기
         default_agent = config.get("default_agent")
         if not default_agent:
             raise ValueError("default_agent not found in configuration")
@@ -100,19 +100,19 @@ def load_bedrock_agentcore_config():
         auth_config = agent_config.get("authorizer_configuration", {})
         aws_config = agent_config.get("aws", {})
 
-        # Extract required values
+        # 필수 값 추출
         agent_session_id = bedrock_config.get("agent_session_id")
         agent_arn = bedrock_config.get("agent_arn")
         region = aws_config.get("region")
 
-        # Handle allowedClients - it's a list, so take the first one
+        # allowedClients는 목록이므로 첫 번째 항목 사용
         allowed_clients = []
         if "customJWTAuthorizer" in auth_config:
             allowed_clients = auth_config["customJWTAuthorizer"].get("allowedClients", [])
 
         client_id = allowed_clients[0] if allowed_clients else None
 
-        # Validate required fields
+        # 필수 필드 검증
 
         if not agent_arn:
             raise ValueError("agent_arn not found in bedrock_agentcore configuration")
@@ -138,7 +138,7 @@ def load_bedrock_agentcore_config():
         raise ValueError(f"Error loading configuration: {str(e)}")
 
 
-# Load configuration
+# 설정 불러오기
 try:
     config = load_bedrock_agentcore_config()
     agentSessionId = config["agentSessionId"]
@@ -146,7 +146,7 @@ try:
     client_id = config["client_id"]
     region = config["region"]
 except Exception as config_error:
-    # These will be None if config loading fails, and we'll handle it in the main function
+    # 설정을 불러오지 못하면 None이 되며 main 함수에서 처리
     agentSessionId = None
     agentRuntimeArn = None
     client_id = None
@@ -155,10 +155,10 @@ except Exception as config_error:
 
 
 class StreamingHttpBedrockAgentCoreClient:
-    """Streaming version of HttpBedrockAgentCoreClient for real-time responses."""
+    """실시간 응답을 지원하는 HttpBedrockAgentCoreClient의 스트리밍 버전."""
 
     def __init__(self, region: str):
-        """Initialize StreamingHttpBedrockAgentCoreClient."""
+        """StreamingHttpBedrockAgentCoreClient를 초기화한다."""
         self.region = region
         self.dp_endpoint = f"https://bedrock-agentcore.{region}.amazonaws.com"
         self.logger = logging.getLogger(f"bedrock_agentcore.streaming_http_runtime.{region}")
@@ -171,30 +171,30 @@ class StreamingHttpBedrockAgentCoreClient:
         bearer_token: str,
         endpoint_name: str = "DEFAULT",
     ):
-        """Invoke agent endpoint and yield streaming response chunks."""
-        # Escape agent ARN for URL
+        """에이전트 엔드포인트를 호출하고 스트리밍 응답 청크를 반환한다."""
+        # URL에 사용할 에이전트 ARN 이스케이프
         escaped_arn = urllib.parse.quote(agent_arn, safe="")
 
-        # Build URL
+        # URL 구성
         url = f"{self.dp_endpoint}/runtimes/{escaped_arn}/invocations"
 
-        # Headers
+        # 헤더
         headers = {
             "Authorization": f"Bearer {bearer_token}",
             "Content-Type": "application/json",
             "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id": session_id,
         }
 
-        # Parse the payload string back to JSON object to send properly
+        # 올바르게 전송할 수 있도록 페이로드 문자열을 다시 JSON 객체로 파싱
         try:
             body = json.loads(payload) if isinstance(payload, str) else payload
         except json.JSONDecodeError:
-            # Fallback for non-JSON strings - wrap in payload object
+            # JSON 문자열이 아니면 페이로드 객체로 감싸서 처리
             self.logger.warning("Failed to parse payload as JSON, wrapping in payload object")
             body = {"payload": payload}
 
         try:
-            # Make streaming request
+            # 스트리밍 요청 전송
             response = requests.post(
                 url,
                 params={"qualifier": endpoint_name},
@@ -205,16 +205,16 @@ class StreamingHttpBedrockAgentCoreClient:
             )
             response.raise_for_status()
 
-            # Check if response is streaming
+            # 스트리밍 응답인지 확인
             if "text/event-stream" in response.headers.get("content-type", ""):
-                # Handle streaming response
+                # 스트리밍 응답 처리
                 for line in response.iter_lines(chunk_size=1, decode_unicode=True):
                     if line and line.startswith("data: "):
-                        chunk = line[6:]  # Remove "data: " prefix
-                        if chunk.strip():  # Only yield non-empty chunks
+                        chunk = line[6:]  # "data: " 접두사 제거
+                        if chunk.strip():  # 비어 있지 않은 청크만 반환
                             yield chunk
             else:
-                # Non-streaming response, yield entire content
+                # 스트리밍 응답이 아니면 전체 콘텐츠 반환
                 if response.content:
                     yield response.text
 
@@ -241,7 +241,7 @@ def main():
     )
     import boto3
 
-    # Check if configuration loading failed
+    # 설정 불러오기에 실패했는지 확인
     if agentRuntimeArn is None or client_id is None or region is None:
         st.markdown(
             f"""
@@ -271,11 +271,11 @@ def main():
         )
         st.stop()
 
-    # Debug: Check authentication state
+    # 디버그: 인증 상태 확인
     if "cognito_access_token" not in st.session_state:
         st.session_state["cognito_access_token"] = None
 
-    # If not authenticated, show login and exit
+    # 인증되지 않았으면 로그인 화면을 표시하고 종료
     if st.session_state["cognito_access_token"] is None:
         st.markdown(
             """
@@ -370,9 +370,9 @@ def main():
                     st.rerun()
                 except Exception as e:
                     st.error(f"Cognito authentication failed: {e}")
-        return  # Only return here if not authenticated
+        return  # 인증되지 않은 경우에만 여기에서 반환
 
-    # Enhanced system status panel
+    # 개선된 시스템 상태 패널
     st.markdown(
         f"""
         <div style="position:fixed;top:15px;right:25px;z-index:9999;padding:18px 24px;background:linear-gradient(145deg, #1a1f2e 0%, #242b3d 100%);border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(100,181,246,0.1);font-size:0.9em;color:#90caf9;font-family:Inter,Segoe UI,Arial,sans-serif;opacity:0.95;backdrop-filter:blur(10px);border:1px solid rgba(100,181,246,0.15);">
@@ -399,7 +399,7 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # Enhanced CSS styling
+    # 개선된 CSS 스타일
     st.markdown(
         """
         <style>
@@ -460,7 +460,7 @@ def main():
             animation: thinking 1.5s infinite, slideInLeft 0.3s ease-out;
         }
         
-        /* Animations */
+        /* 애니메이션 */
         @keyframes slideInRight {
             from { opacity: 0; transform: translateX(20px); }
             to { opacity: 1; transform: translateX(0); }
@@ -481,7 +481,7 @@ def main():
             50% { transform: scale(1.02); opacity: 0.9; }
         }
         
-        /* Enhanced Typography */
+        /* 개선된 타이포그래피 */
         h1, h2, h3, h4, h5, h6, p, label {
             color: #e8f4fd !important;
             font-family: 'Inter', 'Segoe UI', Arial, sans-serif !important;
@@ -495,12 +495,12 @@ def main():
             font-weight: 700 !important;
         }
         
-        /* Sidebar Styling */
+        /* 사이드바 스타일 */
         .sidebar .sidebar-content {
             background: linear-gradient(145deg, #1a1f2e 0%, #0f1419 100%) !important;
         }
         
-        /* Custom Scrollbar */
+        /* 사용자 지정 스크롤바 */
         ::-webkit-scrollbar {
             width: 8px;
         }
@@ -520,7 +520,7 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # Enhanced sidebar
+    # 개선된 사이드바
     st.sidebar.markdown(
         """
         <div style='text-align:center;padding:1.5rem 0;border-bottom:1px solid rgba(100,181,246,0.2);margin-bottom:1.5rem;'>
@@ -550,7 +550,7 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # Enhanced main header
+    # 개선된 기본 헤더
     st.markdown(
         """
         <div style='text-align:center;padding:2rem 0 1rem 0;'>
@@ -563,15 +563,15 @@ def main():
         unsafe_allow_html=True,
     )
 
-    # Initialize chat history
+    # 채팅 기록 초기화
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "agentSessionId" not in st.session_state:
         st.session_state["agentSessionId"] = agentSessionId if agentSessionId else str(uuid.uuid4())
 
-    # Display chat messages from history on app rerun
+    # 앱을 다시 실행할 때 기록의 채팅 메시지 표시
     messages_to_show = st.session_state.messages[:]
-    # If waiting for assistant, don't show the last user message here (it will be shown in pending section)
+    # 어시스턴트 응답을 기다리는 중이면 마지막 사용자 메시지는 대기 섹션에 표시되므로 여기에서 생략
     if st.session_state.get("pending_assistant", False) and messages_to_show and messages_to_show[-1]["role"] == "user":
         messages_to_show = messages_to_show[:-1]
     for message in messages_to_show:
@@ -597,7 +597,7 @@ def main():
                         unsafe_allow_html=True,
                     )
 
-    # Accept user input only if not waiting for assistant
+    # 어시스턴트 응답 대기 중이 아닐 때만 사용자 입력 허용
     if "pending_assistant" not in st.session_state:
         st.session_state["pending_assistant"] = False
 
@@ -608,7 +608,7 @@ def main():
             st.session_state["pending_assistant"] = True
             st.rerun()
 
-    # If waiting for assistant and last message is from user, process response
+    # 어시스턴트 응답을 기다리고 있고 마지막 메시지가 사용자 메시지이면 응답 처리
     if (
         st.session_state["pending_assistant"]
         and st.session_state.messages
@@ -628,7 +628,7 @@ def main():
             accumulated_response = ""
 
             try:
-                # Setup streaming client
+                # 스트리밍 클라이언트 설정
                 session_id = st.session_state.get("agentSessionId")
                 context = build_context(st.session_state.messages, CONTEXT_WINDOW)
                 payload = json.dumps({"prompt": context})
@@ -637,13 +637,13 @@ def main():
 
                 streaming_client = StreamingHttpBedrockAgentCoreClient(region)
 
-                # Show initial thinking state with pulsing animation
+                # 맥동 애니메이션과 함께 초기 처리 상태 표시
                 message_placeholder.markdown(
                     '<span class="thinking-bubble">🤖 💭 Bedrock Agentcore is thinking...</span>',
                     unsafe_allow_html=True,
                 )
 
-                # Stream the response with animations
+                # 애니메이션과 함께 응답 스트리밍
                 chunk_count = 0
                 formatted_response = ""
 
@@ -654,21 +654,21 @@ def main():
                     bearer_token=bearer_token,
                     endpoint_name=qualifier,
                 ):
-                    if chunk.strip():  # Only process non-empty chunks
+                    if chunk.strip():  # 비어 있지 않은 청크만 처리
                         accumulated_response += chunk
                         chunk_count += 1
 
-                        # Check if we have a complete response with End marker (quoted version)
+                        # 따옴표로 묶인 End 마커가 있는 완전한 응답인지 확인
                         if '"End agent execution"' in accumulated_response:
-                            # Show processing state
+                            # 처리 상태 표시
                             message_placeholder.markdown(
                                 '<span class="thinking-bubble">🤖 🔄 Processing response...</span>',
                                 unsafe_allow_html=True,
                             )
 
-                            # Parse the JSON and extract the formatted response
+                            # JSON을 파싱하고 형식이 적용된 응답 추출
                             try:
-                                # Find the JSON part between quoted Begin and End markers
+                                # 따옴표로 묶인 Begin과 End 마커 사이의 JSON 부분 찾기
                                 begin_marker = '"Begin agent execution"'
                                 end_marker = '"End agent execution"'
 
@@ -676,14 +676,14 @@ def main():
                                 end_pos = accumulated_response.find(end_marker)
 
                                 if begin_pos != -1 and end_pos != -1:
-                                    # Extract everything between the markers
+                                    # 마커 사이의 모든 내용 추출
                                     json_part = accumulated_response[begin_pos + len(begin_marker) : end_pos].strip()
 
-                                    # The JSON should start immediately after the Begin marker
+                                    # JSON은 Begin 마커 바로 다음에서 시작
                                     json_start = json_part.find('{"role":')
                                     if json_start != -1:
                                         json_str = json_part[json_start:]
-                                        # Find the end of the JSON object by counting braces
+                                        # 중괄호 수를 세어 JSON 객체의 끝 찾기
                                         brace_count = 0
                                         json_end = -1
                                         for i, char in enumerate(json_str):
@@ -697,42 +697,42 @@ def main():
 
                                         if json_end != -1:
                                             json_str = json_str[:json_end]
-                                            logger.info(f"Extracted JSON: {json_str}")  # Debug print
+                                            logger.info(f"Extracted JSON: {json_str}")  # 디버그 출력
                                             response_data = json.loads(json_str)
 
-                                            # Extract text from the JSON structure
+                                            # JSON 구조에서 텍스트 추출
                                             if (
                                                 "content" in response_data
                                                 and len(response_data["content"]) > 0
                                                 and "text" in response_data["content"][0]
                                             ):
                                                 formatted_response = response_data["content"][0]["text"]
-                                                logger.info(f"Extracted text: {formatted_response}")  # Debug print
+                                                logger.info(f"Extracted text: {formatted_response}")  # 디버그 출력
 
                             except (json.JSONDecodeError, KeyError, IndexError) as e:
                                 logger.info(f"JSON parsing error: {e}")
                                 logger.info(f"Accumulated response: {accumulated_response}")
-                                # Fallback to show full response for debugging
+                                # 디버깅을 위해 전체 응답을 표시하는 대체 처리
                                 formatted_response = accumulated_response
                             break
 
-                        # Display streaming text for non-JSON responses or while accumulating
+                        # JSON이 아닌 응답 또는 누적 중인 응답의 스트리밍 텍스트 표시
                         else:
-                            # Add typing cursor effect during streaming
+                            # 스트리밍 중 입력 커서 효과 추가
                             streaming_text = accumulated_response
-                            if chunk_count % 3 == 0:  # Add cursor every few chunks for effect
+                            if chunk_count % 3 == 0:  # 효과를 위해 몇 개 청크마다 커서 추가
                                 streaming_text += ""
 
-                            # Update display with streaming animation (make URLs clickable)
+                            # URL을 클릭 가능하게 만들고 스트리밍 애니메이션으로 화면 갱신
                             clickable_streaming_text = make_urls_clickable(streaming_text)
                             message_placeholder.markdown(
                                 f'<div class="assistant-bubble streaming typing-cursor">🤖 {clickable_streaming_text}</div>',
                                 unsafe_allow_html=True,
                             )
-                            # Small delay to make streaming visible and smooth
+                            # 스트리밍이 눈에 보이고 부드럽게 진행되도록 짧게 지연
                             time.sleep(0.02)
 
-                # Final response with timing (remove streaming classes)
+                # 스트리밍 클래스를 제거하고 소요 시간과 함께 최종 응답 표시
                 elapsed = time.time() - start_time
                 answer = (
                     formatted_response
@@ -754,7 +754,7 @@ def main():
                 answer = error_msg
                 elapsed = time.time() - start_time
 
-            # Add final response to session state
+            # 최종 응답을 세션 상태에 추가
             final_answer = answer if "answer" in locals() else accumulated_response
             st.session_state.messages.append({"role": "assistant", "content": final_answer, "elapsed": elapsed})
             st.session_state["pending_assistant"] = False

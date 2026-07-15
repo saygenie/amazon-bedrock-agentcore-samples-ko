@@ -1,19 +1,19 @@
 """
-Lab 03B: Fine-Grained Access Control Resource Cleanup
+Lab 03B: 세분화된 액세스 제어 리소스 정리
 
-Removes Lab 3B-specific resources while preserving Lab 3A base resources.
+Lab 3A 기본 리소스는 보존하면서 Lab 3B 전용 리소스를 제거합니다.
 
-AWS RESOURCES DELETED:
-- AgentCore Gateway with JWT auth (interceptor-gateway-jwt-*)
-- Gateway targets
-- Lambda interceptor function
-- Lambda execution role
+삭제하는 AWS 리소스:
+- JWT 인증을 사용하는 AgentCore Gateway(interceptor-gateway-jwt-*)
+- Gateway 대상
+- Lambda 인터셉터 함수
+- Lambda 실행 역할
 
-AWS RESOURCES PRESERVED:
-- AgentCore Runtime (reused from Lab 3A)
-- Cognito User Pool and users
+보존하는 AWS 리소스:
+- AgentCore Runtime(Lab 3A에서 재사용)
+- Cognito User Pool 및 사용자
 - OAuth2 Credential Provider
-- Parameter Store entries
+- Parameter Store 항목
 """
 
 import boto3
@@ -22,13 +22,13 @@ import time
 
 def cleanup_lab_03b(region_name: str = "us-east-1", verbose: bool = True) -> None:
     """
-    Clean up Lab 3B resources (JWT Gateway and Lambda Interceptor).
+    Lab 3B 리소스(JWT Gateway 및 Lambda 인터셉터)를 정리합니다.
 
-    Preserves Lab 3A resources (Runtime, Cognito, OAuth2 provider).
+    Lab 3A 리소스(Runtime, Cognito, OAuth2 provider)는 보존합니다.
 
-    Args:
-        region_name: AWS region
-        verbose: Print detailed status
+    인자:
+        region_name: AWS 리전
+        verbose: 상세 상태 출력 여부
     """
     print("🧹 Cleaning up Lab 3B resources...\n")
     print("=" * 70)
@@ -38,7 +38,7 @@ def cleanup_lab_03b(region_name: str = "us-east-1", verbose: bool = True) -> Non
     iam_client = boto3.client("iam")
     ssm_client = boto3.client("ssm", region_name=region_name)  # noqa: F841
 
-    # 1. Delete Gateway with JWT auth
+    # 1. JWT 인증을 사용하는 Gateway 삭제
     print("[1/3] Deleting Lab 3B Gateway...")
     try:
         gateways = agentcore_client.list_gateways()
@@ -49,14 +49,14 @@ def cleanup_lab_03b(region_name: str = "us-east-1", verbose: bool = True) -> Non
 
                 print(f"  Found gateway: {gateway_name}")
 
-                # Delete targets first
+                # 대상을 먼저 삭제
                 targets = agentcore_client.list_gateway_targets(gatewayIdentifier=gateway_id)
                 for target in targets.get("items", []):
                     target_id = target["targetId"]
                     agentcore_client.delete_gateway_target(gatewayIdentifier=gateway_id, targetId=target_id)
                     print(f"    ✓ Deleted target: {target_id}")
 
-                # Wait for targets to be deleted
+                # 대상 삭제 대기
                 if targets.get("items"):
                     print("  ⏳ Waiting for targets to be deleted...")
                     for _ in range(30):
@@ -65,7 +65,7 @@ def cleanup_lab_03b(region_name: str = "us-east-1", verbose: bool = True) -> Non
                         if len(check.get("items", [])) == 0:
                             break
 
-                # Delete gateway
+                # Gateway 삭제
                 agentcore_client.delete_gateway(gatewayIdentifier=gateway_id)
                 print(f"  ✓ Gateway deleted: {gateway_name}")
                 break
@@ -74,7 +74,7 @@ def cleanup_lab_03b(region_name: str = "us-east-1", verbose: bool = True) -> Non
     except Exception as e:
         print(f"  ⚠ Gateway cleanup error: {e}")
 
-    # 2. Delete Lambda interceptor
+    # 2. Lambda 인터셉터 삭제
     print("[2/3] Deleting Lambda interceptor...")
     try:
         function_name = "aiml301_sre_agentcore-interceptor-request"
@@ -86,22 +86,22 @@ def cleanup_lab_03b(region_name: str = "us-east-1", verbose: bool = True) -> Non
     except Exception as e:
         print(f"  ⚠ Lambda cleanup error: {e}")
 
-    # 3. Delete Lambda execution role
+    # 3. Lambda 실행 역할 삭제
     print("[3/3] Deleting Lambda execution role...")
     try:
         role_name = "aiml301_sre_agentcore-interceptor-role"
         try:
-            # Detach policies
+            # 정책 분리
             policies = iam_client.list_attached_role_policies(RoleName=role_name)
             for policy in policies.get("AttachedPolicies", []):
                 iam_client.detach_role_policy(RoleName=role_name, PolicyArn=policy["PolicyArn"])
 
-            # Delete inline policies
+            # 인라인 정책 삭제
             inline = iam_client.list_role_policies(RoleName=role_name)
             for policy_name in inline.get("PolicyNames", []):
                 iam_client.delete_role_policy(RoleName=role_name, PolicyName=policy_name)
 
-            # Delete role
+            # 역할 삭제
             iam_client.delete_role(RoleName=role_name)
             print(f"  ✓ IAM role deleted: {role_name}")
         except iam_client.exceptions.NoSuchEntityException:

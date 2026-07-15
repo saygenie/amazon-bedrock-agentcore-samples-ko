@@ -1,14 +1,14 @@
 """
-ShortTermMemoryHook for AgentCore Memory Integration
+AgentCore Memory 통합용 ShortTermMemoryHook
 
-This module provides a reusable hook provider that automatically manages
-short-term memory for Strands agents using Amazon Bedrock AgentCore Memory.
+이 모듈은 Amazon Bedrock AgentCore Memory를 사용해 Strands 에이전트의
+단기 Memory를 자동 관리하는 재사용 가능한 hook provider를 제공합니다.
 
-Features:
-- Automatic conversation history loading on agent initialization
-- Automatic message persistence on message addition
-- Support for application context injection
-- Error handling and logging
+기능:
+- 에이전트 초기화 시 대화 기록 자동 로드
+- 메시지 추가 시 자동 저장
+- 애플리케이션 context 삽입 지원
+- 오류 처리 및 로깅
 """
 
 import logging
@@ -22,31 +22,31 @@ from strands.hooks import (
 )
 from bedrock_agentcore.memory import MemoryClient
 
-# Configure logger
+# logger 구성
 logger = logging.getLogger(__name__)
 
 
 class ShortTermMemoryHook(HookProvider):
     """
-    Automatic memory management hook for Strands agents.
+    Strands 에이전트용 자동 Memory 관리 hook입니다.
 
-    This hook provider integrates Amazon Bedrock AgentCore Memory with Strands agents,
-    providing seamless conversation history loading and persistence without manual intervention.
+    Amazon Bedrock AgentCore Memory를 Strands 에이전트와 통합하여 수동 개입 없이
+    대화 기록을 불러오고 저장합니다.
 
-    Key features:
-    - Loads recent conversation turns on agent initialization
-    - Automatically saves messages after each agent invocation
-    - Extracts application-specific information for context injection
-    - Handles memory lookups and error cases gracefully
+    주요 기능:
+    - 에이전트 초기화 시 최근 대화 turn 로드
+    - 각 에이전트 호출 후 메시지 자동 저장
+    - context 삽입을 위한 애플리케이션별 정보 추출
+    - Memory 조회 및 오류 상황 처리
 
-    Args:
-        memory_client: MemoryClient instance for AgentCore Memory operations
-        memory_id: ID of the AgentCore Memory resource
-        context_keywords: Optional list of keywords to identify application context
-        max_context_turns: Maximum number of recent turns to load (default: 5)
-        branch_name: Memory branch name to use (default: "main")
+    인자:
+        memory_client: AgentCore Memory 작업용 MemoryClient 인스턴스
+        memory_id: AgentCore Memory 리소스 ID
+        context_keywords: 애플리케이션 context 식별용 선택적 키워드 목록
+        max_context_turns: 불러올 최근 turn의 최대 개수(기본값: 5)
+        branch_name: 사용할 Memory branch 이름(기본값: "main")
 
-    Example:
+    예:
         >>> memory_client = MemoryClient(region_name='us-west-2')
         >>> memory_hook = ShortTermMemoryHook(memory_client, memory_id="xyz-123")
         >>> agent = Agent(
@@ -64,13 +64,13 @@ class ShortTermMemoryHook(HookProvider):
         max_context_turns: int = 5,
         branch_name: str = "main",
     ):
-        """Initialize the ShortTermMemoryHook."""
+        """ShortTermMemoryHook을 초기화합니다."""
         self.memory_client = memory_client
         self.memory_id = memory_id
         self.max_context_turns = max_context_turns
         self.branch_name = branch_name
 
-        # Default keywords for identifying application context
+        # 애플리케이션 context 식별용 기본 키워드
         self.context_keywords = context_keywords or [
             "Stack Name:",
             "EC2 Instance:",
@@ -90,17 +90,16 @@ class ShortTermMemoryHook(HookProvider):
 
     def on_agent_initialized(self, event: AgentInitializedEvent) -> None:
         """
-        Load recent conversation history when agent initializes.
+        에이전트 초기화 시 최근 대화 기록을 불러옵니다.
 
-        This method is called when a Strands agent is initialized. It retrieves
-        recent conversation turns from memory and injects them into the agent's
-        system prompt as context, prioritizing application-specific information.
+        Strands 에이전트 초기화 시 호출됩니다. Memory에서 최근 대화 turn을 가져와
+        애플리케이션별 정보를 우선하는 context로 에이전트의 system prompt에 삽입합니다.
 
-        Args:
-            event: AgentInitializedEvent containing the agent instance
+        인자:
+            event: 에이전트 인스턴스가 포함된 AgentInitializedEvent
         """
         try:
-            # Extract actor and session identifiers from agent state
+            # 에이전트 상태에서 actor 및 세션 식별자 추출
             actor_id = event.agent.state.get("actor_id")
             session_id = event.agent.state.get("session_id")
 
@@ -113,7 +112,7 @@ class ShortTermMemoryHook(HookProvider):
 
             logger.debug(f"Loading memory for actor_id={actor_id}, session_id={session_id}")
 
-            # Retrieve recent conversation turns from memory
+            # Memory에서 최근 대화 turn 가져오기
             recent_turns = self.memory_client.get_last_k_turns(
                 memory_id=self.memory_id,
                 actor_id=actor_id,
@@ -139,17 +138,16 @@ class ShortTermMemoryHook(HookProvider):
 
     def on_message_added(self, event: MessageAddedEvent) -> None:
         """
-        Automatically persist messages to memory.
+        메시지를 Memory에 자동 저장합니다.
 
-        This method is called whenever a new message is added to the agent's
-        message history (user input or agent response). The message is persisted
-        to AgentCore Memory for later retrieval.
+        에이전트 메시지 기록에 사용자 입력이나 에이전트 응답이 추가될 때마다 호출됩니다.
+        나중에 가져올 수 있도록 메시지를 AgentCore Memory에 저장합니다.
 
-        Args:
-            event: MessageAddedEvent containing the agent and new message
+        인자:
+            event: 에이전트와 새 메시지가 포함된 MessageAddedEvent
         """
         try:
-            # Extract agent state
+            # 에이전트 상태 추출
             actor_id = event.agent.state.get("actor_id")
             session_id = event.agent.state.get("session_id")
 
@@ -157,7 +155,7 @@ class ShortTermMemoryHook(HookProvider):
                 logger.warning("Cannot save message: Missing actor_id or session_id in agent state")
                 return
 
-            # Get the most recent message
+            # 가장 최근 메시지 가져오기
             messages = event.agent.messages
             if not messages:
                 logger.warning("No messages found to persist")
@@ -166,19 +164,19 @@ class ShortTermMemoryHook(HookProvider):
             latest_message = messages[-1]
             message_role = latest_message.get("role", "unknown")
 
-            # Extract text content from message
+            # 메시지에서 텍스트 콘텐츠 추출
             message_content = latest_message.get("content", [])
             if isinstance(message_content, list) and message_content:
                 message_text = message_content[0].get("text", "")
             else:
                 message_text = str(message_content)
 
-            # Skip empty messages (don't persist to memory if text is empty)
+            # 빈 메시지는 건너뜀(텍스트가 비어 있으면 Memory에 저장하지 않음)
             if not message_text or not message_text.strip():
                 logger.debug(f"Skipping empty message (role={message_role}) - no content to persist")
                 return
 
-            # Save to memory
+            # Memory에 저장
             self.memory_client.create_event(
                 memory_id=self.memory_id,
                 actor_id=actor_id,
@@ -198,13 +196,13 @@ class ShortTermMemoryHook(HookProvider):
 
     def register_hooks(self, registry: HookRegistry) -> None:
         """
-        Register hooks with the Strands agent hook registry.
+        Strands 에이전트 hook 레지스트리에 hook을 등록합니다.
 
-        This method is called by the Strands framework to register this hook provider's
-        callbacks with the agent's event system.
+        Strands 프레임워크가 이 hook provider의 콜백을 에이전트 이벤트 시스템에
+        등록할 때 호출합니다.
 
-        Args:
-            registry: HookRegistry instance to register callbacks with
+        인자:
+            registry: 콜백을 등록할 HookRegistry 인스턴스
         """
         registry.add_callback(MessageAddedEvent, self.on_message_added)
         registry.add_callback(AgentInitializedEvent, self.on_agent_initialized)
@@ -212,27 +210,27 @@ class ShortTermMemoryHook(HookProvider):
 
     def _build_context_from_turns(self, turns: List[List[Dict[str, Any]]]) -> str:
         """
-        Build context string from conversation turns.
+        대화 turn에서 context 문자열을 생성합니다.
 
-        Extracts application-specific information and recent conversation history,
-        prioritizing structured information (application details) for better context.
+        더 나은 context를 위해 구조화된 애플리케이션 세부 정보를 우선하여
+        애플리케이션별 정보와 최근 대화 기록을 추출합니다.
 
-        Args:
-            turns: List of conversation turns, each containing a list of messages
+        인자:
+            turns: 각각 메시지 목록이 포함된 대화 turn 목록
 
-        Returns:
-            Formatted context string for injection into system prompt
+        반환:
+            system prompt에 삽입할 형식화된 context 문자열
         """
         context_messages = []
         application_info = []
 
-        # Process each turn and extract information
+        # 각 turn을 처리하고 정보 추출
         for turn in turns:
             for message in turn:
                 role = message.get("role", "").lower()
                 content = message.get("content", {})
 
-                # Handle different content formats
+                # 다양한 콘텐츠 형식 처리
                 if isinstance(content, dict):
                     text = content.get("text", "")
                 elif isinstance(content, str):
@@ -240,7 +238,7 @@ class ShortTermMemoryHook(HookProvider):
                 else:
                     text = str(content)
 
-                # Extract application information based on keywords
+                # 키워드를 기반으로 애플리케이션 정보 추출
                 is_application_info = any(keyword in text for keyword in self.context_keywords)
 
                 if is_application_info and role == "assistant":
@@ -248,7 +246,7 @@ class ShortTermMemoryHook(HookProvider):
                 else:
                     context_messages.append(f"{role.title()}: {text}")
 
-        # Build final context with application info prioritized
+        # 애플리케이션 정보를 우선하여 최종 context 구성
         context_parts = []
 
         if application_info:
@@ -258,7 +256,7 @@ class ShortTermMemoryHook(HookProvider):
         if context_messages:
             if application_info:
                 context_parts.append("\nRECENT CONVERSATION:")
-            # Include only recent conversation messages (last 6)
+            # 최근 대화 메시지만 포함(마지막 6개)
             context_parts.extend(context_messages[-6:])
 
         return "\n".join(context_parts)

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build script for agentcore-runtime-gw-mcp-toolkit
+# agentcore-runtime-gw-mcp-toolkit 빌드 스크립트
 
 echo "Building package..."
 python -m build

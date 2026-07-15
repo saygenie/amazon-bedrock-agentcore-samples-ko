@@ -1,54 +1,54 @@
-# AWS Agent Registry with OAuth Authentication
+# OAuth 인증을 사용하는 AWS Agent Registry
 
-## Overview
+## 개요
 
-AWS Agent Registry is a fully managed discovery service that provides a centralized catalog for organizing, curating, and discovering AI agents, MCP servers, agent skills, and custom resources across your organization. Publishers register their resources into a searchable registry, curators control what gets approved, and consumers discover the right tools and agents using semantic and keyword search.
+AWS Agent Registry는 조직 전반의 AI 에이전트, MCP 서버, Agent Skills 및 사용자 지정 리소스를 구성하고 선별하며 검색할 수 있는 중앙 집중식 카탈로그를 제공하는 완전관리형 검색 서비스입니다. 게시자는 검색 가능한 레지스트리에 리소스를 등록하고, 큐레이터는 승인 대상을 관리하며, 소비자는 시맨틱 검색과 키워드 검색을 사용하여 적합한 도구와 에이전트를 찾습니다.
 
-As organizations scale their use of AI agents and tools, discovering the right resource becomes increasingly difficult. Teams build MCP servers, deploy agents, and create specialized tools — but without a central catalog, these resources remain siloed and hard to find. The Agent Registry solves this by providing centralized discovery, governance through approval workflows, flexible resource types, hybrid search (semantic + keyword), and flexible authorization.
+조직에서 AI 에이전트와 도구의 사용이 확대될수록 적합한 리소스를 찾기가 점점 어려워집니다. 팀에서는 MCP 서버를 구축하고 에이전트를 배포하며 전문 도구를 만들지만, 중앙 카탈로그가 없으면 이러한 리소스는 서로 단절되어 찾기 어렵습니다. Agent Registry는 중앙 집중식 검색, 승인 워크플로를 통한 거버넌스, 유연한 리소스 유형, 하이브리드 검색(시맨틱 + 키워드), 유연한 권한 부여를 제공하여 이 문제를 해결합니다.
 
-### OAuth (JWT) Authorization for the Agent Registry
+### Agent Registry의 OAuth(JWT) 권한 부여
 
-The Agent Registry supports two authorization types for search operations: **IAM-based** (using AWS SigV4 signing) and **JWT-based** (using tokens from an OAuth 2.0 identity provider). JWT authorization lets consumers search the registry using tokens from providers like Amazon Cognito, Okta, Microsoft Azure AD, Auth0, or any OAuth 2.0-compatible provider. This is useful when you want to make the registry accessible to a broad set of users through existing corporate credentials, without provisioning individual IAM access.
+Agent Registry는 검색 작업에 대해 **IAM 기반**(AWS SigV4 서명 사용)과 **JWT 기반**(OAuth 2.0 ID 공급자의 토큰 사용)이라는 두 가지 권한 부여 유형을 지원합니다. JWT 권한 부여를 사용하면 소비자는 Amazon Cognito, Okta, Microsoft Azure AD, Auth0 또는 OAuth 2.0 호환 공급자의 토큰으로 레지스트리를 검색할 수 있습니다. 개별 IAM 액세스를 프로비저닝하지 않고 기존 기업 자격 증명을 통해 다양한 사용자가 레지스트리에 액세스하도록 하려는 경우에 유용합니다.
 
-To configure JWT authorization, you provide:
+JWT 권한 부여를 구성하려면 다음 정보를 제공합니다.
 
-- **Discovery URL** — The OpenID Connect (OIDC) discovery URL from your identity provider. The Agent Registry uses this to fetch login, token, and verification settings.
-- **Allowed clients** — Permitted values for the `client_id` claim in the JWT token. Only tokens issued to allowed clients can access the registry.
+- **검색 URL**: ID 공급자의 OpenID Connect(OIDC) 검색 URL입니다. Agent Registry는 이 URL을 사용하여 로그인, 토큰 및 검증 설정을 가져옵니다.
+- **허용된 클라이언트**: JWT 토큰의 `client_id` 클레임에 허용되는 값입니다. 허용된 클라이언트에 발급된 토큰만 레지스트리에 액세스할 수 있습니다.
 
-The authorization type only affects search operations. All management operations (create, update, delete) always require IAM authorization, regardless of the registry's authorization setting.
+권한 부여 유형은 검색 작업에만 영향을 줍니다. 모든 관리 작업(생성, 업데이트, 삭제)에는 레지스트리의 권한 부여 설정과 관계없이 항상 IAM 권한 부여가 필요합니다.
 
-This tutorial demonstrates how to set up an Agent Registry with OAuth authentication using **Amazon Cognito** as the identity provider. It walks through the full workflow across three personas:
+이 튜토리얼에서는 **Amazon Cognito**를 ID 공급자로 사용하여 OAuth 인증이 적용된 Agent Registry를 설정하는 방법을 보여 줍니다. 다음 세 가지 페르소나의 전체 워크플로를 살펴봅니다.
 
-- **Administrator**: Configure Cognito as the OAuth provider and create an Agent Registry with JWT-based authentication.
-- **Publisher**: Register records in the Agent Registry and submit them for approval.
-- **Consumer**: Authenticate via Cognito to obtain a JWT token, then perform semantic search against the Agent Registry using the token.
+- **관리자**: Cognito를 OAuth 공급자로 구성하고 JWT 기반 인증을 사용하는 Agent Registry를 생성합니다.
+- **게시자**: Agent Registry에 레코드를 등록하고 승인을 요청합니다.
+- **소비자**: Cognito를 통해 인증하여 JWT 토큰을 받은 다음, 이 토큰을 사용해 Agent Registry에서 시맨틱 검색을 수행합니다.
 
-### Architecture Flow
+### 아키텍처 흐름
 
-![Architecture Flow](images/registry-end-to-end-oauth.png)
+![아키텍처 흐름](images/registry-end-to-end-oauth.png)
 
-### Tutorial Details
+### 튜토리얼 세부 정보
 
-| Information          | Details                                                                                  |
+| 정보                  | 세부 정보                                                                                 |
 |:---------------------|:-----------------------------------------------------------------------------------------|
-| Tutorial type        | Interactive                                                                               |
-| AgentCore components | AWS Agent Registry, Amazon Cognito                                                       |
-| Auth type            | IAM SigV4 (management operations), OAuth JWT (search operations)                         |
-| Identity provider    | Amazon Cognito                                                                           |
-| Tutorial components  | Cognito setup, registry creation with OAuth, record registration, approval workflow, authenticated search, negative auth tests |
-| Example complexity   | Intermediate                                                                             |
-| SDK used             | boto3, requests                                                                          |
+| 튜토리얼 유형         | 대화형                                                                                    |
+| AgentCore 구성 요소   | AWS Agent Registry, Amazon Cognito                                                       |
+| 인증 유형             | IAM SigV4(관리 작업), OAuth JWT(검색 작업)                                                |
+| ID 공급자             | Amazon Cognito                                                                           |
+| 튜토리얼 구성 요소    | Cognito 설정, OAuth를 사용하는 레지스트리 생성, 레코드 등록, 승인 워크플로, 인증된 검색, 인증 거부 테스트 |
+| 예제 난이도           | 중급                                                                                     |
+| 사용 SDK              | boto3, requests                                                                          |
 
-### What This Tutorial Covers
+### 이 튜토리얼에서 다루는 내용
 
-1. **Configure OAuth Provider** — Create a Cognito User Pool, App Client, and test user for JWT token issuance
-2. **Create Registry with OAuth** — Create an Agent Registry with `CUSTOM_JWT` authorizer configuration, linking it to the Cognito discovery URL and allowed client IDs
-3. **Register and Approve Records** — As a publisher, create an MCP record in the registry and walk through the approval workflow (DRAFT → PENDING_APPROVAL → APPROVED)
-4. **Authenticate** — Obtain a JWT access token from Cognito using the `USER_PASSWORD_AUTH` flow
-5. **Search with OAuth Token** — As a consumer, perform semantic search against the registry using the Bearer token
-6. **Verify Auth Enforcement** — Negative tests to confirm the registry rejects requests without valid tokens
-7. **Cleanup** — Delete registry records, the registry, and Cognito resources
+1. **OAuth 공급자 구성**: JWT 토큰 발급을 위한 Cognito 사용자 풀, 앱 클라이언트 및 테스트 사용자를 생성합니다.
+2. **OAuth를 사용하는 레지스트리 생성**: Cognito 검색 URL 및 허용된 클라이언트 ID와 연결된 `CUSTOM_JWT` 권한 부여자 구성으로 Agent Registry를 생성합니다.
+3. **레코드 등록 및 승인**: 게시자 역할로 레지스트리에 MCP 레코드를 생성하고 승인 워크플로(DRAFT → PENDING_APPROVAL → APPROVED)를 진행합니다.
+4. **인증**: `USER_PASSWORD_AUTH` 흐름을 사용하여 Cognito에서 JWT 액세스 토큰을 받습니다.
+5. **OAuth 토큰으로 검색**: 소비자 역할로 Bearer 토큰을 사용하여 레지스트리에서 시맨틱 검색을 수행합니다.
+6. **인증 적용 확인**: 유효한 토큰이 없는 요청을 레지스트리가 거부하는지 인증 거부 테스트로 확인합니다.
+7. **정리**: 레지스트리 레코드, 레지스트리 및 Cognito 리소스를 삭제합니다.
 
-## Tutorial
+## 튜토리얼
 
-- [AWS Agent Registry with OAuth Authentication](registry-end-to-end-oauth.ipynb)
+- [OAuth 인증을 사용하는 AWS Agent Registry](registry-end-to-end-oauth.ipynb)

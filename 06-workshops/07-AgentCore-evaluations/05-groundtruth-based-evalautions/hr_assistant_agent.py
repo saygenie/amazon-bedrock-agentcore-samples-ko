@@ -1,12 +1,12 @@
 """
-HR Assistant Agent: Strands agent deployed on Bedrock AgentCore Runtime.
+ HR Assistant Agent: Bedrock AgentCore Runtime에 배포되는 Strands 에이전트입니다.
 
-Tools (deterministic / mock data for reproducible evaluations):
-  get_pto_balance        - remaining PTO days for an employee
-  submit_pto_request     - request time off
-  lookup_hr_policy       - company policy documents
-  get_benefits_summary   - health, dental, vision, 401k, life insurance details
-  get_pay_stub           - pay stub for a given period
+ 도구(재현 가능한 평가를 위한 결정론적 모의 데이터):
+   get_pto_balance        - 직원의 남은 PTO 일수
+   submit_pto_request     - 휴가 요청
+   lookup_hr_policy       - 회사 정책 문서
+   get_benefits_summary   - 건강, 치과, 안과, 401k, 생명 보험 세부 정보
+   get_pay_stub           - 특정 기간의 급여 명세서
 """
 
 import logging
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 app = BedrockAgentCoreApp()
 
 # ---------------------------------------------------------------------------
-# Mock data
+# 모의 데이터
 # ---------------------------------------------------------------------------
 
 _PTO_BALANCES = {
@@ -128,7 +128,7 @@ _PTO_REQUEST_COUNTER = {"n": 0}
 
 
 # ---------------------------------------------------------------------------
-# Strands tools
+# Strands 도구
 # ---------------------------------------------------------------------------
 
 
@@ -246,7 +246,7 @@ def get_pay_stub(employee_id: str, period: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Agent
+# 에이전트
 # ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """You are a helpful HR Assistant for Acme Corp.
@@ -271,13 +271,13 @@ _TOOLS = [
     get_pay_stub,
 ]
 
-# Session cache: session_id -> Agent (preserves conversation history across turns)
+# 세션 캐시: session_id -> Agent(턴 간 대화 기록 유지)
 _SESSION_AGENTS: dict[str, Agent] = {}
 
 
 @app.entrypoint
 async def invoke(payload, context):
-    """Handle an agent invocation from AgentCore Runtime."""
+    """AgentCore Runtime의 에이전트 호출을 처리합니다."""
     prompt = payload.get("prompt", "")
     session_id = context.session_id
     logger.info("Received prompt (session=%s): %s", session_id, prompt[:80])
@@ -294,7 +294,7 @@ async def invoke(payload, context):
         if "data" in event:
             parts.append(str(event["data"]))
     response = "".join(parts)
-    # Strip inline <thinking>...</thinking> blocks so spans contain only the final answer
+    # span에 최종 답변만 포함되도록 인라인 <thinking>...</thinking> 블록 제거
     response = re.sub(r"<thinking>.*?</thinking>", "", response, flags=re.DOTALL).strip()
     return response
 

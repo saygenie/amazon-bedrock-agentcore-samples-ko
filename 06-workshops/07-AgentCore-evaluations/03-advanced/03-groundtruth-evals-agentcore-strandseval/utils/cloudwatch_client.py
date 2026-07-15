@@ -1,4 +1,4 @@
-"""Client for querying observability data from CloudWatch Logs."""
+"""CloudWatch Logs의 관찰성 데이터를 쿼리하는 클라이언트입니다."""
 
 import logging
 import time
@@ -13,18 +13,18 @@ from .models import RuntimeLog, SessionInfo, Span, TraceData
 
 
 class CloudWatchQueryBuilder:
-    """Builder for CloudWatch Logs Insights queries."""
+    """CloudWatch Logs Insights 쿼리 빌더입니다."""
 
     @staticmethod
     def build_spans_by_session_query(session_id: str, agent_id: str = None) -> str:
-        """Build query to get all spans for a session from aws/spans log group.
+        """aws/spans 로그 그룹에서 세션의 모든 span을 가져오는 쿼리를 생성합니다.
 
-        Args:
-            session_id: The session ID to filter by
-            agent_id: Optional agent ID to filter by
+        인수:
+            session_id: 필터링 기준이 되는 세션 ID
+            agent_id: 필터링 기준이 되는 선택적 에이전트 ID
 
-        Returns:
-            CloudWatch Logs Insights query string
+        반환값:
+            CloudWatch Logs Insights 쿼리 문자열
         """
         base_filter = f"attributes.session.id = '{session_id}'"
 
@@ -50,13 +50,13 @@ class CloudWatchQueryBuilder:
 
     @staticmethod
     def build_runtime_logs_by_traces_batch(trace_ids: List[str]) -> str:
-        """Build optimized query to get runtime logs for multiple traces in one query.
+        """여러 trace의 Runtime 로그를 한 번에 가져오는 최적화된 쿼리를 생성합니다.
 
-        Args:
-            trace_ids: List of trace IDs to filter by
+        인수:
+            trace_ids: 필터링 기준이 되는 trace ID 목록
 
-        Returns:
-            CloudWatch Logs Insights query string
+        반환값:
+            CloudWatch Logs Insights 쿼리 문자열
         """
         if not trace_ids:
             return ""
@@ -69,13 +69,13 @@ class CloudWatchQueryBuilder:
 
     @staticmethod
     def build_runtime_logs_by_trace_direct(trace_id: str) -> str:
-        """Build query to get runtime logs for a trace.
+        """trace의 Runtime 로그를 가져오는 쿼리를 생성합니다.
 
-        Args:
-            trace_id: The trace ID to filter by
+        인수:
+            trace_id: 필터링 기준이 되는 trace ID
 
-        Returns:
-            CloudWatch Logs Insights query string
+        반환값:
+            CloudWatch Logs Insights 쿼리 문자열
         """
         return f"""fields @timestamp, @message, spanId, traceId, @logStream
         | filter traceId = '{trace_id}'
@@ -83,11 +83,11 @@ class CloudWatchQueryBuilder:
 
     @staticmethod
     def build_discover_sessions_query() -> str:
-        """Build query to discover unique session IDs within a time window.
+        """시간 범위 내의 고유한 세션 ID를 검색하는 쿼리를 생성합니다.
 
-        Returns:
-            CloudWatch Logs Insights query string that returns unique session IDs
-            with span counts and time ranges.
+        반환값:
+            고유한 세션 ID를 span 수 및 시간 범위와 함께 반환하는
+            CloudWatch Logs Insights 쿼리 문자열
         """
         return """fields @timestamp, attributes.session.id as sessionId, traceId
         | filter ispresent(attributes.session.id)
@@ -104,17 +104,17 @@ class CloudWatchQueryBuilder:
         min_score: Optional[float] = None,
         max_score: Optional[float] = None,
     ) -> str:
-        """Build query to find sessions by evaluation score from results log group.
+        """결과 로그 그룹에서 평가 점수로 세션을 찾는 쿼리를 생성합니다.
 
-        Args:
-            evaluator_name: Name of the evaluator (e.g., "Custom.StrandsEvalOfflineTravelEvaluator")
-            min_score: Minimum score threshold (inclusive)
-            max_score: Maximum score threshold (inclusive)
+        인수:
+            evaluator_name: Evaluator 이름(예: "Custom.StrandsEvalOfflineTravelEvaluator")
+            min_score: 최소 점수 임계값(포함)
+            max_score: 최대 점수 임계값(포함)
 
-        Returns:
-            CloudWatch Logs Insights query string
+        반환값:
+            CloudWatch Logs Insights 쿼리 문자열
         """
-        # Build score filter conditions
+        # 점수 필터 조건 생성
         score_filters = []
         if min_score is not None:
             score_filters.append(f"`{evaluator_name}` >= {min_score}")
@@ -143,7 +143,7 @@ class CloudWatchQueryBuilder:
 
 
 class ObservabilityClient:
-    """Client for querying spans and runtime logs from CloudWatch Logs."""
+    """CloudWatch Logs에서 span과 Runtime 로그를 쿼리하는 클라이언트입니다."""
 
     QUERY_TIMEOUT_SECONDS = 60
     POLL_INTERVAL_SECONDS = 2
@@ -155,13 +155,13 @@ class ObservabilityClient:
         agent_id: str = None,
         runtime_suffix: str = "DEFAULT",
     ):
-        """Initialize the ObservabilityClient.
+        """ObservabilityClient를 초기화합니다.
 
-        Args:
-            region_name: AWS region name
-            log_group: CloudWatch log group name for spans/traces
-            agent_id: Optional agent ID (not used for filtering currently)
-            runtime_suffix: Runtime suffix for log group (default: DEFAULT)
+        인수:
+            region_name: AWS 리전 이름
+            log_group: span/trace용 CloudWatch 로그 그룹 이름
+            agent_id: 선택적 Agent ID(현재 필터링에는 사용하지 않음)
+            runtime_suffix: 로그 그룹의 Runtime 접미사(기본값: DEFAULT)
         """
         self.region = region_name
         self.log_group = log_group
@@ -185,15 +185,15 @@ class ObservabilityClient:
         start_time_ms: int,
         end_time_ms: int,
     ) -> List[Span]:
-        """Query all spans for a session from aws/spans log group.
+        """aws/spans 로그 그룹에서 세션의 모든 span을 쿼리합니다.
 
-        Args:
-            session_id: The session ID to query
-            start_time_ms: Start time in milliseconds since epoch
-            end_time_ms: End time in milliseconds since epoch
+        인수:
+            session_id: 쿼리할 세션 ID
+            start_time_ms: epoch 이후 밀리초 단위의 시작 시간
+            end_time_ms: epoch 이후 밀리초 단위의 종료 시간
 
-        Returns:
-            List of Span objects
+        반환값:
+            Span 객체 목록
         """
         self.logger.info(
             "Querying spans for session: %s from log group: %s",
@@ -221,15 +221,15 @@ class ObservabilityClient:
         start_time_ms: int,
         end_time_ms: int,
     ) -> List[RuntimeLog]:
-        """Query runtime logs for multiple traces from agent-specific log group.
+        """에이전트별 로그 그룹에서 여러 trace의 Runtime 로그를 쿼리합니다.
 
-        Args:
-            trace_ids: List of trace IDs to query
-            start_time_ms: Start time in milliseconds since epoch
-            end_time_ms: End time in milliseconds since epoch
+        인수:
+            trace_ids: 쿼리할 trace ID 목록
+            start_time_ms: epoch 이후 밀리초 단위의 시작 시간
+            end_time_ms: epoch 이후 밀리초 단위의 종료 시간
 
-        Returns:
-            List of RuntimeLog objects
+        반환값:
+            RuntimeLog 객체 목록
         """
         if not trace_ids:
             return []
@@ -261,16 +261,16 @@ class ObservabilityClient:
         end_time_ms: int,
         include_runtime_logs: bool = True,
     ) -> TraceData:
-        """Get complete session data including spans and optionally runtime logs.
+        """span과 선택적 Runtime 로그를 포함한 전체 세션 데이터를 가져옵니다.
 
-        Args:
-            session_id: The session ID to query
-            start_time_ms: Start time in milliseconds since epoch
-            end_time_ms: End time in milliseconds since epoch
-            include_runtime_logs: Whether to fetch runtime logs (default: True)
+        인수:
+            session_id: 쿼리할 세션 ID
+            start_time_ms: epoch 이후 밀리초 단위의 시작 시간
+            end_time_ms: epoch 이후 밀리초 단위의 종료 시간
+            include_runtime_logs: Runtime 로그를 가져올지 여부(기본값: True)
 
-        Returns:
-            TraceData object with spans and runtime logs
+        반환값:
+            span과 Runtime 로그가 포함된 TraceData 객체
         """
         self.logger.info("Fetching session data for: %s", session_id)
 
@@ -302,15 +302,15 @@ class ObservabilityClient:
         end_time_ms: int,
         limit: int = 100,
     ) -> List[SessionInfo]:
-        """Discover unique session IDs within a time window.
+        """시간 범위 내에서 고유한 세션 ID를 검색합니다.
 
-        Args:
-            start_time_ms: Start time in milliseconds since epoch
-            end_time_ms: End time in milliseconds since epoch
-            limit: Maximum number of sessions to return (default: 100)
+        인수:
+            start_time_ms: epoch 이후 밀리초 단위의 시작 시간
+            end_time_ms: epoch 이후 밀리초 단위의 종료 시간
+            limit: 반환할 최대 세션 수(기본값: 100)
 
-        Returns:
-            List of SessionInfo objects with session metadata
+        반환값:
+            세션 메타데이터가 포함된 SessionInfo 객체 목록
         """
         self.logger.info(
             "Discovering sessions in log group: %s from %s to %s",
@@ -348,19 +348,19 @@ class ObservabilityClient:
         max_score: Optional[float] = None,
         limit: int = 100,
     ) -> List[SessionInfo]:
-        """Discover sessions by evaluation score from evaluation results log group.
+        """평가 결과 로그 그룹에서 평가 점수를 기준으로 세션을 검색합니다.
 
-        Args:
-            evaluation_log_group: Log group containing evaluation results
-            evaluator_name: Name of the evaluator to filter by
-            start_time_ms: Start time in milliseconds since epoch
-            end_time_ms: End time in milliseconds since epoch
-            min_score: Minimum score threshold (inclusive)
-            max_score: Maximum score threshold (inclusive)
-            limit: Maximum number of sessions to return (default: 100)
+        인수:
+            evaluation_log_group: 평가 결과가 포함된 로그 그룹
+            evaluator_name: 필터링 기준이 되는 Evaluator 이름
+            start_time_ms: epoch 이후 밀리초 단위의 시작 시간
+            end_time_ms: epoch 이후 밀리초 단위의 종료 시간
+            min_score: 최소 점수 임계값(포함)
+            max_score: 최대 점수 임계값(포함)
+            limit: 반환할 최대 세션 수(기본값: 100)
 
-        Returns:
-            List of SessionInfo objects with session metadata and score info
+        반환값:
+            세션 메타데이터와 점수 정보가 포함된 SessionInfo 객체 목록
         """
         self.logger.info(
             "Discovering sessions by score in log group: %s (evaluator: %s, score range: %s-%s)",
@@ -394,7 +394,7 @@ class ObservabilityClient:
         return sessions
 
     def _parse_session_discovery_result(self, result) -> Optional[SessionInfo]:
-        """Parse CloudWatch result into SessionInfo for time-based discovery."""
+        """시간 기반 검색을 위해 CloudWatch 결과를 SessionInfo로 파싱합니다."""
         fields = result if isinstance(result, list) else result.get("fields", [])
 
         def get_field(field_name: str, default=None):
@@ -412,7 +412,7 @@ class ObservabilityClient:
         first_seen_str = get_field("firstSeen")
         last_seen_str = get_field("lastSeen")
 
-        # Parse counts
+        # 개수 파싱
         try:
             span_count = int(float(span_count_str))
         except (ValueError, TypeError):
@@ -425,13 +425,13 @@ class ObservabilityClient:
             except (ValueError, TypeError):
                 pass
 
-        # Parse timestamps - require valid timestamps, don't fallback to now()
+        # 타임스탬프 파싱 - 유효한 타임스탬프가 필요하며 now()로 대체하지 않음
         first_seen = None
         last_seen = None
         if first_seen_str:
             try:
                 first_seen = datetime.fromisoformat(first_seen_str.replace("Z", "+00:00"))
-                # Ensure timezone-aware
+                # 시간대 정보가 있는지 확인
                 if first_seen.tzinfo is None:
                     first_seen = first_seen.replace(tzinfo=timezone.utc)
             except (ValueError, TypeError) as e:
@@ -439,13 +439,13 @@ class ObservabilityClient:
         if last_seen_str:
             try:
                 last_seen = datetime.fromisoformat(last_seen_str.replace("Z", "+00:00"))
-                # Ensure timezone-aware
+                # 시간대 정보가 있는지 확인
                 if last_seen.tzinfo is None:
                     last_seen = last_seen.replace(tzinfo=timezone.utc)
             except (ValueError, TypeError) as e:
                 self.logger.warning(f"Failed to parse last_seen '{last_seen_str}': {e}")
 
-        # Skip sessions with missing timestamps
+        # 타임스탬프가 누락된 세션 건너뛰기
         if first_seen is None or last_seen is None:
             self.logger.warning(f"Session {session_id} missing timestamps, skipping")
             return None
@@ -459,11 +459,11 @@ class ObservabilityClient:
         )
 
     def _parse_score_discovery_result(self, result) -> Optional[SessionInfo]:
-        """Parse CloudWatch result into SessionInfo for score-based discovery.
+        """점수 기반 검색을 위해 CloudWatch 결과를 SessionInfo로 파싱합니다.
 
-        Note: For score-based discovery, span_count represents the evaluation count
-        (number of evaluations found for this session), not the span count from traces.
-        The actual eval_count is also stored in metadata for clarity.
+        참고: 점수 기반 검색에서 span_count는 trace의 span 수가 아니라
+        평가 수(이 세션에서 발견된 평가 수)를 나타냅니다.
+        명확성을 위해 실제 eval_count도 메타데이터에 저장됩니다.
         """
         fields = result if isinstance(result, list) else result.get("fields", [])
 
@@ -484,7 +484,7 @@ class ObservabilityClient:
         first_eval_str = get_field("firstEval")
         last_eval_str = get_field("lastEval")
 
-        # Parse counts and scores
+        # 개수와 점수 파싱
         try:
             eval_count = int(float(eval_count_str))
         except (ValueError, TypeError):
@@ -505,13 +505,13 @@ class ObservabilityClient:
         except (ValueError, TypeError):
             max_score = 0.0
 
-        # Parse timestamps - require valid timestamps, don't fallback to now()
+        # 타임스탬프 파싱 - 유효한 타임스탬프가 필요하며 now()로 대체하지 않음
         first_seen = None
         last_seen = None
         if first_eval_str:
             try:
                 first_seen = datetime.fromisoformat(first_eval_str.replace("Z", "+00:00"))
-                # Ensure timezone-aware
+                # 시간대 정보가 있는지 확인
                 if first_seen.tzinfo is None:
                     first_seen = first_seen.replace(tzinfo=timezone.utc)
             except (ValueError, TypeError) as e:
@@ -519,20 +519,20 @@ class ObservabilityClient:
         if last_eval_str:
             try:
                 last_seen = datetime.fromisoformat(last_eval_str.replace("Z", "+00:00"))
-                # Ensure timezone-aware
+                # 시간대 정보가 있는지 확인
                 if last_seen.tzinfo is None:
                     last_seen = last_seen.replace(tzinfo=timezone.utc)
             except (ValueError, TypeError) as e:
                 self.logger.warning(f"Failed to parse last_eval '{last_eval_str}': {e}")
 
-        # Skip sessions with missing timestamps
+        # 타임스탬프가 누락된 세션 건너뛰기
         if first_seen is None or last_seen is None:
             self.logger.warning(f"Session {session_id} missing timestamps, skipping")
             return None
 
         return SessionInfo(
             session_id=session_id,
-            span_count=eval_count,  # For score-based: eval_count (see docstring)
+            span_count=eval_count,  # 점수 기반: eval_count(docstring 참조)
             first_seen=first_seen,
             last_seen=last_seen,
             metadata={
@@ -550,20 +550,20 @@ class ObservabilityClient:
         start_time: int,
         end_time: int,
     ) -> list:
-        """Execute a CloudWatch Logs Insights query and wait for results.
+        """CloudWatch Logs Insights 쿼리를 실행하고 결과를 기다립니다.
 
-        Args:
-            query_string: The CloudWatch Logs Insights query
-            log_group_name: The log group to query
-            start_time: Start time in milliseconds since epoch
-            end_time: End time in milliseconds since epoch
+        인수:
+            query_string: CloudWatch Logs Insights 쿼리
+            log_group_name: 쿼리할 로그 그룹
+            start_time: epoch 이후 밀리초 단위의 시작 시간
+            end_time: epoch 이후 밀리초 단위의 종료 시간
 
-        Returns:
-            List of result dictionaries
+        반환값:
+            결과 딕셔너리 목록
 
-        Raises:
-            TimeoutError: If query doesn't complete within timeout
-            Exception: If query fails
+        예외:
+            TimeoutError: 제한 시간 안에 쿼리가 완료되지 않는 경우
+            Exception: 쿼리가 실패하는 경우
         """
         self.logger.debug("Starting CloudWatch query on log group: %s", log_group_name)
 

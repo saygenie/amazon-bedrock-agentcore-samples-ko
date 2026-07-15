@@ -6,7 +6,7 @@ echo "AWS Samples: ECS Agent with OAuth Session Binding"
 echo "=========================================="
 echo ""
 
-# Check prerequisites
+# 사전 요구 사항 확인
 echo "Checking prerequisites..."
 
 if ! command -v uv &> /dev/null; then
@@ -36,7 +36,7 @@ if ! command -v aws &> /dev/null; then
     exit 1
 fi
 
-# Check AWS CLI version (bedrock-agentcore requires v2.27+)
+# AWS CLI 버전 확인(bedrock-agentcore에는 v2.27 이상 필요)
 AWS_CLI_VERSION=$(aws --version 2>&1 | sed -n 's/.*aws-cli\/\([0-9]*\.[0-9]*\).*/\1/p')
 MIN_VERSION="2.27"
 if [ "$(printf '%s\n' "$MIN_VERSION" "$AWS_CLI_VERSION" | sort -V | head -n1)" != "$MIN_VERSION" ]; then
@@ -50,7 +50,7 @@ echo ""
 echo "All prerequisites met!"
 echo ""
 
-# Activate virtual environment
+# 가상 환경 활성화
 echo "Activating Python virtual environment..."
 if [ ! -d ".venv" ]; then
     echo "❌ Error: virtual environment is not installed"
@@ -61,7 +61,7 @@ source .venv/bin/activate || { echo "✗ Failed to activate virtual environment"
 echo "✓ Virtual environment activated"
 echo ""
 
-# Export dependencies
+# 종속성 내보내기
 echo "Exporting dependencies with uv..."
 
 echo "  Exporting backend/runtime/requirements.txt..."
@@ -73,7 +73,7 @@ uv export --format requirements-txt --only-group oauth --no-hashes > backend/ses
 echo "✓ Dependencies exported"
 echo ""
 
-# Deploy with CDK
+# CDK로 배포
 echo "Deploying with CDK..."
 uv run cdk bootstrap --qualifier sample3lo --toolkit-stack-name CDKToolkit-sample3lo
 
@@ -85,4 +85,3 @@ echo ""
 echo "=========================================="
 echo "✓ Deployment complete!"
 echo "=========================================="
-

@@ -1,5 +1,5 @@
 class S2sEvent:
-    # Default configuration values
+# 기본 구성 값
     DEFAULT_INFER_CONFIG = {"maxTokens": 1024, "topP": 0.95, "temperature": 0.7}
 
     DEFAULT_AUDIO_INPUT_CONFIG = {

@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
-"""Auth0 OAuth utilities for AWS AgentCore Registry: create, seed, and search.
+"""AWS AgentCore Registry용 Auth0 OAuth 유틸리티: 생성, 시드 및 검색.
 
-This script provides end-to-end tooling for setting up and populating an
-AWS AgentCore Registry that uses Auth0 CUSTOM_JWT authorization.
+이 스크립트는 Auth0 CUSTOM_JWT 권한 부여를 사용하는 AWS AgentCore Registry를
+설정하고 채우기 위한 엔드 투 엔드 도구를 제공합니다.
 
-Key capabilities:
-    - Authenticate via Auth0 client-credentials OAuth flow
-    - Create a new registry with CUSTOM_JWT authorizer backed by Auth0
-    - Seed the registry with sample agent records (weather, order-status,
-      customer-support, inventory-lookup) and auto-approve them
-    - Search registry records using OAuth bearer tokens
+주요 기능:
+    - Auth0 클라이언트 자격 증명 OAuth 흐름을 통한 인증
+    - Auth0 기반 CUSTOM_JWT 권한 부여자를 사용하여 새 레지스트리 생성
+    - 샘플 에이전트 레코드(weather, order-status, customer-support,
+      inventory-lookup)를 레지스트리에 시드하고 자동 승인
+    - OAuth Bearer 토큰을 사용하여 레지스트리 레코드 검색
 
-Configuration is loaded from a .env file (see .env.example) and requires:
+설정은 .env 파일에서 로드되며(.env.example 참조), 다음 값이 필요합니다.
     AWS_REGION, AWS_ACCOUNT_ID,
     AUTH0_DOMAIN, AUTH0_AUDIENCE.
 
-Usage:
-    # As a module
+사용법:
+    # 모듈로 사용
     from seed_records import create_registry, seed, search, get_token
 
-    # As a script — seeds records into the registry specified by REGISTRY_ID
+    # 스크립트로 사용 - REGISTRY_ID로 지정한 레지스트리에 레코드 시드
     python seed_records.py
 """
 
@@ -53,7 +53,7 @@ def _dp_client():
     return boto3.client("bedrock-agentcore", region_name=REGION)
 
 
-# ── Registry ──────────────────────────────────────────────────────────────────
+# ── Registry 설정 ─────────────────────────────────────────────────────────────
 
 
 def create_registry(
@@ -62,9 +62,9 @@ def create_registry(
     poll_interval=5,
     max_wait=150,
 ):
-    """Create an AgentCore registry with Auth0 CUSTOM_JWT authorizer.
+    """Auth0 CUSTOM_JWT 권한 부여자를 사용하는 AgentCore Registry를 생성합니다.
 
-    Returns dict with registryId, registryArn, and status.
+    registryId, registryArn, status가 포함된 딕셔너리를 반환합니다.
     """
     cp = _cp_client()
     discovery_url = f"https://{AUTH0_DOMAIN}/.well-known/openid-configuration"
@@ -107,7 +107,7 @@ def create_registry(
 
 
 def update_registry_audience_with_mcp_url(registry_id):
-    """Add the MCP endpoint URL to the registry's allowedAudience."""
+    """레지스트리의 allowedAudience에 MCP 엔드포인트 URL을 추가합니다."""
     cp = _cp_client()
     dp = _dp_client()
     registry = cp.get_registry(registryId=registry_id)
@@ -133,7 +133,7 @@ def update_registry_audience_with_mcp_url(registry_id):
     return cp.get_registry(registryId=registry_id)
 
 
-# ── Seed ──────────────────────────────────────────────────────────────────────
+# ── 시드 ──────────────────────────────────────────────────────────────────────
 
 RECORDS = [
     {
@@ -227,9 +227,9 @@ RECORDS = [
 
 
 def seed(registry_id):
-    """Create records, submit for approval, and approve them.
+    """레코드를 생성하고 승인 요청을 제출한 후 승인합니다.
 
-    Returns list of created record dicts.
+    생성된 레코드 딕셔너리의 목록을 반환합니다.
     """
     cp = _cp_client()
     created = []
@@ -269,7 +269,7 @@ def seed(registry_id):
 
 
 def delete_registry(registry_id):
-    """Delete all records in a registry, then delete the registry itself."""
+    """레지스트리의 모든 레코드를 삭제한 후 레지스트리 자체를 삭제합니다."""
     cp = _cp_client()
     records = cp.list_registry_records(registryId=registry_id).get("registryRecords", [])
     for rec in records:

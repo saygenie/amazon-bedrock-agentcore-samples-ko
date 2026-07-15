@@ -1,22 +1,22 @@
-# AgentCore Evaluation Utility
+# AgentCore Evaluations 유틸리티
 
-Python utility for extracting CloudWatch trace data and evaluating agent sessions using the AgentCore Evaluation DataPlane API.
+CloudWatch trace 데이터를 추출하고 AgentCore Evaluation DataPlane API를 사용하여 에이전트 세션을 평가하는 Python 유틸리티입니다.
 
-## Installation
+## 설치
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Configuration
+## 구성
 
-Configure AWS credentials with access to CloudWatch Logs and AgentCore Evaluation API:
+CloudWatch Logs 및 AgentCore Evaluation API에 액세스할 수 있는 AWS 자격 증명을 구성합니다.
 
 ```bash
 aws configure
 ```
 
-Or set environment variables:
+또는 환경 변수를 설정합니다.
 
 ```bash
 export AWS_ACCESS_KEY_ID="your-key"
@@ -24,15 +24,15 @@ export AWS_SECRET_ACCESS_KEY="your-secret"
 export AWS_DEFAULT_REGION="us-east-1"
 ```
 
-## Usage
+## 사용법
 
 ```python
 from utils import EvaluationClient
 
-# Initialize client
+# Client 초기화
 client = EvaluationClient(region="us-east-1")
 
-# Evaluate a session
+# 세션 평가
 results = client.evaluate_session(
     session_id="your-session-id",
     evaluator_ids=["Builtin.Helpfulness"],
@@ -40,15 +40,15 @@ results = client.evaluate_session(
     region="us-east-1"
 )
 
-# Print results
+# 결과 출력
 for result in results.results:
     print(f"{result.evaluator_name}: {result.value} - {result.label}")
     print(f"Explanation: {result.explanation}")
 ```
 
-## Multi-Evaluator Support
+## 여러 evaluator 지원
 
-Evaluate with multiple evaluators in a single call:
+한 번의 호출로 여러 evaluator를 사용해 평가합니다.
 
 ```python
 results = client.evaluate_session(
@@ -59,9 +59,9 @@ results = client.evaluate_session(
 )
 ```
 
-## Auto-Save and Metadata
+## 자동 저장 및 메타데이터
 
-Save input/output files and track experiments:
+입출력 파일을 저장하고 실험을 추적합니다.
 
 ```python
 results = client.evaluate_session(
@@ -69,18 +69,18 @@ results = client.evaluate_session(
     evaluator_ids=["Builtin.Helpfulness"],
     agent_id="agent-id",
     region="us-east-1",
-    auto_save_input=True,   # Saves to evaluation_input/
-    auto_save_output=True,  # Saves to evaluation_output/
-    auto_create_dashboard=True,  # generates data for HTML dashboard available locally
-    metadata={. # pass literally anything
+    auto_save_input=True,   # evaluation_input/에 저장
+    auto_save_output=True,  # evaluation_output/에 저장
+    auto_create_dashboard=True,  # 로컬에서 사용할 수 있는 HTML 대시보드용 데이터 생성
+    metadata={. # 어떤 값이든 그대로 전달
         "experiment": "baseline",
         "description": "Initial evaluation run"
     }
 )
 ```
 
-Input files contain only the spans sent to the API for exact replay. Output files contain complete results with metadata.
+입력 파일에는 정확한 재현을 위해 API로 전송한 span만 포함됩니다. 출력 파일에는 메타데이터를 포함한 전체 결과가 저장됩니다.
 
-## Implementation Details
+## 구현 세부 정보
 
-The utility queries CloudWatch Logs for OpenTelemetry spans and runtime logs, filters relevant data (gen_ai attributes and conversation logs), and submits to the evaluation API. Default lookback window is 7 days with a maximum of 1000 items per evaluation.
+이 유틸리티는 CloudWatch Logs에서 OpenTelemetry span과 runtime 로그를 쿼리하고, 관련 데이터(gen_ai 속성 및 대화 로그)를 필터링한 뒤 평가 API로 전송합니다. 기본 조회 기간은 7일이며, 평가당 최대 항목 수는 1,000개입니다.

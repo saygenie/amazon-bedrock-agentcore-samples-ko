@@ -1,19 +1,19 @@
 """
-Cognito setup helper for AIML301 Workshop
-Sets up authentication infrastructure for Labs 3-5
+AIML301 Workshop용 Cognito 설정 헬퍼
+Lab 3~5의 인증 인프라를 설정합니다.
 
-Authentication Flow:
-- Lab 3: Gateway with Cognito JWT auth for end users
-- Lab 3-5: Gateway-to-Runtime M2M authentication using client credentials
-- Labs 4+: Optional user-based access control for advanced use cases
+인증 흐름:
+- Lab 3: 최종 사용자용 Cognito JWT 인증을 사용하는 Gateway
+- Lab 3~5: client credentials를 사용하는 Gateway-to-Runtime M2M 인증
+- Lab 4 이상: 고급 사용 사례를 위한 선택적 사용자 기반 접근 제어
 
-Cognito Resources Created:
+생성하는 Cognito 리소스:
 1. User Pool: aiml301-UserPool
-2. User Auth Client: aiml301-UserAuthClient (public, for end-user authentication)
-3. M2M Client: aiml301-M2MClient (confidential, for service-to-service auth)
-4. Resource Server: aiml301-agentcore-runtime (with custom scopes)
+2. User Auth Client: aiml301-UserAuthClient(최종 사용자 인증용 public 클라이언트)
+3. M2M Client: aiml301-M2MClient(서비스 간 인증용 confidential 클라이언트)
+4. Resource Server: aiml301-agentcore-runtime(사용자 지정 scope 포함)
 5. User Pool Domain: aiml301-agentcore-{timestamp}
-6. Test User: testuser@aiml301.example.com
+6. 테스트 사용자: testuser@aiml301.example.com
 """
 
 import json
@@ -26,21 +26,21 @@ from lab_helpers.constants import PARAMETER_PATHS
 
 
 class CognitoSetup:
-    """Manages Cognito user pool setup and configuration"""
+    """Cognito User Pool 설정 및 구성을 관리합니다."""
 
     def __init__(self, region: str = AWS_REGION, profile: str = AWS_PROFILE):
-        """Initialize Cognito client and session"""
+        """Cognito 클라이언트와 세션을 초기화합니다."""
         self.session = boto3.Session(profile_name=profile, region_name=region)
         self.cognito = self.session.client("cognito-idp", region_name=region)
         self.region = region
         self.prefix = "aiml301"
         self.test_user_email = f"testuser@{self.prefix}.example.com"
-        self.test_user_password = "<enter password>"  # Meets policy: uppercase, lowercase, numbers, symbols
+        self.test_user_password = "<enter password>"  # 대문자, 소문자, 숫자, 기호 policy 충족
 
     def create_user_pool(self) -> str:
         """
-        Create Cognito User Pool with security best practices
-        Returns: User Pool ID
+        보안 모범 사례에 따라 Cognito User Pool을 생성합니다.
+        반환: User Pool ID
         """
         user_pool_name = f"{self.prefix}-UserPool"
 
@@ -59,12 +59,12 @@ class CognitoSetup:
                         "TemporaryPasswordValidityDays": 7,
                     }
                 },
-                # Auto-verify email on signup
+                # 가입 시 이메일 자동 확인
                 AutoVerifiedAttributes=["email"],
-                # Email-based username (case insensitive)
+                # 이메일 기반 사용자 이름(대소문자 구분 안 함)
                 UsernameAttributes=["email"],
                 EmailConfiguration={"EmailSendingAccount": "COGNITO_DEFAULT"},
-                MfaConfiguration="OFF",  # Disabled for workshop simplicity
+                MfaConfiguration="OFF",  # Workshop 단순화를 위해 비활성화
                 AccountRecoverySetting={"RecoveryMechanisms": [{"Name": "verified_email", "Priority": 1}]},
             )
 
@@ -81,13 +81,13 @@ class CognitoSetup:
 
     def create_resource_server(self, user_pool_id: str) -> str:
         """
-        Create Resource Server with custom scopes for fine-grained authorization
+        세분화된 권한 부여를 위한 사용자 지정 scope가 있는 Resource Server를 생성합니다.
 
-        Scopes:
-        - mcp.invoke: Permission to invoke MCP server tools
-        - runtime.access: Permission to access AgentCore Runtime
+        Scope:
+        - mcp.invoke: MCP 서버 도구 호출 권한
+        - runtime.access: AgentCore Runtime 접근 권한
 
-        Returns: Resource Server Identifier
+        반환: Resource Server 식별자
         """
         resource_server_id = f"{self.prefix}-agentcore-runtime"
         resource_server_name = f"{self.prefix} AgentCore Runtime API"
@@ -120,10 +120,10 @@ class CognitoSetup:
 
     def create_user_auth_client(self, user_pool_id: str) -> str:
         """
-        Create User Auth Client (PUBLIC)
-        For end-user authentication with username/password
+        public User Auth Client를 생성합니다.
+        사용자 이름과 암호를 사용하는 최종 사용자 인증에 사용합니다.
 
-        Returns: Client ID
+        반환: Client ID
         """
         client_name = f"{self.prefix}-UserAuthClient"
 
@@ -133,7 +133,7 @@ class CognitoSetup:
             response = self.cognito.create_user_pool_client(
                 UserPoolId=user_pool_id,
                 ClientName=client_name,
-                GenerateSecret=False,  # Public client - no secret
+                GenerateSecret=False,  # public 클라이언트 - secret 없음
                 RefreshTokenValidity=30,
                 AccessTokenValidity=60,
                 IdTokenValidity=60,
@@ -164,10 +164,10 @@ class CognitoSetup:
 
     def create_m2m_client(self, user_pool_id: str, resource_server_id: str) -> tuple:
         """
-        Create M2M Client (CONFIDENTIAL)
-        For service-to-service authentication using client credentials grant
+        confidential M2M Client를 생성합니다.
+        client credentials grant를 사용하는 서비스 간 인증에 사용합니다.
 
-        Returns: (Client ID, Client Secret)
+        반환: (Client ID, Client Secret)
         """
         client_name = f"{self.prefix}-M2MClient"
 
@@ -177,7 +177,7 @@ class CognitoSetup:
             response = self.cognito.create_user_pool_client(
                 UserPoolId=user_pool_id,
                 ClientName=client_name,
-                GenerateSecret=True,  # Confidential client - requires secret
+                GenerateSecret=True,  # confidential 클라이언트 - secret 필요
                 RefreshTokenValidity=30,
                 AccessTokenValidity=60,
                 TokenValidityUnits={"AccessToken": "minutes", "RefreshToken": "days"},
@@ -207,11 +207,11 @@ class CognitoSetup:
 
     def create_user_pool_domain(self, user_pool_id: str) -> str:
         """
-        Create User Pool Domain for OAuth2 token endpoint
+        OAuth2 토큰 엔드포인트용 User Pool Domain을 생성합니다.
 
-        Returns: Domain URL
+        반환: 도메인 URL
         """
-        # Generate unique domain prefix using timestamp
+        # 타임스탬프로 고유한 도메인 접두사 생성
         timestamp = str(int(time.time()))
         domain_prefix = f"{self.prefix}-agentcore-{timestamp}"
 
@@ -222,7 +222,7 @@ class CognitoSetup:
                 Domain=domain_prefix, UserPoolId=user_pool_id
             )
 
-            # Construct full domain URL
+            # 전체 도메인 URL 구성
             domain_url = f"https://{domain_prefix}.auth.{self.region}.amazoncognito.com"
             print(f"✅ User Pool Domain created: {domain_url}")
 
@@ -234,13 +234,13 @@ class CognitoSetup:
 
     def create_groups(self, user_pool_id: str) -> None:
         """
-        Create Cognito groups for role-based access control.
+        역할 기반 접근 제어용 Cognito 그룹을 생성합니다.
 
-        Groups:
-        - sre: SRE users who create remediation plans (Precedence 10)
-        - approvers: Users who approve and execute plans (Precedence 5)
+        그룹:
+        - sre: 교정 계획을 생성하는 SRE 사용자(Precedence 10)
+        - approvers: 계획을 승인하고 실행하는 사용자(Precedence 5)
 
-        Lower precedence number = higher priority
+        Precedence 숫자가 낮을수록 우선순위가 높습니다.
         """
         groups = [
             {
@@ -273,7 +273,7 @@ class CognitoSetup:
                 raise
 
     def assign_user_to_group(self, user_pool_id: str, username: str, group_name: str) -> None:
-        """Assign user to a Cognito group"""
+        """사용자를 Cognito 그룹에 할당합니다."""
         try:
             self.cognito.admin_add_user_to_group(UserPoolId=user_pool_id, Username=username, GroupName=group_name)
             print(f"✅ User {username} added to group '{group_name}'")  # codeql[py/clear-text-logging-sensitive-data]
@@ -282,7 +282,7 @@ class CognitoSetup:
             raise
 
     def create_test_user(self, user_pool_id: str) -> None:
-        """Create test user for workshops (SRE role)"""
+        """Workshop용 테스트 사용자를 생성합니다(SRE 역할)."""
         print(f"Creating test user: {self.test_user_email}...")
 
         try:
@@ -294,10 +294,10 @@ class CognitoSetup:
                     {"Name": "email", "Value": self.test_user_email},
                     {"Name": "email_verified", "Value": "true"},
                 ],
-                MessageAction="SUPPRESS",  # Don't send welcome email
+                MessageAction="SUPPRESS",  # 환영 이메일을 보내지 않음
             )
 
-            # Set permanent password (same as temporary for simplicity in workshop)
+            # Workshop 단순화를 위해 임시 암호와 같은 영구 암호 설정
             self.cognito.admin_set_user_password(
                 UserPoolId=user_pool_id,
                 Username=self.test_user_email,
@@ -314,9 +314,9 @@ class CognitoSetup:
             raise
 
     def create_approver_user(self, user_pool_id: str) -> Dict[str, str]:
-        """Create approver test user for multi-actor workflow"""
+        """여러 actor가 참여하는 워크플로용 승인자 테스트 사용자를 생성합니다."""
         approver_email = f"approver@{self.prefix}.example.com"
-        approver_password = "<enter password>"  # Meets policy requirements
+        approver_password = "<enter password>"  # policy 요구 사항 충족
 
         print(f"Creating approver user: {approver_email}...")
 
@@ -329,10 +329,10 @@ class CognitoSetup:
                     {"Name": "email", "Value": approver_email},
                     {"Name": "email_verified", "Value": "true"},
                 ],
-                MessageAction="SUPPRESS",  # Don't send welcome email
+                MessageAction="SUPPRESS",  # 환영 이메일을 보내지 않음
             )
 
-            # Set permanent password
+            # 영구 암호 설정
             self.cognito.admin_set_user_password(
                 UserPoolId=user_pool_id,
                 Username=approver_email,
@@ -353,8 +353,8 @@ class CognitoSetup:
 
     def update_user_auth_client_for_oauth(self, user_pool_id: str, client_id: str, resource_server_id: str) -> None:
         """
-        Update User Auth Client to support OAuth flows and custom scopes.
-        This enables ID tokens with rich claims (email, groups, etc.)
+        OAuth 흐름과 사용자 지정 scope를 지원하도록 User Auth Client를 업데이트합니다.
+        이메일, 그룹 등의 다양한 claim이 포함된 ID 토큰을 사용할 수 있게 합니다.
         """
         print("Updating User Auth Client for OAuth support...")
 
@@ -362,17 +362,17 @@ class CognitoSetup:
             self.cognito.update_user_pool_client(
                 UserPoolId=user_pool_id,
                 ClientId=client_id,
-                # Keep existing auth flows
+                # 기존 인증 흐름 유지
                 ExplicitAuthFlows=[
                     "ALLOW_USER_PASSWORD_AUTH",
                     "ALLOW_ADMIN_USER_PASSWORD_AUTH",
                     "ALLOW_REFRESH_TOKEN_AUTH",
                     "ALLOW_USER_SRP_AUTH",
                 ],
-                # Add OAuth flows
+                # OAuth 흐름 추가
                 AllowedOAuthFlows=["code", "implicit"],
                 AllowedOAuthFlowsUserPoolClient=True,
-                # Add custom scopes
+                # 사용자 지정 scope 추가
                 AllowedOAuthScopes=[
                     "openid",
                     "profile",
@@ -380,11 +380,11 @@ class CognitoSetup:
                     f"{resource_server_id}/mcp.invoke",
                     f"{resource_server_id}/runtime.access",
                 ],
-                # Add callback URL for local testing
+                # 로컬 테스트용 콜백 URL 추가
                 CallbackURLs=["http://localhost:8080/callback"],
                 LogoutURLs=["http://localhost:8080/logout"],
                 SupportedIdentityProviders=["COGNITO"],
-                # Token validity
+                # 토큰 유효 기간
                 IdTokenValidity=60,
                 AccessTokenValidity=60,
                 RefreshTokenValidity=30,
@@ -393,7 +393,7 @@ class CognitoSetup:
                     "IdToken": "minutes",
                     "RefreshToken": "days",
                 },
-                # Disable for public client (no secret)
+                # secret이 없는 public 클라이언트에서는 비활성화
                 EnablePropagateAdditionalUserContextData=False,
                 EnableTokenRevocation=True,
                 PreventUserExistenceErrors="ENABLED",
@@ -410,41 +410,41 @@ class CognitoSetup:
 
     def setup_cognito(self) -> Dict[str, Any]:
         """
-        Execute full Cognito setup and return configuration
+        전체 Cognito 설정을 실행하고 구성을 반환합니다.
         """
         print("\n" + "=" * 70)
         print("COGNITO SETUP FOR AIML301 WORKSHOP")
         print("=" * 70 + "\n")
 
-        # Create user pool
+        # User Pool 생성
         user_pool_id, user_pool_arn = self.create_user_pool()
 
-        # Create resource server (must be before M2M client)
+        # Resource Server 생성(M2M Client보다 먼저 생성해야 함)
         resource_server_id = self.create_resource_server(user_pool_id)
 
-        # Create auth clients
+        # 인증 클라이언트 생성
         user_auth_client_id = self.create_user_auth_client(user_pool_id)
         m2m_client_id, m2m_client_secret = self.create_m2m_client(user_pool_id, resource_server_id)
 
-        # Create domain
+        # 도메인 생성
         domain_url = self.create_user_pool_domain(user_pool_id)
         token_endpoint = f"{domain_url}/oauth2/token"
 
-        # Create groups for role-based access control
+        # 역할 기반 접근 제어용 그룹 생성
         self.create_groups(user_pool_id)
 
-        # Create test user (developer role)
+        # 테스트 사용자 생성(개발자 역할)
         self.create_test_user(user_pool_id)
         self.assign_user_to_group(user_pool_id, self.test_user_email, "sre")
 
-        # Create approver user
+        # 승인자 사용자 생성
         approver_user = self.create_approver_user(user_pool_id)
         self.assign_user_to_group(user_pool_id, approver_user["email"], "approvers")
 
-        # Update User Auth Client for OAuth support (enables ID tokens with rich claims)
+        # 다양한 claim이 있는 ID 토큰을 위해 User Auth Client에 OAuth 지원 추가
         self.update_user_auth_client_for_oauth(user_pool_id, user_auth_client_id, resource_server_id)
 
-        # Build configuration
+        # 구성 생성
         cognito_config = {
             "region": self.region,
             "user_pool_id": user_pool_id,
@@ -500,14 +500,14 @@ class CognitoSetup:
         return cognito_config
 
     def save_to_ssm(self, cognito_config: Dict[str, Any]) -> None:
-        """Save Cognito configuration to SSM Parameter Store"""
+        """Cognito 구성을 SSM Parameter Store에 저장합니다."""
         print("\n" + "=" * 70)
         print("SAVING COGNITO CONFIG TO SSM PARAMETER STORE")
         print("=" * 70 + "\n")
 
         params = PARAMETER_PATHS["cognito"]
 
-        # Save individual parameters
+        # 개별 파라미터 저장
         put_parameter(params["user_pool_id"], cognito_config["user_pool_id"])
         put_parameter(params["user_pool_name"], cognito_config["user_pool_name"])
         put_parameter(params["user_pool_arn"], cognito_config["user_pool_arn"])
@@ -539,7 +539,7 @@ class CognitoSetup:
         put_parameter(params["test_user_email"], cognito_config["test_user"]["email"])
         put_parameter(params["test_user_password"], cognito_config["test_user"]["password"])
 
-        # Save approver user credentials
+        # 승인자 사용자 자격 증명 저장
         put_parameter(params["approver_user_email"], cognito_config["approver_user"]["email"])
         put_parameter(
             params["approver_user_password"],
@@ -549,7 +549,7 @@ class CognitoSetup:
         print("✅ Cognito configuration saved to SSM Parameter Store")
 
     def save_to_file(self, cognito_config: Dict[str, Any], filename: str = "cognito_config.json") -> None:
-        """Save Cognito configuration to local JSON file (for reference)"""
+        """참조용 Cognito 구성을 로컬 JSON 파일에 저장합니다."""
         print(f"\nSaving configuration to {filename}...")
 
         with open(filename, "w") as f:
@@ -560,20 +560,20 @@ class CognitoSetup:
 
 def setup_cognito_complete() -> Dict[str, Any]:
     """
-    Complete Cognito setup workflow
-    1. Create all Cognito resources
-    2. Save to SSM Parameter Store
-    3. Return configuration
+    전체 Cognito 설정 워크플로를 실행합니다.
+    1. 모든 Cognito 리소스 생성
+    2. SSM Parameter Store에 저장
+    3. 구성 반환
     """
     setup = CognitoSetup()
 
-    # Execute setup
+    # 설정 실행
     cognito_config = setup.setup_cognito()
 
-    # Save to SSM
+    # SSM에 저장
     setup.save_to_ssm(cognito_config)
 
-    # Save to file for reference
+    # 참조용 파일에 저장
     setup.save_to_file(cognito_config)
 
     print("\n" + "=" * 70)
@@ -610,14 +610,14 @@ def setup_cognito_complete() -> Dict[str, Any]:
 
 def cleanup_cognito(user_pool_id: Optional[str] = None) -> None:
     """
-    Clean up Cognito resources
+    Cognito 리소스를 정리합니다.
 
-    Args:
-        user_pool_id: User Pool ID to delete (if None, fetches from SSM)
+    인자:
+        user_pool_id: 삭제할 User Pool ID(None이면 SSM에서 가져옴)
     """
     setup = CognitoSetup()
 
-    # Get user pool ID from SSM if not provided
+    # 제공되지 않은 경우 SSM에서 User Pool ID 가져오기
     if user_pool_id is None:
         try:
             user_pool_id = get_parameter(PARAMETER_PATHS["cognito"]["user_pool_id"])
@@ -631,7 +631,7 @@ def cleanup_cognito(user_pool_id: Optional[str] = None) -> None:
     print("")
 
     try:
-        # Step 1: Get domain from User Pool (if exists)
+        # 1단계: User Pool에서 도메인 가져오기(있는 경우)
         print("Step 1: Checking for User Pool Domain...")
         try:
             domain_response = setup.cognito.describe_user_pool(UserPoolId=user_pool_id)
@@ -649,14 +649,14 @@ def cleanup_cognito(user_pool_id: Optional[str] = None) -> None:
 
         print("")
 
-        # Step 2: Delete User Pool
+        # 2단계: User Pool 삭제
         print(f"Step 2: Deleting User Pool: {user_pool_id}...")
         setup.cognito.delete_user_pool(UserPoolId=user_pool_id)
         print(f"  ✅ User Pool deleted: {user_pool_id}")
 
         print("")
 
-        # Step 3: Delete SSM parameters
+        # 3단계: SSM 파라미터 삭제
         print("Step 3: Deleting SSM parameters...")
         params = PARAMETER_PATHS["cognito"]
         deleted_count = 0
@@ -665,7 +665,7 @@ def cleanup_cognito(user_pool_id: Optional[str] = None) -> None:
                 delete_parameter(param_path)
                 deleted_count += 1
             except:  # noqa: E722
-                pass  # Parameter might not exist
+                pass  # 파라미터가 없을 수 있음
 
         print(f"  ✅ Deleted {deleted_count} SSM parameters")
         print("")

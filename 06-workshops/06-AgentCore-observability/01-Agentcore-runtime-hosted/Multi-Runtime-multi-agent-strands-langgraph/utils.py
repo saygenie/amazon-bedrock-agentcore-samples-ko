@@ -1,6 +1,6 @@
 """
-Utility functions for multi-agent tutorial.
-Only includes functionality not provided by bedrock-agentcore-starter-toolkit.
+멀티 에이전트 튜토리얼용 유틸리티 함수입니다.
+bedrock-agentcore-starter-toolkit에서 제공하지 않는 기능만 포함합니다.
 """
 
 import boto3
@@ -10,12 +10,12 @@ from boto3.session import Session
 
 def update_orchestrator_permissions(sub_agent_arns: list, orchestrator_agent_id: str, region=None):
     """
-    Add permissions to orchestrator role to invoke sub-agents directly.
+    오케스트레이터 역할에 하위 에이전트를 직접 호출할 권한을 추가합니다.
 
-    Args:
-        sub_agent_arns: List of sub-agent runtime ARNs
-        orchestrator_agent_id: The orchestrator's agent runtime ID (e.g., 'orchestrator_a2a-eHQbJjFPxX')
-        region: AWS region (optional)
+    인수:
+        sub_agent_arns: 하위 에이전트 런타임 ARN 목록
+        orchestrator_agent_id: 오케스트레이터의 에이전트 런타임 ID(예: 'orchestrator_a2a-eHQbJjFPxX')
+        region: AWS 리전(선택 사항)
     """
     if region is None:
         region = Session().region_name
@@ -24,13 +24,13 @@ def update_orchestrator_permissions(sub_agent_arns: list, orchestrator_agent_id:
     iam_client = boto3.client("iam", region_name=region)
     agentcore_client = boto3.client("bedrock-agentcore-control", region_name=region)
 
-    # Get the execution role ARN from the runtime configuration
+    # 런타임 구성에서 실행 역할 ARN 가져오기
     runtime_info = agentcore_client.get_agent_runtime(agentRuntimeId=orchestrator_agent_id)
     role_arn = runtime_info.get("roleArn") or runtime_info.get("agentRuntime", {}).get("roleArn")
     if not role_arn:
         raise ValueError(f"Could not find execution role for runtime {orchestrator_agent_id}")
 
-    # Extract role name from ARN (arn:aws:iam::account:role/role-name)
+    # ARN에서 역할 이름 추출(arn:aws:iam::account:role/role-name)
     orchestrator_role_name = role_arn.split("/")[-1]
 
     orchestrator_permissions = {
@@ -64,12 +64,12 @@ def update_orchestrator_permissions(sub_agent_arns: list, orchestrator_agent_id:
 
 def cleanup_runtime(launch_result, agent_name, region=None):
     """
-    Clean up AgentCore Runtime, ECR repository, and IAM role.
+    AgentCore Runtime, ECR 리포지토리 및 IAM 역할을 정리합니다.
 
-    Args:
-        launch_result: Result object from runtime.launch()
-        agent_name: Name of the agent (used for IAM role cleanup)
-        region: AWS region (optional)
+    인수:
+        launch_result: runtime.launch()의 결과 객체
+        agent_name: 에이전트 이름(IAM 역할 정리에 사용)
+        region: AWS 리전(선택 사항)
     """
     if region is None:
         region = Session().region_name
@@ -78,37 +78,37 @@ def cleanup_runtime(launch_result, agent_name, region=None):
     ecr_client = boto3.client("ecr", region_name=region)
     iam_client = boto3.client("iam", region_name=region)
 
-    # Delete runtime
+    # 런타임 삭제
     agentcore_client.delete_agent_runtime(agentRuntimeId=launch_result.agent_id)
     print(f"Deleted runtime: {launch_result.agent_id}")
 
-    # Delete ECR repository
+    # ECR 리포지토리 삭제
     repo_name = launch_result.ecr_uri.split("/")[1].split(":")[0]
     ecr_client.delete_repository(repositoryName=repo_name, force=True)
     print(f"Deleted ECR repo: {repo_name}")
 
-    # Delete IAM role (created by auto_create_execution_role=True)
-    # Role name follows pattern: agentcore-{agent_name}-role
+    # IAM 역할 삭제(auto_create_execution_role=True로 생성됨)
+    # 역할 이름은 agentcore-{agent_name}-role 패턴을 따름
     role_name = f"agentcore-{agent_name}-role"
     try:
-        # First delete all inline policies
+        # 먼저 모든 인라인 정책 삭제
         policies = iam_client.list_role_policies(RoleName=role_name)
         for policy_name in policies.get("PolicyNames", []):
             iam_client.delete_role_policy(RoleName=role_name, PolicyName=policy_name)
 
-        # Then delete the role
+        # 그런 다음 역할 삭제
         iam_client.delete_role(RoleName=role_name)
         print(f"Deleted IAM role: {role_name}")
     except iam_client.exceptions.NoSuchEntityException:
-        pass  # Role doesn't exist or already deleted
+        pass  # 역할이 없거나 이미 삭제됨
 
 
 def cleanup_ssm_parameters(parameter_names: list):
     """
-    Clean up SSM parameters.
+    SSM 파라미터를 정리합니다.
 
-    Args:
-        parameter_names: List of parameter names to delete
+    인수:
+        parameter_names: 삭제할 파라미터 이름 목록
     """
     ssm = boto3.client("ssm")
     for name in parameter_names:

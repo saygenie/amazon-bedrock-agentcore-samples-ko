@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""GitHub agent tools for AgentCore Identity."""
+"""AgentCore Identity용 GitHub 에이전트 도구."""
 
 import logging
 from typing import Any
@@ -17,29 +17,29 @@ logger = logging.getLogger(__name__)
 
 
 class GitHubTools:
-    """Tools for interacting with GitHub using OAuth authentication."""
+    """OAuth 인증으로 GitHub와 상호 작용하는 도구."""
 
     def __init__(self, config: GitHubConfig) -> None:
-        """Initialize GitHub tools.
+        """GitHub 도구를 초기화한다.
 
-        Args:
-            config: GitHub configuration object
+        인수:
+            config: GitHub 설정 객체
 
         """
         self.config = config
 
     def _on_auth_url(self, url: str) -> None:
-        """Handle authorization URL by raising AuthorizationRequiredError.
+        """AuthorizationRequiredError를 발생시켜 권한 부여 URL을 처리한다.
 
-        This URL must be presented to the user to grant access.
+        액세스 권한을 부여하려면 이 URL을 사용자에게 제시해야 한다.
         """
         raise AuthorizationRequiredError(provider="GitHub", auth_url=url)
 
     async def _call_github_api(self, endpoint: str, scopes: list[str], params: dict | None = None) -> Any:
-        """Make authenticated GitHub API call.
+        """인증된 GitHub API 호출을 수행한다.
 
-        Raises:
-            ApiError: When API call fails
+        예외:
+            ApiError: API 호출이 실패할 때
 
         """
 

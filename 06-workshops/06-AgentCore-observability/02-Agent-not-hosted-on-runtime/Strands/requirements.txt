@@ -1,4 +1,4 @@
-# Strands Agent SDK and instrumentation
+# Strands Agents SDK 및 계측
 strands-agents[otel]
 strands-agents-tools
 boto3

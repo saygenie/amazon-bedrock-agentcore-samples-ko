@@ -1,13 +1,13 @@
-# AgentCore Identity: Runtime Inbound and Outbound Auth (Cognito)
+# AgentCore Identity: Runtime 인바운드 및 아웃바운드 인증(Cognito)
 
-## Overview
+## 개요
 
-This sample shows how to secure an **AgentCore Runtime** agent with both inbound and outbound authentication using Amazon Cognito as the Identity Provider (IdP).
+이 샘플에서는 Amazon Cognito를 Identity Provider(IdP)로 사용하여 **AgentCore Runtime** 에이전트에 인바운드 및 아웃바운드 인증을 모두 적용하는 방법을 보여 줍니다.
 
-- **Inbound Auth**: The runtime endpoint is protected by a Cognito JWT. Callers must present a valid bearer token or receive `AccessDeniedException`.
-- **Outbound Auth**: The agent retrieves an API key from AgentCore Identity (backed by AWS Secrets Manager) at runtime. The key is never stored in environment variables or agent code.
+- **인바운드 인증**: Runtime 엔드포인트는 Cognito JWT로 보호됩니다. 호출자는 유효한 bearer 토큰을 제시해야 하며, 그렇지 않으면 `AccessDeniedException`을 받습니다.
+- **아웃바운드 인증**: 에이전트는 실행 시 AgentCore Identity(AWS Secrets Manager 기반)에서 API 키를 가져옵니다. 키는 환경 변수나 에이전트 코드에 저장되지 않습니다.
 
-### Architecture
+### 아키텍처
 
 ```
 Caller
@@ -23,38 +23,38 @@ AgentCore Identity  ──fetches secret──▶  AWS Secrets Manager
 External API (weather service, OpenAI, etc.)
 ```
 
-### Tutorial Details
+### 튜토리얼 세부 정보
 
-| Information         | Details                                               |
+| 정보                | 세부 정보                                             |
 |:--------------------|:------------------------------------------------------|
-| Tutorial type       | CLI walkthrough                                       |
-| Agent type          | Single                                                |
-| Agentic Framework   | Strands Agents                                        |
-| LLM model           | Anthropic Claude Haiku 4.5                            |
-| Inbound Auth        | Amazon Cognito (CUSTOM_JWT)                           |
-| Outbound Auth       | AgentCore Identity - API Key credential provider      |
-| Example complexity  | Easy                                                  |
-| CLI tool            | `agentcore` (npm: `@aws/agentcore`)                   |
+| 튜토리얼 유형       | CLI 실습                                              |
+| 에이전트 유형       | 단일                                                   |
+| 에이전트 프레임워크 | Strands Agents                                        |
+| LLM 모델            | Anthropic Claude Haiku 4.5                            |
+| 인바운드 인증       | Amazon Cognito(CUSTOM_JWT)                            |
+| 아웃바운드 인증     | AgentCore Identity - API 키 자격 증명 공급자          |
+| 예제 난이도         | 쉬움                                                   |
+| CLI 도구            | `agentcore`(npm: `@aws/agentcore`)                    |
 
 ---
 
-## Prerequisites
+## 사전 요구 사항
 
-- **Node.js** 20.x or later
+- **Node.js** 20.x 이상
 - **Python** 3.10+
-- **uv** ([install](https://docs.astral.sh/uv/getting-started/installation/))
-- **AWS credentials** configured (`aws configure` or environment variables)
-- **AgentCore CLI** installed:
+- **uv**([설치](https://docs.astral.sh/uv/getting-started/installation/))
+- 구성된 **AWS 자격 증명**(`aws configure` 또는 환경 변수)
+- 설치된 **AgentCore CLI**:
 
 ```bash
 npm install -g @aws/agentcore
 ```
 
-- **Amazon Bedrock model access**: Enable `claude-haiku-4-5` in the [Bedrock console](https://console.aws.amazon.com/bedrock/home#/models)
+- **Amazon Bedrock 모델 액세스**: [Bedrock 콘솔](https://console.aws.amazon.com/bedrock/home#/models)에서 `claude-haiku-4-5`를 활성화합니다.
 
 ---
 
-## Step 1: Install Setup Dependencies
+## 1단계: 설정 종속성 설치
 
 ```bash
 pip install -r requirements.txt
@@ -62,18 +62,18 @@ pip install -r requirements.txt
 
 ---
 
-## Step 2: Set Up Cognito (Inbound IdP)
+## 2단계: Cognito 설정(인바운드 IdP)
 
 ```bash
 python setup_cognito.py
 ```
 
-This creates:
-- A Cognito User Pool with one test user (`testuser` / `AgentCoreTest1!`)
-- An App Client with `USER_PASSWORD_AUTH` enabled
-- Saves pool ID, client ID, and discovery URL to `cognito_config.json`
+이 명령은 다음 리소스와 파일을 생성합니다.
+- 테스트 사용자 1명(`testuser` / `AgentCoreTest1!`)이 포함된 Cognito User Pool
+- `USER_PASSWORD_AUTH`가 활성화된 App Client
+- 풀 ID, 클라이언트 ID 및 검색 URL을 `cognito_config.json`에 저장
 
-Take note of the two values printed at the end — you will need them in Step 4:
+마지막에 출력되는 두 값을 기록해 두세요. 4단계에서 필요합니다.
 
 ```
 --discovery-url    https://cognito-idp.<region>.amazonaws.com/<pool_id>/.well-known/openid-configuration
@@ -82,14 +82,14 @@ Take note of the two values printed at the end — you will need them in Step 4:
 
 ---
 
-## Step 3: Create the AgentCore Project
+## 3단계: AgentCore 프로젝트 생성
 
 ```bash
 agentcore create --name RuntimeAuthDemo --defaults --no-agent
 cd RuntimeAuthDemo
 ```
 
-Set your deployment target (the CLI creates an empty `aws-targets.json`):
+배포 대상을 설정합니다(CLI에서 빈 `aws-targets.json`을 생성함).
 
 ```bash
 cat > agentcore/aws-targets.json << 'EOF'
@@ -97,13 +97,13 @@ cat > agentcore/aws-targets.json << 'EOF'
 EOF
 ```
 
-> Replace `YOUR_AWS_ACCOUNT_ID` with your 12-digit AWS account ID. Find it with `aws sts get-caller-identity --query Account --output text`.
+> `YOUR_AWS_ACCOUNT_ID`를 12자리 AWS 계정 ID로 바꾸세요. `aws sts get-caller-identity --query Account --output text`로 확인할 수 있습니다.
 
 ---
 
-## Step 4: Add the Agent (Bring Your Own Code)
+## 4단계: 에이전트 추가(Bring Your Own Code)
 
-Use the `--authorizer-type CUSTOM_JWT` flags to configure inbound JWT auth at deploy time. Replace the placeholder values with the discovery URL and client ID from Step 2:
+배포 시 인바운드 JWT 인증을 구성하려면 `--authorizer-type CUSTOM_JWT` 플래그를 사용합니다. 자리 표시자 값을 2단계에서 확인한 검색 URL 및 클라이언트 ID로 바꾸세요.
 
 ```bash
 agentcore add agent \
@@ -121,14 +121,14 @@ agentcore add agent \
 
 ---
 
-## Step 5: Add Outbound Identity Credential
+## 5단계: 아웃바운드 ID 자격 증명 추가
 
-The agent calls the [OpenWeatherMap API](https://openweathermap.org/api) which requires an API key. Get a free one:
+에이전트가 호출하는 [OpenWeatherMap API](https://openweathermap.org/api)에는 API 키가 필요합니다. 무료 키를 발급받으세요.
 
-1. Sign up at [openweathermap.org](https://home.openweathermap.org/users/sign_up) (free tier)
-2. Go to [API keys](https://home.openweathermap.org/api_keys) and copy your key
+1. [openweathermap.org](https://home.openweathermap.org/users/sign_up)에서 가입합니다(무료 티어).
+2. [API 키](https://home.openweathermap.org/api_keys)로 이동하여 키를 복사합니다.
 
-Store it securely in AgentCore Identity:
+AgentCore Identity에 키를 안전하게 저장합니다.
 
 ```bash
 agentcore add credential \
@@ -136,17 +136,17 @@ agentcore add credential \
   --api-key YOUR_OPENWEATHERMAP_API_KEY
 ```
 
-> The CLI stores the key in AWS Secrets Manager via AgentCore Identity. At runtime, the agent retrieves it with `@requires_api_key("OutboundApiKey")`. The key never appears in code or environment variables.
+> CLI는 AgentCore Identity를 통해 AWS Secrets Manager에 키를 저장합니다. 실행 시 에이전트는 `@requires_api_key("OutboundApiKey")`로 키를 가져옵니다. 키는 코드나 환경 변수에 노출되지 않습니다.
 
 ---
 
-## Step 6: Deploy
+## 6단계: 배포
 
 ```bash
 agentcore deploy -y
 ```
 
-Deployment takes a few minutes. Monitor progress:
+배포에는 몇 분이 걸립니다. 진행 상황을 확인합니다.
 
 ```bash
 agentcore status
@@ -154,21 +154,21 @@ agentcore status
 
 ---
 
-## Step 7: Test Inbound and Outbound Auth
+## 7단계: 인바운드 및 아웃바운드 인증 테스트
 
-Go back to the sample root directory and run the invoke script:
+샘플 루트 디렉터리로 돌아가 호출 스크립트를 실행합니다.
 
 ```bash
 cd ..
 python invoke.py "What is the weather in Seattle?"
 ```
 
-The script runs two tests:
+스크립트는 다음 두 가지 테스트를 실행합니다.
 
-1. **Without bearer token** — expects `AccessDeniedException`
-2. **With valid Cognito bearer token** — expects a successful agent response
+1. **bearer 토큰 없이 호출** — `AccessDeniedException` 예상
+2. **유효한 Cognito bearer 토큰으로 호출** — 에이전트의 성공 응답 예상
 
-Expected output:
+예상 출력:
 
 ```
 [Test 1] Invoking WITHOUT bearer token (expect AccessDeniedException)...
@@ -183,9 +183,9 @@ The weather in Seattle is currently Sunny, 72F.
 
 ---
 
-## Streamlit UI (Optional)
+## Streamlit UI(선택 사항)
 
-For an interactive browser-based experience instead of the CLI:
+CLI 대신 브라우저 기반의 대화형 환경을 사용하려면 다음 명령을 실행합니다.
 
 ```bash
 pip install streamlit
@@ -193,11 +193,11 @@ cd ..
 streamlit run streamlit_app.py
 ```
 
-Log in, then use the chat interface to test weather queries. Clear the Bearer Token field in the sidebar to test 403 rejection.
+로그인한 다음 채팅 인터페이스에서 날씨 쿼리를 테스트합니다. 403 거부를 테스트하려면 사이드바의 Bearer Token 필드를 비우세요.
 
 ---
 
-## Step 8: Cleanup
+## 8단계: 정리
 
 ```bash
 cd RuntimeAuthDemo
@@ -205,7 +205,7 @@ agentcore remove agent --name MyAgent --force
 agentcore remove credential --name OutboundApiKey --force
 ```
 
-Delete Cognito resources:
+Cognito 리소스를 삭제합니다.
 
 ```python
 import boto3, json
@@ -221,10 +221,10 @@ print("Cognito User Pool deleted.")
 
 ---
 
-## Key Concepts
+## 핵심 개념
 
-| Concept | How it works in this sample |
+| 개념 | 이 샘플의 작동 방식 |
 |:--------|:---------------------------|
-| **Inbound JWT validation** | AgentCore Runtime checks `Authorization: Bearer <token>` against the Cognito JWKS endpoint before executing the agent |
-| **Outbound API key** | `@requires_api_key(provider_name="OutboundApiKey")` calls `bedrock-agentcore:GetResourceApiKey` + `secretsmanager:GetSecretValue` at runtime |
-| **Zero-secret agent code** | API keys live in Secrets Manager; agent code only sees them in-memory via the decorator |
+| **인바운드 JWT 검증** | AgentCore Runtime은 에이전트를 실행하기 전에 Cognito JWKS 엔드포인트를 기준으로 `Authorization: Bearer <token>`을 확인합니다. |
+| **아웃바운드 API 키** | `@requires_api_key(provider_name="OutboundApiKey")`는 실행 시 `bedrock-agentcore:GetResourceApiKey` + `secretsmanager:GetSecretValue`를 호출합니다. |
+| **보안 암호가 없는 에이전트 코드** | API 키는 Secrets Manager에 있으며, 에이전트 코드는 데코레이터를 통해 메모리에서만 키를 사용합니다. |

@@ -10,7 +10,7 @@ import { PrivateApiPublicCertStack } from "../lib/test5-private-api-public-cert-
 import { PublicDnsPrivateCertStack } from "../lib/test6-public-dns-private-cert-stack";
 import { PrivateDnsPrivateCertStack } from "../lib/test7-private-dns-private-cert-stack";
 import { PrivateCertBackendStack } from "../lib/private-cert-backend-stack";
-// PublicCertProxyStack removed — proxy ALB is now created via boto3 in the notebooks
+// PublicCertProxyStack 제거 - 이제 Notebook에서 boto3로 프록시 ALB 생성
 import { PrivateDomainStack } from "../lib/private-domain-stack";
 import { ShortLivedCaStack } from "../lib/shared/short-lived-ca-stack";
 import { EksClusterStack } from "../lib/shared/eks-cluster-stack";
@@ -39,7 +39,7 @@ if (!accountA) {
 
 const envA = { account: accountA, region: "us-west-2" };
 
-// Existing VPC stacks
+// 기존 VPC 스택
 const vpcUsWest2 = new VpcegressStack(app, "VpcegressStack-USWest2", {
 	env: envA,
 	vpcCidr: "10.0.0.0/16",
@@ -51,7 +51,7 @@ const vpcUsEast1 = new VpcegressStack(app, "VpcegressStack-USEast1", {
 	crossRegionReferences: true,
 });
 
-// Peering lab: Private API Gateway in us-east-1 + VPC peering
+// Peering Lab: us-east-1의 Private API Gateway + VPC Peering
 new PrivateApigwStack(app, "PeeringApigw-USEast1", {
 	env: { account: accountA, region: "us-east-1" },
 	vpc: vpcUsEast1.vpc,
@@ -82,14 +82,14 @@ if (accountB) {
 		},
 	);
 
-	// Cross-account lab: Private API Gateway in Account B
+	// Cross-account Lab: Account B의 Private API Gateway
 	new PrivateApigwStack(app, "CrossAccountApigw-AccountB", {
 		env: { account: accountB, region: "us-west-2" },
 		vpc: vpcAccountB.vpc,
 	});
 }
 
-// MCP Server on ECS (requires publicCertArn)
+// ECS의 MCP Server(publicCertArn 필요)
 if (publicCertArn) {
 	new McpEcsStack(app, "McpEcs", {
 		env: envA,
@@ -99,13 +99,13 @@ if (publicCertArn) {
 	});
 }
 
-// Shared EKS Cluster
+// 공유 EKS Cluster
 const eksCluster = new EksClusterStack(app, "SharedEksCluster", {
 	env: envA,
 	vpc: vpcUsWest2.vpc,
 });
 
-// MCP Server on EKS (requires NGINX Ingress + publicCertArn for NLB TLS)
+// EKS의 MCP Server(NLB TLS용 NGINX Ingress + publicCertArn 필요)
 if (publicCertArn) {
 	new McpEksStack(app, "McpEks", {
 		env: envA,
@@ -121,7 +121,7 @@ if (publicCertArn) {
 		privateDomain,
 	});
 
-	// REST API on EKS
+	// EKS의 REST API
 	new ApiEksStack(app, "ApiEks", {
 		env: envA,
 		clusterName: eksCluster.cluster.clusterName,
@@ -143,7 +143,7 @@ new PrivateApigwStack(app, "PrivateApigw", {
 	vpc: vpcUsWest2.vpc,
 });
 
-// Test 5: Private DNS + Public Certificate
+// 테스트 5: Private DNS + Public Certificate
 new PrivateApiPublicCertStack(app, "Test5-PrivateApiPublicCert", {
 	env: envA,
 	vpc: vpcUsWest2.vpc,
@@ -151,13 +151,13 @@ new PrivateApiPublicCertStack(app, "Test5-PrivateApiPublicCert", {
 	publicCertArn,
 });
 
-// Shared Private CA (for Tests 6 and 7)
+// 공유 Private CA(테스트 6 및 7용)
 const privateCa = new PrivateCaStack(app, "SharedPrivateCa", {
 	env: envA,
 	baseDomain,
 });
 
-// Test 6: Public DNS + Private Certificate
+// 테스트 6: Public DNS + Private Certificate
 new PublicDnsPrivateCertStack(app, "Test6-PublicDnsPrivateCert", {
 	env: envA,
 	vpc: vpcUsWest2.vpc,
@@ -166,12 +166,12 @@ new PublicDnsPrivateCertStack(app, "Test6-PublicDnsPrivateCert", {
 	hostedZoneId,
 });
 
-// Shared AgentCore Gateway (Cognito M2M auth)
+// 공유 AgentCore Gateway(Cognito M2M 인증)
 new AgentCoreGatewayStack(app, "SharedAgentCoreGateway", {
 	env: envA,
 });
 
-// Test 7: Private DNS + Private Certificate (requires publicCertArn for ALB workaround)
+// 테스트 7: Private DNS + Private Certificate(ALB 우회 방식에 publicCertArn 필요)
 if (publicCertArn) {
 	new PrivateDnsPrivateCertStack(app, "Test7-PrivateDnsPrivateCert", {
 		env: envA,
@@ -182,7 +182,7 @@ if (publicCertArn) {
 	});
 }
 
-// Private domain lab: ALB with public cert + private hosted zone (Private DNS)
+// Private Domain Lab: Public Certificate가 있는 ALB + Private Hosted Zone(Private DNS)
 if (publicCertArn) {
 	new PrivateDomainStack(app, "PrivateDomain", {
 		env: envA,
@@ -192,13 +192,13 @@ if (publicCertArn) {
 	});
 }
 
-// Short-lived Private CA ($50/month) for the private-certificate-authority lab
+// Private Certificate Authority Lab용 단기 Private CA(월 50달러)
 const shortLivedCa = new ShortLivedCaStack(app, "ShortLivedPrivateCa", {
 	env: envA,
 	baseDomain,
 });
 
-// Private CA lab: backend with private CA cert (EC2 serves HTTPS:443)
+// Private CA Lab: Private CA Certificate를 사용하는 백엔드(EC2가 HTTPS:443 제공)
 new PrivateCertBackendStack(app, "PrivateCaBackend", {
 	env: envA,
 	vpc: vpcUsWest2.vpc,
@@ -206,7 +206,7 @@ new PrivateCertBackendStack(app, "PrivateCaBackend", {
 	certificateAuthorityArn: shortLivedCa.caArn,
 });
 
-// Self-signed lab: backend with self-signed cert
+// Self-signed Lab: 자체 서명 Certificate를 사용하는 백엔드
 new PrivateCertBackendStack(app, "SelfSignedBackend", {
 	env: envA,
 	vpc: vpcUsWest2.vpc,

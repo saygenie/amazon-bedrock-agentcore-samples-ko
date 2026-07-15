@@ -1,4 +1,4 @@
-"""Online evaluation helper functions for agent invocation and evaluation workflows."""
+"""에이전트 호출 및 평가 워크플로용 Online Evaluation 도우미 함수입니다."""
 
 import json
 import time
@@ -9,10 +9,10 @@ from .evaluation_client import EvaluationClient
 
 
 def generate_session_id() -> str:
-    """Generate a valid session ID in UUID format.
+    """UUID 형식의 유효한 세션 ID를 생성합니다.
 
-    Returns:
-        UUID v4 string (e.g., 'de45c51c-27c3-4670-aa72-c8b302b23890')
+    반환값:
+        UUID v4 문자열(예: 'de45c51c-27c3-4670-aa72-c8b302b23890')
     """
     return str(uuid.uuid4())
 
@@ -24,19 +24,19 @@ def invoke_agent(
     session_id: str = "",
     qualifier: str = "DEFAULT",
 ) -> Tuple[str, List[str]]:
-    """Invoke agent runtime and return session ID with response content.
+    """AgentCore Runtime을 호출하고 세션 ID와 응답 내용을 반환합니다.
 
-    Args:
+    인수:
         agentcore_client: Boto3 agentcore client
-        agent_arn: Agent runtime ARN
-        prompt: User input prompt
-        session_id: Optional session ID for multi-turn conversations (UUID format)
-                   - Empty string '' = create new session
-                   - Valid UUID = continue existing session or use specific session ID
-        qualifier: Agent runtime qualifier (default: DEFAULT)
+        agent_arn: Agent Runtime ARN
+        prompt: 사용자 입력 prompt
+        session_id: 다중 턴 대화용 선택적 세션 ID(UUID 형식)
+                   - 빈 문자열 '' = 새 세션 생성
+                   - 유효한 UUID = 기존 세션을 계속하거나 특정 세션 ID 사용
+        qualifier: Agent Runtime qualifier(기본값: DEFAULT)
 
-    Returns:
-        Tuple of (session_id, content_list)
+    반환값:
+        (session_id, content_list) 튜플
     """
     api_params = {
         "agentRuntimeArn": agent_arn,
@@ -83,20 +83,20 @@ def evaluate_session(
     experiment_name: str,
     metadata: Optional[Dict[str, Any]] = None,
 ) -> Any:
-    """Evaluate a session with specified evaluators.
+    """지정된 Evaluator로 세션을 평가합니다.
 
-    Args:
-        eval_client: EvaluationClient instance
-        session_id: Session ID to evaluate
-        evaluators: List of evaluator IDs
-        scope: Evaluation scope (session, trace, or span)
+    인수:
+        eval_client: EvaluationClient 인스턴스
+        session_id: 평가할 세션 ID
+        evaluators: Evaluator ID 목록
+        scope: 평가 범위(session, trace 또는 span)
         agent_id: Agent ID
-        region: AWS region
-        experiment_name: Experiment identifier for tracking
-        metadata: Optional metadata dictionary
+        region: AWS 리전
+        experiment_name: 추적용 실험 식별자
+        metadata: 선택적 메타데이터 딕셔너리
 
-    Returns:
-        EvaluationResults object
+    반환값:
+        EvaluationResults 객체
     """
     eval_metadata = {"experiment": experiment_name}
     if metadata:
@@ -128,21 +128,21 @@ def evaluate_session_comprehensive(
     span_only_evaluators: List[str],
     metadata: Optional[Dict[str, Any]] = None,
 ) -> List[Any]:
-    """Run all evaluators across appropriate scopes.
+    """모든 Evaluator를 적절한 범위에서 실행합니다.
 
-    Args:
-        eval_client: EvaluationClient instance
-        session_id: Session ID to evaluate
+    인수:
+        eval_client: EvaluationClient 인스턴스
+        session_id: 평가할 세션 ID
         agent_id: Agent ID
-        region: AWS region
-        experiment_name: Experiment identifier
-        flexible_evaluators: List of flexible scope evaluators
-        session_only_evaluators: List of session-only evaluators
-        span_only_evaluators: List of span-only evaluators
-        metadata: Optional metadata dictionary
+        region: AWS 리전
+        experiment_name: 실험 식별자
+        flexible_evaluators: 유연한 범위의 Evaluator 목록
+        session_only_evaluators: 세션 전용 Evaluator 목록
+        span_only_evaluators: span 전용 Evaluator 목록
+        metadata: 선택적 메타데이터 딕셔너리
 
-    Returns:
-        List of combined evaluation results
+    반환값:
+        결합된 평가 결과 목록
     """
     all_results = []
 
@@ -189,27 +189,27 @@ def invoke_and_evaluate(
     session_only_evaluators: Optional[List[str]] = None,
     span_only_evaluators: Optional[List[str]] = None,
 ) -> Tuple[str, List[Any]]:
-    """Complete workflow: invoke agent, wait for log propagation, then evaluate.
+    """전체 워크플로: 에이전트를 호출하고 로그 전파를 기다린 다음 평가합니다.
 
-    Args:
+    인수:
         agentcore_client: Boto3 agentcore client
-        eval_client: EvaluationClient instance
-        agent_arn: Agent runtime ARN
+        eval_client: EvaluationClient 인스턴스
+        agent_arn: Agent Runtime ARN
         agent_id: Agent ID
-        region: AWS region
-        prompt: User input prompt
-        experiment_name: Experiment identifier
-        session_id: Optional session ID (empty = new session, UUID = continue/specify session)
-        metadata: Optional metadata dictionary
-        evaluators: List of evaluator IDs (None = use comprehensive evaluation)
-        scope: Evaluation scope (session, trace, span)
-        delay: Seconds to wait for CloudWatch propagation
-        flexible_evaluators: Required if evaluators is None
-        session_only_evaluators: Required if evaluators is None
-        span_only_evaluators: Required if evaluators is None
+        region: AWS 리전
+        prompt: 사용자 입력 prompt
+        experiment_name: 실험 식별자
+        session_id: 선택적 세션 ID(비어 있으면 새 세션, UUID이면 세션 계속 또는 지정)
+        metadata: 선택적 메타데이터 딕셔너리
+        evaluators: Evaluator ID 목록(None이면 종합 평가 사용)
+        scope: 평가 범위(session, trace, span)
+        delay: CloudWatch 전파를 기다릴 시간(초)
+        flexible_evaluators: evaluators가 None이면 필수
+        session_only_evaluators: evaluators가 None이면 필수
+        span_only_evaluators: evaluators가 None이면 필수
 
-    Returns:
-        Tuple of (session_id, results_list)
+    반환값:
+        (session_id, results_list) 튜플
     """
     returned_session_id, content = invoke_agent(
         agentcore_client=agentcore_client,

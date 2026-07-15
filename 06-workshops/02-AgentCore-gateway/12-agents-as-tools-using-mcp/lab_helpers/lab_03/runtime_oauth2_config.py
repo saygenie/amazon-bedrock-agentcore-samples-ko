@@ -1,21 +1,21 @@
 """
-Lab 03: Runtime OAuth2 Configuration - Token Validation Setup
+Lab 03: Runtime OAuth2 구성 - 토큰 검증 설정
 
-Configures AgentCore Runtime to accept and validate M2M OAuth2 tokens from Gateway.
+Gateway의 M2M OAuth2 토큰을 수락하고 검증하도록 AgentCore Runtime을 구성합니다.
 
-Architecture:
-- Runtime receives requests from Gateway with Authorization: Bearer {M2M_token}
-- Runtime validates JWT signature using Cognito public keys
-- Runtime checks token scopes and authorizes operations
-- Only allows requests with valid tokens and required scopes
+아키텍처:
+- Runtime은 Gateway에서 Authorization: Bearer {M2M_token} 요청을 받음
+- Runtime은 Cognito 공개 키를 사용해 JWT 서명을 검증함
+- Runtime은 토큰 scope를 확인하고 작업을 승인함
+- 유효한 토큰과 필수 scope가 있는 요청만 허용함
 
-Token Validation Flow:
-1. Gateway sends Bearer token in Authorization header
-2. Runtime intercepts request and extracts JWT
-3. Runtime fetches Cognito public key using kid from JWT header
-4. Runtime verifies JWT signature
-5. Runtime checks scopes in token claims
-6. Runtime allows/denies operation based on scopes
+토큰 검증 흐름:
+1. Gateway가 Authorization 헤더로 Bearer 토큰 전송
+2. Runtime이 요청을 가로채 JWT 추출
+3. Runtime이 JWT 헤더의 kid를 사용해 Cognito 공개 키 조회
+4. Runtime이 JWT 서명 검증
+5. Runtime이 토큰 claim의 scope 확인
+6. Runtime이 scope를 기준으로 작업 허용/거부
 """
 
 import json
@@ -27,10 +27,10 @@ from lab_helpers.constants import PARAMETER_PATHS
 
 
 class RuntimeOAuth2Configuration:
-    """Configure Runtime to validate incoming M2M OAuth2 tokens"""
+    """수신되는 M2M OAuth2 토큰을 검증하도록 Runtime을 구성합니다."""
 
     def __init__(self, region: str = AWS_REGION, profile: str = AWS_PROFILE):
-        """Initialize Runtime OAuth2 configuration"""
+        """Runtime OAuth2 구성을 초기화합니다."""
         self.session = boto3.Session(profile_name=profile, region_name=region)
         self.agentcore = self.session.client("bedrock-agentcore-control", region_name=region)
         self.ssm = self.session.client("ssm", region_name=region)
@@ -42,20 +42,20 @@ class RuntimeOAuth2Configuration:
 
     def configure_runtime_token_validation(self, runtime_id: str, cognito_config: Optional[Dict] = None) -> Dict:
         """
-        Configure Runtime to validate M2M tokens from Gateway
+        Gateway의 M2M 토큰을 검증하도록 Runtime을 구성합니다.
 
-        Args:
+        인자:
             runtime_id: AgentCore Runtime ID
-            cognito_config: Cognito configuration (fetches from SSM if not provided)
+            cognito_config: Cognito 구성(제공하지 않으면 SSM에서 조회)
 
-        Returns:
-            Runtime OAuth2 validation configuration
+        반환:
+            Runtime OAuth2 검증 구성
         """
         print("\n" + "=" * 70)
         print("CONFIGURING RUNTIME TO VALIDATE M2M TOKENS")
         print("=" * 70 + "\n")
 
-        # Get Cognito configuration if not provided
+        # 제공되지 않은 경우 Cognito 구성 조회
         if not cognito_config:
             try:
                 user_pool_id = get_parameter(PARAMETER_PATHS["cognito"]["user_pool_id"])
@@ -82,7 +82,7 @@ class RuntimeOAuth2Configuration:
         print(f"  M2M Client: {cognito_config['m2m_client_id']}")
         print(f"  Resource Server: {cognito_config['resource_server_id']}\n")
 
-        # Build Runtime OAuth2 configuration
+        # Runtime OAuth2 구성 생성
         runtime_oauth2_config = {
             "runtime_id": runtime_id,
             "inbound_auth_type": "OAUTH2_JWT",
@@ -97,14 +97,14 @@ class RuntimeOAuth2Configuration:
                     f"{cognito_config['resource_server_id']}/mcp.invoke",
                     f"{cognito_config['resource_server_id']}/runtime.access",
                 ],
-                "scope_strategy": "REQUIRE_ANY",  # Require at least one scope
+                "scope_strategy": "REQUIRE_ANY",  # 하나 이상의 scope 필요
             },
             "token_validation": {
                 "validate_signature": True,
                 "validate_expiration": True,
                 "validate_issuer": True,
                 "validate_audience": True,
-                "clock_skew_seconds": 60,  # Allow 60 second clock skew
+                "clock_skew_seconds": 60,  # 60초의 clock skew 허용
             },
         }
 
@@ -126,7 +126,7 @@ class RuntimeOAuth2Configuration:
             f"  Validate Expiration: {runtime_oauth2_config['token_validation']['validate_expiration']}\n"
         )  # codeql[py/clear-text-logging-sensitive-data]
 
-        # Save configuration to SSM
+        # SSM에 구성 저장
         put_parameter(
             f"/{self.prefix}/lab-03/runtime-oauth2-config",
             json.dumps(runtime_oauth2_config, indent=2),
@@ -138,25 +138,25 @@ class RuntimeOAuth2Configuration:
 
     def create_runtime_iam_policy_for_token_validation(self, runtime_role_arn: str) -> None:
         """
-        Create IAM policy for Runtime to validate tokens
+        Runtime에서 토큰을 검증하는 데 사용할 IAM 정책을 생성합니다.
 
-        Permissions needed:
-        - Fetch Cognito public keys (JWKS endpoint)
-        - Access token validation service
+        필요한 권한:
+        - Cognito 공개 키 조회(JWKS 엔드포인트)
+        - 토큰 검증 서비스 접근
 
-        Args:
-            runtime_role_arn: Runtime IAM role ARN
+        인자:
+            runtime_role_arn: Runtime IAM 역할 ARN
         """
         print("\n" + "=" * 70)
         print("UPDATING RUNTIME IAM ROLE FOR TOKEN VALIDATION")
         print("=" * 70 + "\n")
 
-        # Extract role name from ARN
+        # ARN에서 역할 이름 추출
         role_name = runtime_role_arn.split("/")[-1]
 
         print(f"Updating IAM role: {role_name}\n")
 
-        # Create token validation policy
+        # 토큰 검증 정책 생성
         token_validation_policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -209,12 +209,12 @@ class RuntimeOAuth2Configuration:
 
     def generate_runtime_token_validation_code(self) -> str:
         """
-        Generate Python code for Runtime to validate tokens
+        Runtime에서 토큰을 검증할 Python 코드를 생성합니다.
 
-        This code runs in the Runtime MCP server and validates incoming tokens.
+        이 코드는 Runtime MCP 서버에서 실행되며 수신 토큰을 검증합니다.
 
-        Returns:
-            Python code for token validation
+        반환:
+            토큰 검증용 Python 코드
         """
         return '''
 # Token Validation Module for AgentCore Runtime
@@ -380,7 +380,7 @@ async def handle_mcp_request(request: Request):
 '''
 
     def print_runtime_token_validation_guide(self) -> None:
-        """Print guide for implementing token validation in Runtime"""
+        """Runtime에 토큰 검증을 구현하는 방법을 출력합니다."""
         print("\n" + "=" * 70)
         print("RUNTIME TOKEN VALIDATION IMPLEMENTATION GUIDE")
         print("=" * 70 + "\n")
@@ -433,14 +433,14 @@ async def handle_mcp_request(request: Request):
 
 def setup_runtime_oauth2_validation_complete(runtime_id: str, runtime_role_arn: str) -> Dict:
     """
-    Complete setup workflow for Runtime OAuth2 token validation
+    Runtime OAuth2 토큰 검증 설정 워크플로를 완료합니다.
 
-    Args:
+    인자:
         runtime_id: Runtime ID
-        runtime_role_arn: Runtime IAM role ARN
+        runtime_role_arn: Runtime IAM 역할 ARN
 
-    Returns:
-        Complete OAuth2 validation configuration
+    반환:
+        전체 OAuth2 검증 구성
     """
     print("\n" + "=" * 70)
     print("SETTING UP RUNTIME OAUTH2 TOKEN VALIDATION")
@@ -448,16 +448,16 @@ def setup_runtime_oauth2_validation_complete(runtime_id: str, runtime_role_arn: 
 
     config = RuntimeOAuth2Configuration()
 
-    # Step 1: Configure token validation
+    # 1단계: 토큰 검증 구성
     runtime_oauth2_config = config.configure_runtime_token_validation(runtime_id=runtime_id)
 
-    # Step 2: Update IAM role with token validation permissions
+    # 2단계: 토큰 검증 권한으로 IAM 역할 업데이트
     config.create_runtime_iam_policy_for_token_validation(runtime_role_arn=runtime_role_arn)
 
-    # Step 3: Print implementation guide
+    # 3단계: 구현 가이드 출력
     config.print_runtime_token_validation_guide()
 
-    # Step 4: Save token validation code
+    # 4단계: 토큰 검증 코드 저장
     validation_code = config.generate_runtime_token_validation_code()
     put_parameter("/aiml301/lab-03/runtime-token-validation-code", validation_code)
 

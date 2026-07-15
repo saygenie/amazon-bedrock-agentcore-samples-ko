@@ -1,6 +1,6 @@
 """
-Local Supervisor Agent for Lab 05
-Runs Strands agent locally from notebook with parameterized gateway URL and access token
+Lab 05용 로컬 Supervisor Agent
+파라미터화된 Gateway URL과 액세스 토큰으로 Notebook에서 Strands agent를 로컬 실행합니다.
 """
 
 from strands import Agent
@@ -9,34 +9,34 @@ from strands.tools.mcp.mcp_client import MCPClient
 from mcp.client.streamable_http import streamablehttp_client
 import logging
 
-# Configure logging
+# 로깅 구성
 logging.getLogger("strands").setLevel(logging.INFO)
 logging.basicConfig(format="%(levelname)s | %(name)s | %(message)s", handlers=[logging.StreamHandler()])
 
 
 def create_mcp_client(gateway_url, access_token):
     """
-    Create MCP client with OAuth authentication
+    OAuth 인증을 사용하는 MCP 클라이언트를 생성합니다.
 
-    Args:
-        gateway_url: Gateway MCP endpoint URL
-        access_token: OAuth access token from Cognito
+    인자:
+        gateway_url: Gateway MCP 엔드포인트 URL
+        access_token: Cognito의 OAuth 액세스 토큰
 
-    Returns:
-        MCPClient: Configured MCP client
+    반환:
+        MCPClient: 구성된 MCP 클라이언트
     """
     return MCPClient(lambda: streamablehttp_client(gateway_url, headers={"Authorization": f"Bearer {access_token}"}))
 
 
 def get_all_tools(mcp_client):
     """
-    Retrieve all tools from Gateway with pagination support
+    페이지네이션을 지원하며 Gateway의 모든 도구를 조회합니다.
 
-    Args:
-        mcp_client: MCPClient instance
+    인자:
+        mcp_client: MCPClient 인스턴스
 
-    Returns:
-        list: All available MCP tools
+    반환:
+        list: 사용 가능한 모든 MCP 도구
     """
     tools = []
     pagination_token = None
@@ -54,15 +54,15 @@ def get_all_tools(mcp_client):
 
 def create_supervisor_agent(model_id, tools, region="us-west-2"):
     """
-    Create Strands supervisor agent
+    Strands supervisor agent를 생성합니다.
 
-    Args:
-        model_id: Bedrock model identifier or inference profile ARN
-        tools: List of MCP tools
-        region: AWS region
+    인자:
+        model_id: Bedrock 모델 식별자 또는 inference profile ARN
+        tools: MCP 도구 목록
+        region: AWS 리전
 
-    Returns:
-        Agent: Configured Strands agent
+    반환:
+        Agent: 구성된 Strands agent
     """
     system_prompt = """
 # Supervisor Agent System Prompt
@@ -135,16 +135,16 @@ def run_supervisor_agent(
     model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0",
 ):
     """
-    Run supervisor agent with parameterized configuration
+    파라미터화된 구성으로 Supervisor Agent를 실행합니다.
 
-    Args:
-        gateway_url: Gateway MCP endpoint URL
-        access_token: OAuth access token from Cognito
-        prompt: User prompt/query for the agent
-        model_id: Bedrock model identifier (default: Claude Haiku 4.5)
+    인자:
+        gateway_url: Gateway MCP 엔드포인트 URL
+        access_token: Cognito의 OAuth 액세스 토큰
+        prompt: Agent에 전달할 사용자 prompt/query
+        model_id: Bedrock 모델 식별자(기본값: Claude Haiku 4.5)
 
-    Returns:
-        str: Agent response text
+    반환:
+        str: Agent 응답 텍스트
     """
     try:
         mcp_client = create_mcp_client(gateway_url, access_token)
@@ -159,7 +159,7 @@ def run_supervisor_agent(
 
             response = agent(prompt)
 
-            # Extract text from response
+            # 응답에서 텍스트 추출
             content = response.message.get("content", [])
             if isinstance(content, list) and len(content) > 0:
                 text = content[0].get("text", str(response))

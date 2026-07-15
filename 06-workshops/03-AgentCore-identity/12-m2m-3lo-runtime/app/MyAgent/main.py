@@ -1,19 +1,19 @@
 """
-AgentCore Runtime agent demonstrating three outbound auth flows:
+세 가지 아웃바운드 인증 흐름을 보여주는 AgentCore Runtime 에이전트입니다.
 
   1. M2M (machine-to-machine / client credentials):
-     The agent calls an internal API as a service account — no user interaction.
-     Uses @requires_access_token with auth_flow="M2M".
+     에이전트가 사용자 상호 작용 없이 서비스 계정으로 내부 API를 호출합니다.
+     auth_flow="M2M"으로 @requires_access_token을 사용합니다.
 
   2. GitHub Auth Code (3LO / USER_FEDERATION):
-     The agent lists the user's GitHub repositories.
-     First call returns a consent URL; subsequent calls use stored tokens.
+     에이전트가 사용자의 GitHub 리포지터리를 나열합니다.
+     첫 호출은 동의 URL을 반환하고, 이후 호출은 저장된 토큰을 사용합니다.
 
   3. Google Auth Code (3LO / USER_FEDERATION):
-     The agent reads the user's Google Calendar events.
-     First call returns a consent URL; subsequent calls use stored tokens.
+     에이전트가 사용자의 Google Calendar 이벤트를 읽습니다.
+     첫 호출은 동의 URL을 반환하고, 이후 호출은 저장된 토큰을 사용합니다.
 
-Inbound Auth: Cognito JWT (configured in agentcore/agentcore.json).
+인바운드 인증: Cognito JWT(agentcore/agentcore.json에서 구성)
 """
 
 import json
@@ -29,12 +29,12 @@ from bedrock_agentcore.services.identity import TokenPoller
 
 
 class _NonBlockingPoller(TokenPoller):
-    """Returns immediately so the consent URL can be passed to the user.
+    """동의 URL을 사용자에게 전달할 수 있도록 즉시 반환합니다.
 
-    On first call (no token yet): on_auth_url is called with the URL, then
-    this poller returns "" immediately instead of blocking. The tool returns
-    the consent URL to the agent. On the second invocation (after the user
-    completes consent), GetResourceOauth2Token returns the token directly.
+    첫 호출(아직 토큰 없음)에서는 URL로 on_auth_url을 호출한 후 이 폴러가
+    차단하지 않고 즉시 ""을 반환합니다. 도구는 에이전트에 동의 URL을 반환합니다.
+    사용자가 동의를 완료한 뒤 두 번째로 호출하면 GetResourceOauth2Token이
+    토큰을 직접 반환합니다.
     """
 
     async def poll_for_token(self) -> str:
@@ -45,8 +45,8 @@ app = BedrockAgentCoreApp()
 _model = BedrockModel(model_id="us.anthropic.claude-haiku-4-5-20251001-v1:0")
 
 # ---------------------------------------------------------------------------
-# M2M: client credentials grant (Cognito machine client)
-# The agent authenticates as a service account — no user involved.
+# M2M: client credentials 권한 부여(Cognito 머신 클라이언트)
+# 에이전트가 사용자 개입 없이 서비스 계정으로 인증
 # ---------------------------------------------------------------------------
 
 _m2m_token_cache: dict = {}
@@ -88,7 +88,7 @@ async def get_weather_m2m(location: str) -> str:
     if not token:
         return "Failed to obtain M2M token. Check the M2MProvider credential configuration."
 
-    # Fetch API key from AgentCore Identity (same as sample 10)
+    # AgentCore Identity에서 API 키 가져오기(Sample 10과 동일)
     if "key" not in _api_key_cache:
         await _fetch_api_key(api_key="")
     api_key = _api_key_cache.get("key", "")
@@ -125,8 +125,8 @@ async def get_weather_m2m(location: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# GitHub 3LO: authorization code grant
-# The agent lists the user's GitHub repositories.
+# GitHub 3LO: authorization code 권한 부여
+# 에이전트가 사용자의 GitHub 리포지터리를 나열
 # ---------------------------------------------------------------------------
 
 _github_auth_url_cache: dict = {}
@@ -196,8 +196,8 @@ def get_github_repos() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Google 3LO: authorization code grant
-# The agent reads the user's Google Calendar events.
+# Google 3LO: authorization code 권한 부여
+# 에이전트가 사용자의 Google Calendar 이벤트를 읽음
 # ---------------------------------------------------------------------------
 
 _google_auth_url_cache: dict = {}
@@ -263,7 +263,7 @@ def get_calendar_events() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Agent entrypoint
+# 에이전트 진입점
 # ---------------------------------------------------------------------------
 
 _agent: Agent | None = None

@@ -1,15 +1,15 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 """
-Weather REST API Lambda — EntraID variant.
+Weather REST API Lambda - EntraID 변형입니다.
 
-Simple HTTP endpoint that returns weather data. Called by AgentCore Gateway
-via the OpenAPI target. The Gateway handles token validation (EntraID 3LO),
-so this Lambda receives pre-authorized requests.
+날씨 데이터를 반환하는 간단한 HTTP 엔드포인트입니다. AgentCore Gateway가
+OpenAPI target을 통해 호출합니다. Gateway가 토큰 검증(EntraID 3LO)을 처리하므로
+이 Lambda는 사전 승인된 요청을 받습니다.
 
-The Gateway passes the user's EntraID access token in the Authorization header.
-For this demo, we trust the Gateway's auth and return mock weather data.
-In production, you'd validate the token against EntraID.
+Gateway는 사용자의 EntraID access token을 Authorization 헤더로 전달합니다.
+이 데모에서는 Gateway의 인증을 신뢰하고 모의 날씨 데이터를 반환합니다.
+프로덕션에서는 EntraID를 기준으로 토큰을 검증해야 합니다.
 """
 
 import json
@@ -17,8 +17,8 @@ import random
 
 
 def lambda_handler(event, context):
-    """Handle GET /weather?location=..."""
-    # Log request metadata only (exclude headers which may contain tokens)
+    """GET /weather?location=... 요청을 처리합니다."""
+    # 요청 메타데이터만 기록(토큰이 포함될 수 있는 헤더 제외)
     print(f"Method: {event.get('httpMethod', 'unknown')}, Path: {event.get('path', '/')}")
 
     method = event.get("httpMethod") or event.get("requestContext", {}).get("http", {}).get("method", "GET")
@@ -32,7 +32,7 @@ def lambda_handler(event, context):
     if not location:
         return json_response(400, {"error": "Missing required parameter: location"})
 
-    # Mock weather data
+    # 모의 날씨 데이터
     weather = {
         "location": location,
         "temperature": round(random.uniform(20, 95), 1),

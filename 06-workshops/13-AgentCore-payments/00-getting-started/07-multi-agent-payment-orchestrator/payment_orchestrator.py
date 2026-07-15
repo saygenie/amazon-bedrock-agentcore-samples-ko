@@ -1,16 +1,16 @@
 """
-Multi-Agent Payment Orchestrator for AgentCore Runtime.
+AgentCore Runtime을 위한 Multi-Agent Payment Orchestrator입니다.
 
-Three agents in one runtime:
-- Research Agent: deep data gathering (Coinbase wallet, Session A)
-- Discovery Agent: find cheap tools (Privy wallet, Session B)
-- Orchestrator: routes tasks, monitors budgets, NO payment plugin
+하나의 runtime에 세 agent가 있습니다.
+- Research Agent: 심층 data 수집(Coinbase wallet, Session A)
+- Discovery Agent: 저렴한 tool 검색(Privy wallet, Session B)
+- Orchestrator: task routing 및 budget monitoring, payment plugin 없음
 
-The app backend passes two session IDs and two instrument IDs via the
-invocation payload. Each specialist gets its own plugin with its own
-budget. The orchestrator cannot spend — structural enforcement.
+App backend는 invocation payload를 통해 두 session ID와 두 instrument ID를
+전달합니다. 각 specialist에는 자체 budget이 있는 plugin이 할당됩니다.
+Orchestrator는 구조적으로 지출할 수 없습니다.
 
-Deployment:
+배포:
     agentcore create --name PaymentOrchestrator --defaults
     agentcore deploy
 """
@@ -38,15 +38,15 @@ MODEL_ID = os.environ.get("MODEL_ID", "us.anthropic.claude-sonnet-4-6")
 
 @app.entrypoint
 def handle_request(payload, context=None):
-    """Handle an invocation from the app backend.
+    """App backend의 invocation을 처리합니다.
 
-    Args:
-        payload: JSON dict with:
-            - prompt: The user's request
+    인수:
+        payload: 다음 항목이 있는 JSON dict
+            - prompt: 사용자 request
             - user_id: User identifier
-            - research_session_id: Session A (research agent budget)
+            - research_session_id: Session A(research agent budget)
             - research_instrument_id: Coinbase instrument
-            - discovery_session_id: Session B (discovery agent budget)
+            - discovery_session_id: Session B(discovery agent budget)
             - discovery_instrument_id: Privy instrument
     """
     prompt = payload.get("prompt", "Hello")
@@ -67,7 +67,7 @@ def handle_request(payload, context=None):
     ):
         return {"error": "Missing session or instrument IDs in payload"}
 
-    # --- Specialist plugins (each with own session + instrument) ---
+    # --- Specialist plugin(각각 자체 session + instrument 사용) ---
 
     research_plugin = AgentCorePaymentsPlugin(
         config=AgentCorePaymentsPluginConfig(
@@ -89,7 +89,7 @@ def handle_request(payload, context=None):
         )
     )
 
-    # --- Budget check tool (orchestrator only) ---
+    # --- Budget 확인 tool(orchestrator 전용) ---
 
     dp_client = boto3.client("bedrock-agentcore", region_name=REGION)
 
@@ -118,7 +118,7 @@ def handle_request(payload, context=None):
             }
         return json.dumps(results, indent=2)
 
-    # --- Specialist agents ---
+    # --- 전문 agent ---
 
     model = BedrockModel(model_id=MODEL_ID, streaming=True)
 
@@ -149,7 +149,7 @@ def handle_request(payload, context=None):
         ),
     )
 
-    # --- Orchestrator (NO plugin — cannot spend) ---
+    # --- Orchestrator(plugin이 없어 지출 불가) ---
 
     orchestrator = Agent(
         model=model,

@@ -13,10 +13,10 @@ resource "aws_cognito_user_pool" "this" {
   }
 }
 
-# Upgrade to Essentials tier (required for V3_0 Pre Token Generation).
-# Then attach the Pre Token Generation Lambda trigger.
-# The aws_cognito_user_pool resource does not support UserPoolTier natively,
-# and the V3_0 trigger requires Essentials tier, so both are done via CLI.
+# Essentials tier로 업그레이드(V3_0 Pre Token Generation에 필요).
+# 그런 다음 Pre Token Generation Lambda 트리거를 연결합니다.
+# aws_cognito_user_pool 리소스는 UserPoolTier를 기본 지원하지 않고
+# V3_0 트리거에는 Essentials tier가 필요하므로 두 작업 모두 CLI로 수행합니다.
 resource "null_resource" "configure_user_pool" {
   depends_on = [
     aws_cognito_user_pool.this,
@@ -74,7 +74,7 @@ resource "aws_cognito_resource_server" "this" {
 }
 
 # -----------------------------------------------------------------------------
-# Cognito App Client - Gateway (inbound auth to AgentCore Gateway)
+# Cognito App Client - Gateway(AgentCore Gateway 인바운드 인증)
 # -----------------------------------------------------------------------------
 resource "aws_cognito_user_pool_client" "gateway" {
   name         = "${var.name_prefix}-gateway-client-${local.suffix}"
@@ -94,7 +94,7 @@ resource "aws_cognito_user_pool_client" "gateway" {
 }
 
 # -----------------------------------------------------------------------------
-# Cognito App Client - Downstream (used by interceptor for API Gateway auth)
+# Cognito App Client - Downstream(인터셉터가 API Gateway 인증에 사용)
 # -----------------------------------------------------------------------------
 resource "aws_cognito_user_pool_client" "downstream" {
   name         = "${var.name_prefix}-downstream-client-${local.suffix}"

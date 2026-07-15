@@ -1,20 +1,20 @@
 """
-Setup script to create Gateway with Lambda target and save configuration.
+Lambda 대상을 포함하는 Gateway를 생성하고 구성을 저장하는 설정 스크립트입니다.
 
-Usage:
+사용법:
     python setup-gateway.py [--region REGION] [--role-arn ROLE_ARN]
 
-Options:
-    --region REGION      AWS region (defaults to current session region)
-    --role-arn ROLE_ARN  IAM role ARN with trust relationship (creates one if not provided)
+옵션:
+    --region REGION      AWS 리전(기본값: 현재 세션의 리전)
+    --role-arn ROLE_ARN  신뢰 관계가 있는 IAM 역할 ARN(제공하지 않으면 생성)
 
-This script will:
-1. Create a sample Refund Lambda function (if not provided)
-2. Create an Amazon Bedrock AgentCore Gateway with OAuth authorization
-3. Attach the Lambda as a target to the Gateway
-4. Save the configuration to gateway_config.json
+이 스크립트는 다음 작업을 수행합니다.
+1. 샘플 Refund Lambda 함수 생성(제공되지 않은 경우)
+2. OAuth 권한 부여를 사용하는 Amazon Bedrock AgentCore Gateway 생성
+3. Lambda를 Gateway 대상으로 연결
+4. 구성을 gateway_config.json에 저장
 
-If a Gateway already exists (from gateway_config.json), it will be reused.
+Gateway가 이미 있으면(gateway_config.json 기준) 재사용합니다.
 """
 
 import argparse
@@ -29,7 +29,7 @@ import boto3
 from bedrock_agentcore_starter_toolkit.operations.gateway.client import GatewayClient
 
 
-# Refund Lambda function code (Node.js)
+# Refund Lambda 함수 코드(Node.js)
 REFUND_LAMBDA_CODE = """
 console.log('Loading function');
 
@@ -44,7 +44,7 @@ export const handler = async (event, context) => {
         const body = JSON.parse(event.body);
         response = {"status": "Done", "amount": body.amount, "orderId": body.orderId};
     } else {
-        // For Gateway direct invocation
+        // Gateway 직접 호출용
         response = {"status": "Done", "amount": event.amount, "orderId": event.orderId};
         return response;
     }
@@ -54,7 +54,7 @@ export const handler = async (event, context) => {
 };
 """
 
-# Refund tool schema for the Gateway target
+# Gateway 대상용 Refund 도구 스키마
 REFUND_TOOL_SCHEMA = [
     {
         "name": "refund",
@@ -83,7 +83,7 @@ REFUND_TOOL_SCHEMA = [
 
 
 def load_existing_config() -> dict | None:
-    """Load existing gateway_config.json if it exists and has valid gateway info."""
+    """기존 gateway_config.json에 유효한 Gateway 정보가 있으면 로드합니다."""
     config_path = Path("gateway_config.json")
     if not config_path.exists():
         return None
@@ -92,7 +92,7 @@ def load_existing_config() -> dict | None:
         with open(config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
 
-        # Check if config has required gateway fields (not placeholders)
+        # 구성에 자리 표시자가 아닌 필수 Gateway 필드가 있는지 확인
         if config.get("gateway_id") and "<" not in config.get("gateway_id", "<"):
             return config
     except (json.JSONDecodeError, IOError):
@@ -102,10 +102,10 @@ def load_existing_config() -> dict | None:
 
 
 def get_existing_gateway(region: str, gateway_id: str = None, gateway_name: str = None) -> dict | None:
-    """Check if gateway exists by ID or name and return its details."""
+    """ID 또는 이름으로 Gateway가 있는지 확인하고 세부 정보를 반환합니다."""
     boto_client = boto3.client("bedrock-agentcore-control", region_name=region)
 
-    # Try by ID first
+    # 먼저 ID로 조회
     if gateway_id:
         try:
             gateway = boto_client.get_gateway(gatewayIdentifier=gateway_id)
@@ -114,7 +114,7 @@ def get_existing_gateway(region: str, gateway_id: str = None, gateway_name: str 
         except Exception as exc:
             print(f"  Could not retrieve gateway by ID {gateway_id}: {exc}")
 
-    # Try to find by name
+    # 이름으로 조회 시도
     if gateway_name:
         try:
             response = boto_client.list_gateways()
@@ -123,7 +123,7 @@ def get_existing_gateway(region: str, gateway_id: str = None, gateway_name: str 
                     "READY",
                     "ACTIVE",
                 ]:
-                    # Get full gateway details
+                    # 전체 Gateway 세부 정보 가져오기
                     full_gw = boto_client.get_gateway(gatewayIdentifier=gw["gatewayId"])
                     return full_gw
         except Exception as exc:
@@ -133,7 +133,7 @@ def get_existing_gateway(region: str, gateway_id: str = None, gateway_name: str 
 
 
 def get_existing_target(region: str, gateway_id: str, target_name: str) -> dict | None:
-    """Check if a target with the given name exists on the gateway."""
+    """주어진 이름의 대상이 Gateway에 있는지 확인합니다."""
     boto_client = boto3.client("bedrock-agentcore-control", region_name=region)
 
     try:
@@ -152,14 +152,14 @@ def get_existing_target(region: str, gateway_id: str, target_name: str) -> dict 
 
 def create_refund_lambda(region: str, function_name: str = "RefundLambda") -> str:
     """
-    Create or update the Refund Lambda function.
+    Refund Lambda 함수를 생성하거나 업데이트합니다.
 
-    Args:
-        region: AWS region
-        function_name: Name for the Lambda function
+    인수:
+        region: AWS 리전
+        function_name: Lambda 함수 이름
 
-    Returns:
-        Lambda function ARN
+    반환값:
+        Lambda 함수 ARN
     """
     lambda_client = boto3.client("lambda", region_name=region)
     iam_client = boto3.client("iam", region_name=region)
@@ -170,23 +170,23 @@ def create_refund_lambda(region: str, function_name: str = "RefundLambda") -> st
     print(f"\n📦 Setting up Refund Lambda function: {function_name}")
     print("-" * 60)
 
-    # Create deployment package (zip file with index.mjs)
+    # 배포 패키지 생성(index.mjs가 포함된 zip 파일)
     with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp_file:
         zip_path = tmp_file.name
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-            # Use .mjs extension for ES module support
+            # ES 모듈 지원을 위해 .mjs 확장자 사용
             zipf.writestr("index.mjs", REFUND_LAMBDA_CODE.strip())
 
     try:
         with open(zip_path, "rb") as f:
             zip_content = f.read()
 
-        # Try to update existing function first
+        # 먼저 기존 함수 업데이트 시도
         try:
             lambda_client.update_function_code(FunctionName=function_name, ZipFile=zip_content)
             print(f"✓ Updated existing Lambda function: {function_name}")
 
-            # Wait for update to complete
+            # 업데이트가 완료될 때까지 대기
             waiter = lambda_client.get_waiter("function_updated_v2")
             waiter.wait(FunctionName=function_name)
 
@@ -194,11 +194,11 @@ def create_refund_lambda(region: str, function_name: str = "RefundLambda") -> st
             return response["Configuration"]["FunctionArn"]
 
         except lambda_client.exceptions.ResourceNotFoundException:
-            # Create new function with IAM role
+            # IAM 역할을 사용해 새 함수 생성
             role_name = f"{function_name}-execution-role"
             role_arn = f"arn:aws:iam::{account_id}:role/{role_name}"
 
-            # Create IAM role if needed
+            # 필요한 경우 IAM 역할 생성
             try:
                 iam_client.create_role(
                     RoleName=role_name,
@@ -226,7 +226,7 @@ def create_refund_lambda(region: str, function_name: str = "RefundLambda") -> st
             except iam_client.exceptions.EntityAlreadyExistsException:
                 print(f"  IAM role already exists: {role_name}")
 
-            # Create Lambda function with Node.js 20.x runtime
+            # Node.js 20.x 런타임으로 Lambda 함수 생성
             response = lambda_client.create_function(
                 FunctionName=function_name,
                 Runtime="nodejs20.x",
@@ -239,7 +239,7 @@ def create_refund_lambda(region: str, function_name: str = "RefundLambda") -> st
             )
             print(f"✓ Created Lambda function: {function_name}")
 
-            # Wait for function to be active
+            # 함수가 활성화될 때까지 대기
             waiter = lambda_client.get_waiter("function_active_v2")
             waiter.wait(FunctionName=function_name)
 
@@ -250,7 +250,7 @@ def create_refund_lambda(region: str, function_name: str = "RefundLambda") -> st
 
 
 def get_default_region() -> str:
-    """Get the default AWS region from the current session or environment."""
+    """현재 세션 또는 환경에서 기본 AWS 리전을 가져옵니다."""
     session = boto3.Session()
     region = session.region_name or os.environ.get("AWS_DEFAULT_REGION")
     if not region:
@@ -260,29 +260,29 @@ def get_default_region() -> str:
 
 def setup_gateway(region: str = None, role_arn: str = None):
     """
-    Setup AgentCore Gateway with Lambda target and policy engine.
+    Lambda 대상과 정책 엔진을 포함하는 AgentCore Gateway를 설정합니다.
 
-    Args:
-        region: AWS region (defaults to current session region)
-        role_arn: IAM role ARN with trust relationship (creates one if not provided)
+    인수:
+        region: AWS 리전(기본값: 현재 세션의 리전)
+        role_arn: 신뢰 관계가 있는 IAM 역할 ARN(제공하지 않으면 생성)
     """
-    # Use provided region or get default
+    # 제공된 리전을 사용하거나 기본 리전 가져오기
     if not region:
         region = get_default_region()
 
     print("\n🚀 Setting up AgentCore Gateway...")
     print(f"Region: {region}\n")
 
-    # Initialize client
+    # 클라이언트 초기화
     client = GatewayClient(region_name=region)
     client.logger.setLevel(logging.INFO)
 
-    # Gateway and target names used for this tutorial
+    # 이 자습서에서 사용하는 Gateway 및 대상 이름
     gateway_name = "TestGWforPolicyEngine"
     target_name = "RefundToolTarget"
     lambda_function_name = "RefundLambda"
 
-    # Check for existing configuration or gateway
+    # 기존 구성 또는 Gateway 확인
     existing_config = load_existing_config()
     gateway = None
     cognito_response = None
@@ -292,29 +292,29 @@ def setup_gateway(region: str = None, role_arn: str = None):
         print("📋 Found existing gateway_config.json")
         gateway_id = existing_config.get("gateway_id")
 
-        # Try to retrieve the existing gateway
+        # 기존 Gateway 조회 시도
         print(f"  Checking if gateway '{gateway_id}' exists...")
         gateway = get_existing_gateway(region, gateway_id=gateway_id)
 
         if gateway:
             print(f"✓ Reusing existing gateway: {gateway.get('gatewayUrl', gateway_id)}\n")
-            # Reuse existing client_info if available
+            # 기존 client_info가 있으면 재사용
             if existing_config.get("client_info"):
                 cognito_response = {"client_info": existing_config["client_info"]}
 
-            # Check if Lambda ARN is stored in config
+            # 구성에 Lambda ARN이 저장되어 있는지 확인
             lambda_arn = existing_config.get("lambda_arn")
         else:
             print(f"  Gateway '{gateway_id}' not found or not ready.\n")
 
-    # If no gateway yet, check if one exists by name
+    # 아직 Gateway가 없으면 이름으로 기존 Gateway 확인
     if not gateway:
         print(f"🔍 Checking for existing gateway named '{gateway_name}'...")
         gateway = get_existing_gateway(region, gateway_name=gateway_name)
         if gateway:
             print(f"✓ Found existing gateway: {gateway.get('gatewayUrl')}\n")
 
-    # Create or get Lambda function
+    # Lambda 함수 생성 또는 가져오기
     if not lambda_arn:
         print("\n" + "=" * 60)
         print("Step 1: Setting up Refund Lambda function")
@@ -324,7 +324,7 @@ def setup_gateway(region: str = None, role_arn: str = None):
     else:
         print(f"\n✓ Using existing Lambda ARN: {lambda_arn}\n")
 
-    # Create OAuth authorizer if we don't have existing client_info
+    # 기존 client_info가 없으면 OAuth 권한 부여자 생성
     if not cognito_response:
         print("=" * 60)
         print("Step 2: Creating OAuth authorization server")
@@ -332,7 +332,7 @@ def setup_gateway(region: str = None, role_arn: str = None):
         cognito_response = client.create_oauth_authorizer_with_cognito("TestGateway")
         print("✓ Authorization server created\n")
 
-    # Create Gateway if we don't have an existing one
+    # 기존 Gateway가 없으면 생성
     if not gateway:
         print("=" * 60)
         print("Step 3: Creating Gateway")
@@ -349,7 +349,7 @@ def setup_gateway(region: str = None, role_arn: str = None):
         print("Step 3: Skipping gateway creation (reusing existing)")
         print("=" * 60 + "\n")
 
-    # Check if target already exists and add if not
+    # 대상이 이미 있는지 확인하고 없으면 추가
     print("=" * 60)
     print("Step 4: Adding Lambda target")
     print("=" * 60)
@@ -388,7 +388,7 @@ def setup_gateway(region: str = None, role_arn: str = None):
                 print(f"✗ Error creating target: {exc}")
                 raise
 
-    # Save configuration
+    # 구성 저장
     config = {
         "gateway_url": gateway.get("gatewayUrl"),
         "gateway_id": gateway.get("gatewayId"),

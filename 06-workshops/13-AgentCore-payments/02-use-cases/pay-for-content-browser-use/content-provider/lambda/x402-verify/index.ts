@@ -1,25 +1,25 @@
 /**
- * Lambda@Edge viewer-request handler — x402 v2 paywall
+ * Lambda@Edge viewer-request handler - x402 v2 paywall
  *
- * Config is injected at CDK build time via esbuild --define:
- *   __PAY_TO__            Merchant wallet address
- *   __PRICE_USDC_UNITS__  Price in USDC atomic units (6 decimals)
- *   __NETWORK__           CAIP-2 network identifier
+ * config는 CDK build 시 esbuild --define을 통해 주입됩니다.
+ *   __PAY_TO__            merchant wallet address
+ *   __PRICE_USDC_UNITS__  USDC atomic unit 단위의 가격(소수점 6자리)
+ *   __NETWORK__           CAIP-2 network 식별자
  *   __USDC_ADDRESS__      USDC contract address
  *
- * Two flows:
- *   Browser agent flow  — request has no x-payment header
- *                         → returns paywall HTML page at HTTP 200
- *                           (agent reads <script id="x402-requirement">, calls
- *                            ProcessPayment, then pastes the base64 proof into
- *                            the paywall UI — client-side JS validates and unlocks)
+ * 두 가지 흐름:
+ *   브라우저 agent 흐름 - request에 x-payment header가 없음
+ *                         -> HTTP 200으로 paywall HTML 페이지 반환
+ *                           (agent가 <script id="x402-requirement">를 읽고
+ *                            ProcessPayment를 호출한 뒤 base64 proof를 paywall UI에
+ *                            붙여 넣으면 client-side JS가 검증하고 잠금을 해제함)
  *
- *   Programmatic flow   — request has x-payment header with base64 proof
- *                         → validates proof structure and returns 200 with content
- *                           (for direct HTTP clients, not the browser agent path)
+ *   프로그래밍 방식 흐름 - request에 base64 proof가 담긴 x-payment header가 있음
+ *                         -> proof 구조를 검증하고 콘텐츠와 함께 200 반환
+ *                           (브라우저 agent 경로가 아닌 직접 HTTP client용)
  */
 
-// Values injected by CDK esbuild --define flags
+// CDK esbuild --define flag로 주입되는 값
 declare const __PAY_TO__: string;
 declare const __PRICE_USDC_UNITS__: string;
 declare const __NETWORK__: string;
@@ -241,7 +241,7 @@ function validateProof(proofHeader: string): boolean {
 export const handler = async (event: CFEvent): Promise<LambdaResponse | CFRequest> => {
   const request = event.Records[0].cf.request;
 
-  // Only intercept the paywall demo route
+  // paywall 데모 route만 가로챕니다.
   if (!request.uri.startsWith("/article/paywall-demo")) {
     return request;
   }
@@ -250,7 +250,7 @@ export const handler = async (event: CFEvent): Promise<LambdaResponse | CFReques
     request.headers["x-payment"]?.[0]?.value ??
     request.headers["payment-signature"]?.[0]?.value;
 
-  // Programmatic client: validate proof and return content directly
+  // 프로그래밍 방식 client: proof를 검증하고 콘텐츠를 직접 반환합니다.
   if (paymentHeader) {
     if (!validateProof(paymentHeader)) {
       return {
@@ -271,7 +271,7 @@ export const handler = async (event: CFEvent): Promise<LambdaResponse | CFReques
       };
     }
 
-    // Proof is structurally valid — return unlocked content
+    // Proof 구조가 유효하므로 잠금 해제된 콘텐츠를 반환합니다.
     return {
       status: "200",
       statusDescription: "OK",
@@ -290,7 +290,7 @@ export const handler = async (event: CFEvent): Promise<LambdaResponse | CFReques
     };
   }
 
-  // Browser agent flow: no payment header — serve the paywall HTML page
+  // 브라우저 agent 흐름: payment header가 없으므로 paywall HTML 페이지를 제공합니다.
   const host = request.headers["host"]?.[0]?.value ?? "localhost";
   const resource = `https://${host}/article/paywall-demo`;
   const requirement = buildRequirement(resource);

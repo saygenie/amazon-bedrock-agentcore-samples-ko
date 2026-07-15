@@ -1,26 +1,26 @@
-# AgentCore CDK Project
+# AgentCore CDK 프로젝트
 
-This CDK project is managed by the AgentCore CLI. It deploys your agent infrastructure into AWS using the `@aws/agentcore-cdk` L3 constructs.
+이 CDK 프로젝트는 AgentCore CLI에서 관리합니다. `@aws/agentcore-cdk` L3 construct를 사용하여 에이전트 인프라를 AWS에 배포합니다.
 
-## Structure
+## 구조
 
-- `bin/cdk.ts` — Entry point. Reads project configuration from `agentcore/` and creates a stack per deployment target.
-- `lib/cdk-stack.ts` — Defines `AgentCoreStack`, which wraps the `AgentCoreApplication` L3 construct.
-- `test/cdk.test.ts` — Unit tests for stack synthesis.
+- `bin/cdk.ts` - 진입점. `agentcore/`에서 프로젝트 구성을 읽고 배포 대상별로 스택을 생성합니다.
+- `lib/cdk-stack.ts` - `AgentCoreApplication` L3 construct를 래핑하는 `AgentCoreStack`을 정의합니다.
+- `test/cdk.test.ts` - 스택 합성용 단위 테스트입니다.
 
-## Useful commands
+## 유용한 명령
 
-- `npm run build` compile TypeScript to JavaScript
-- `npm run test` run unit tests
-- `npx cdk synth` emit the synthesized CloudFormation template
-- `npx cdk deploy` deploy this stack to your default AWS account/region
-- `npx cdk diff` compare deployed stack with current state
+- `npm run build`: TypeScript를 JavaScript로 컴파일
+- `npm run test`: 단위 테스트 실행
+- `npx cdk synth`: 합성된 CloudFormation 템플릿 출력
+- `npx cdk deploy`: 기본 AWS 계정/리전에 이 스택 배포
+- `npx cdk diff`: 배포된 스택과 현재 상태 비교
 
-## Usage
+## 사용법
 
-You typically don't need to interact with this directory directly. The AgentCore CLI handles synthesis and deployment:
+일반적으로 이 디렉터리와 직접 상호 작용할 필요가 없습니다. AgentCore CLI가 합성과 배포를 처리합니다.
 
 ```bash
-agentcore deploy    # synthesizes and deploys via CDK
-agentcore status    # checks deployment status
+agentcore deploy    # CDK를 통해 합성 및 배포
+agentcore status    # 배포 상태 확인
 ```

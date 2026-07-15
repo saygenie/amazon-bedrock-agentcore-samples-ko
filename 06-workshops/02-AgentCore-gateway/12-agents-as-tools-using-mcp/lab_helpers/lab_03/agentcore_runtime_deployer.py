@@ -1,17 +1,17 @@
 """
-Lab 03: AgentCore Runtime Deployment Helper
+Lab 03: AgentCore Runtime 배포 헬퍼
 
-Deploys Strands remediation agent with AgentCore Code Interpreter to Amazon Bedrock AgentCore Runtime.
+AgentCore Code Interpreter를 사용하는 Strands remediation agent를 Amazon Bedrock AgentCore Runtime에 배포합니다.
 
-Features:
-- IAM role creation for Runtime execution
-- Agent code packaging (Strands + Code Interpreter)
-- Runtime deployment via bedrock-agentcore-starter-toolkit
-- Configuration storage in Parameter Store
-- Deployment lifecycle management (create, update, delete)
-- Integration with Lab-02 Gateway (optional)
+기능:
+- Runtime 실행용 IAM 역할 생성
+- Agent 코드 패키징(Strands + Code Interpreter)
+- bedrock-agentcore-starter-toolkit을 통한 Runtime 배포
+- Parameter Store에 구성 저장
+- 배포 수명 주기 관리(생성, 업데이트, 삭제)
+- Lab-02 Gateway 연동(선택 사항)
 
-Based on AWS patterns:
+AWS 패턴 기반:
 - https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-get-started-toolkit.html
 - https://github.com/awslabs/amazon-bedrock-agentcore-samples
 """
@@ -25,14 +25,14 @@ from typing import Dict, Optional, List
 from datetime import datetime
 from botocore.exceptions import ClientError
 
-# Import centralized configuration
+# 중앙 집중식 구성 가져오기
 from lab_helpers.config import AWS_REGION
 from lab_helpers.constants import PARAMETER_PATHS
 
 logger = logging.getLogger(__name__)
 
-# Configuration defaults
-REGION = AWS_REGION  # Use centralized region from config.py
+# 기본 구성
+REGION = AWS_REGION  # config.py의 중앙 집중식 리전 사용
 PREFIX = "aiml301"
 RUNTIME_NAME = f"{PREFIX}-remediation-runtime"
 RUNTIME_ROLE_NAME = f"{PREFIX}-agentcore-remediation-role"
@@ -40,7 +40,7 @@ RUNTIME_POLICY_NAME = f"{PREFIX}-remediation-runtime-policy"
 
 
 class AgentCoreRuntimeDeployer:
-    """Deployment helper for Strands remediation agent to AgentCore Runtime"""
+    """Strands remediation agent를 AgentCore Runtime에 배포하는 헬퍼입니다."""
 
     def __init__(
         self,
@@ -50,36 +50,36 @@ class AgentCoreRuntimeDeployer:
         verbose: bool = True,
     ):
         """
-        Initialize deployer with AWS clients and configuration.
+        AWS 클라이언트와 구성으로 배포 도구를 초기화합니다.
 
-        Args:
-            region: AWS region (default: us-west-2)
-            prefix: Resource naming prefix (default: aiml301)
-            runtime_name: Name for deployed Runtime (default: aiml301-remediation-runtime)
-            verbose: Enable verbose logging
+        인자:
+            region: AWS 리전(기본값: us-west-2)
+            prefix: 리소스 명명 접두사(기본값: aiml301)
+            runtime_name: 배포된 Runtime 이름(기본값: aiml301-remediation-runtime)
+            verbose: 상세 로깅 활성화 여부
         """
         self.region = region
         self.prefix = prefix
         self.runtime_name = runtime_name
         self.verbose = verbose
 
-        # AWS clients
+        # AWS 클라이언트
         self.iam = boto3.client("iam", region_name=region)
         self.agentcore = boto3.client("bedrock-agentcore-control", region_name=region)
         self.ssm = boto3.client("ssm", region_name=region)
         self.sts = boto3.client("sts", region_name=region)
         self.logs = boto3.client("logs", region_name=region)
 
-        # Get account ID
+        # 계정 ID 조회
         self.account_id = self.sts.get_caller_identity()["Account"]
 
-        # Initialize logger
+        # 로거 초기화
         if verbose:
             logging.basicConfig(level=logging.INFO)
             logger.setLevel(logging.INFO)
 
     def _log(self, message: str, level: str = "info"):
-        """Log message with formatting"""
+        """메시지를 서식에 맞춰 기록합니다."""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         levels = {"info": "ℹ️", "success": "✅", "error": "❌", "warning": "⚠️"}
         icon = levels.get(level, "•")
@@ -87,11 +87,11 @@ class AgentCoreRuntimeDeployer:
         getattr(logger, level, logger.info)(message)
 
     def check_prerequisites(self) -> bool:
-        """Check that all prerequisites for deployment are met"""
+        """모든 배포 사전 요구 사항이 충족되었는지 확인합니다."""
         self._log("Checking prerequisites...")
 
         try:
-            # Check toolkit installation
+            # Toolkit 설치 확인
             try:
                 from bedrock_agentcore_starter_toolkit import Runtime  # noqa: F401
 
@@ -104,12 +104,12 @@ class AgentCoreRuntimeDeployer:
                 )
                 return False
 
-            # Check AWS credentials and permissions
+            # AWS 자격 증명 및 권한 확인
             identity = self.sts.get_caller_identity()
             self._log(f"AWS account: {self.account_id}", "success")
             self._log(f"AWS IAM user/role: {identity.get('Arn')}", "success")
 
-            # Check IAM permissions (attempt to list roles)
+            # IAM 권한 확인(역할 나열 시도)
             try:
                 self.iam.list_roles(MaxItems=1)
                 self._log("IAM permissions verified", "success")
@@ -117,7 +117,7 @@ class AgentCoreRuntimeDeployer:
                 self._log(f"IAM permissions insufficient: {e}", "error")
                 return False
 
-            # Check AgentCore access
+            # AgentCore 접근 확인
             try:
                 self.agentcore.list_agent_runtimes()
                 self._log("AgentCore access verified", "success")
@@ -134,21 +134,21 @@ class AgentCoreRuntimeDeployer:
 
     def create_runtime_iam_role(self) -> Dict:
         """
-        Create IAM role for AgentCore Runtime execution.
+        AgentCore Runtime 실행용 IAM 역할을 생성합니다.
 
-        The role allows:
-        - Runtime service to assume it
-        - CloudWatch logging
-        - ECR image access
-        - Bedrock model invocation (for Code Interpreter)
-        - Parameter Store access
+        이 역할은 다음을 허용합니다.
+        - Runtime 서비스의 역할 수임
+        - CloudWatch 로깅
+        - ECR 이미지 접근
+        - Bedrock 모델 호출(Code Interpreter용)
+        - Parameter Store 접근
 
-        Returns:
-            Dict with role ARN and metadata
+        반환:
+            역할 ARN과 메타데이터가 포함된 딕셔너리
         """
         self._log("Creating IAM role for Runtime...")
 
-        # Trust policy: Allow bedrock-agentcore service to assume role
+        # 신뢰 정책: bedrock-agentcore 서비스가 역할을 수임하도록 허용
         trust_policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -166,7 +166,7 @@ class AgentCoreRuntimeDeployer:
             ],
         }
 
-        # Permissions policy for Runtime
+        # Runtime용 권한 정책
         permissions_policy = {
             "Version": "2012-10-17",
             "Statement": [
@@ -223,18 +223,18 @@ class AgentCoreRuntimeDeployer:
         }
 
         try:
-            # Check if role exists
+            # 역할이 존재하는지 확인
             try:
                 role = self.iam.get_role(RoleName=RUNTIME_ROLE_NAME)
                 self._log(f"IAM role already exists: {RUNTIME_ROLE_NAME}", "warning")
                 role_arn = role["Role"]["Arn"]
 
-                # Update trust policy to ensure it's correct for current region
+                # 현재 리전에 맞도록 신뢰 정책 업데이트
                 self.iam.update_assume_role_policy(RoleName=RUNTIME_ROLE_NAME, PolicyDocument=json.dumps(trust_policy))
                 self._log(f"Updated trust policy for region {self.region}", "success")
 
             except self.iam.exceptions.NoSuchEntityException:
-                # Create new role
+                # 새 역할 생성
                 role = self.iam.create_role(
                     RoleName=RUNTIME_ROLE_NAME,
                     AssumeRolePolicyDocument=json.dumps(trust_policy),
@@ -244,10 +244,10 @@ class AgentCoreRuntimeDeployer:
                 role_arn = role["Role"]["Arn"]
                 self._log(f"Created IAM role: {RUNTIME_ROLE_NAME}", "success")
 
-                # Wait for role to propagate in IAM
+                # IAM에서 역할 전파 대기
                 time.sleep(10)
 
-            # Attach permissions policy
+            # 권한 정책 연결
             self.iam.put_role_policy(
                 RoleName=RUNTIME_ROLE_NAME,
                 PolicyName=RUNTIME_POLICY_NAME,
@@ -255,7 +255,7 @@ class AgentCoreRuntimeDeployer:
             )
             self._log(f"Attached permissions policy: {RUNTIME_POLICY_NAME}", "success")
 
-            # Store role ARN in Parameter Store
+            # 역할 ARN을 Parameter Store에 저장
             param_name = PARAMETER_PATHS["lab_03"]["runtime_role_arn"]
             self.ssm.put_parameter(
                 Name=param_name,
@@ -284,24 +284,24 @@ class AgentCoreRuntimeDeployer:
         include_files: Optional[List[Path]] = None,
     ) -> Dict:
         """
-        Package Strands remediation agent code for deployment.
+        배포를 위해 Strands remediation agent 코드를 패키징합니다.
 
-        Args:
-            agent_script_path: Path to agent Python script
-            requirements_path: Path to requirements.txt (optional)
-            include_files: Additional files to include (optional)
+        인자:
+            agent_script_path: Agent Python 스크립트 경로
+            requirements_path: requirements.txt 경로(선택 사항)
+            include_files: 포함할 추가 파일(선택 사항)
 
-        Returns:
-            Dict with package metadata and file paths
+        반환:
+            패키지 메타데이터와 파일 경로가 포함된 딕셔너리
         """
         self._log(f"Packaging agent code from {agent_script_path}...")
 
-        # Verify agent script exists
+        # Agent 스크립트가 존재하는지 확인
         if not Path(agent_script_path).exists():
             self._log(f"Agent script not found: {agent_script_path}", "error")
             raise FileNotFoundError(f"Agent script not found: {agent_script_path}")
 
-        # Read agent code
+        # Agent 코드 읽기
         with open(agent_script_path, "r") as f:
             agent_code = f.read()
 
@@ -313,14 +313,14 @@ class AgentCoreRuntimeDeployer:
             "files": {"agent_script": str(agent_script_path)},
         }
 
-        # Add requirements if provided
+        # 제공된 경우 requirements 추가
         if requirements_path and Path(requirements_path).exists():
             with open(requirements_path, "r") as f:
                 requirements = f.read()
             package_info["files"]["requirements"] = str(requirements_path)
             package_info["requirements_lines"] = len(requirements.splitlines())
 
-        # Add other files if provided
+        # 제공된 경우 기타 파일 추가
         if include_files:
             for file_path in include_files:
                 if Path(file_path).exists():
@@ -339,21 +339,21 @@ class AgentCoreRuntimeDeployer:
         timeout_seconds: int = 300,
     ) -> Dict:
         """
-        Deploy Strands agent to AgentCore Runtime.
+        Strands agent를 AgentCore Runtime에 배포합니다.
 
-        Args:
-            agent_code: Agent Python code as string
-            agent_name: Name for the agent/runtime
-            role_arn: IAM role ARN (fetches from Parameter Store if not provided)
-            description: Runtime description
-            timeout_seconds: Execution timeout
+        인자:
+            agent_code: 문자열 형식의 Agent Python 코드
+            agent_name: Agent/Runtime 이름
+            role_arn: IAM 역할 ARN(제공하지 않으면 Parameter Store에서 조회)
+            description: Runtime 설명
+            timeout_seconds: 실행 제한 시간
 
-        Returns:
-            Dict with deployment info (runtime ID, ARN, endpoint, etc.)
+        반환:
+            배포 정보(Runtime ID, ARN, 엔드포인트 등)가 포함된 딕셔너리
         """
         self._log(f"Deploying runtime: {agent_name}...")
 
-        # Get role ARN if not provided
+        # 제공되지 않은 경우 역할 ARN 조회
         if not role_arn:
             try:
                 response = self.ssm.get_parameter(Name=PARAMETER_PATHS["lab_03"]["runtime_role_arn"])
@@ -365,7 +365,7 @@ class AgentCoreRuntimeDeployer:
                 role_arn = role_info["role_arn"]
 
         try:
-            # Create runtime using bedrock-agentcore-starter-toolkit
+            # bedrock-agentcore-starter-toolkit을 사용해 Runtime 생성
             from bedrock_agentcore_starter_toolkit import Runtime
 
             runtime = Runtime(
@@ -377,7 +377,7 @@ class AgentCoreRuntimeDeployer:
                 description=description or "Strands remediation agent with Code Interpreter - Lab 03",
             )
 
-            # Deploy to AgentCore
+            # AgentCore에 배포
             runtime_config = runtime.deploy()
 
             self._log("Runtime deployed successfully", "success")
@@ -398,7 +398,7 @@ class AgentCoreRuntimeDeployer:
                 ],
             }
 
-            # Store deployment info in Parameter Store
+            # 배포 정보를 Parameter Store에 저장
             self.ssm.put_parameter(
                 Name=f"/{self.prefix}/lab-03/runtime-config",
                 Value=json.dumps(deployment_info, indent=2),
@@ -415,16 +415,16 @@ class AgentCoreRuntimeDeployer:
 
     def get_runtime_status(self, runtime_id: Optional[str] = None) -> Dict:
         """
-        Get status of deployed runtime.
+        배포된 Runtime의 상태를 조회합니다.
 
-        Args:
-            runtime_id: Runtime ID (fetches from Parameter Store if not provided)
+        인자:
+            runtime_id: Runtime ID(제공하지 않으면 Parameter Store에서 조회)
 
-        Returns:
-            Dict with runtime status
+        반환:
+            Runtime 상태가 포함된 딕셔너리
         """
         try:
-            # Get runtime ID if not provided
+            # 제공되지 않은 경우 Runtime ID 조회
             if not runtime_id:
                 response = self.ssm.get_parameter(Name=f"/{self.prefix}/lab-03/runtime-config")
                 config = json.loads(response["Parameter"]["Value"])
@@ -434,7 +434,7 @@ class AgentCoreRuntimeDeployer:
                 self._log("Runtime ID not found", "error")
                 return {"status": "NOT_FOUND"}
 
-            # Get runtime details
+            # Runtime 세부 정보 조회
             response = self.agentcore.get_agent_runtime(agentRuntimeIdentifier=runtime_id)
 
             status_info = {
@@ -456,14 +456,14 @@ class AgentCoreRuntimeDeployer:
 
     def save_deployment_config(self, config: Dict, output_path: Optional[Path] = None) -> Path:
         """
-        Save deployment configuration to file.
+        배포 구성을 파일에 저장합니다.
 
-        Args:
-            config: Deployment configuration dict
-            output_path: Output file path (optional)
+        인자:
+            config: 배포 구성 딕셔너리
+            output_path: 출력 파일 경로(선택 사항)
 
-        Returns:
-            Path to saved configuration file
+        반환:
+            저장된 구성 파일의 경로
         """
         if not output_path:
             output_path = Path(__file__).parent.parent.parent / "lab_03_deployment_config.json"
@@ -476,13 +476,13 @@ class AgentCoreRuntimeDeployer:
 
     def cleanup(self, force: bool = False) -> bool:
         """
-        Clean up Lab-03 resources.
+        Lab-03 리소스를 정리합니다.
 
-        Args:
-            force: Force deletion without confirmation
+        인자:
+            force: 확인 없이 강제 삭제할지 여부
 
-        Returns:
-            True if cleanup successful
+        반환:
+            정리에 성공하면 True
         """
         self._log("Starting cleanup...")
 
@@ -495,21 +495,21 @@ class AgentCoreRuntimeDeployer:
                 return False
 
         try:
-            # Get runtime ID from Parameter Store
+            # Parameter Store에서 Runtime ID 조회
             try:
                 response = self.ssm.get_parameter(Name=f"/{self.prefix}/lab-03/runtime-config")
                 config = json.loads(response["Parameter"]["Value"])
                 runtime_id = config.get("runtime_id")
 
                 if runtime_id:
-                    # Delete runtime
+                    # Runtime 삭제
                     self.agentcore.delete_agent_runtime(agentRuntimeIdentifier=runtime_id)
                     self._log(f"Deleted runtime: {runtime_id}", "success")
             except ClientError as e:
                 if e.response["Error"]["Code"] != "ParameterNotFound":
                     self._log(f"Error deleting runtime: {e}", "warning")
 
-            # Delete IAM role and policies
+            # IAM 역할 및 정책 삭제
             try:
                 self.iam.delete_role_policy(RoleName=RUNTIME_ROLE_NAME, PolicyName=RUNTIME_POLICY_NAME)
                 self._log(f"Deleted role policy: {RUNTIME_POLICY_NAME}", "success")
@@ -524,7 +524,7 @@ class AgentCoreRuntimeDeployer:
                 if e.response["Error"]["Code"] != "NoSuchEntity":
                     self._log(f"Error deleting role: {e}", "warning")
 
-            # Delete Parameter Store entries
+            # Parameter Store 항목 삭제
             try:
                 self.ssm.delete_parameter(Name=PARAMETER_PATHS["lab_03"]["runtime_role_arn"])
                 self._log("Deleted Parameter Store entry: runtime-role-arn", "success")
@@ -537,7 +537,7 @@ class AgentCoreRuntimeDeployer:
             except ClientError:
                 pass
 
-            # Delete CloudWatch log groups
+            # CloudWatch 로그 그룹 삭제
             try:
                 log_groups = self.logs.describe_log_groups(
                     logGroupNamePrefix=f"/aws/bedrock-agentcore/runtime/{self.runtime_name}"
@@ -562,7 +562,7 @@ def store_runtime_configuration(
     region: str = "us-west-2",
     prefix: str = "aiml301_sre_agentcore",
 ) -> None:
-    """Store runtime configuration in Parameter Store for persistence across sessions"""
+    """세션 간에 유지되도록 Runtime 구성을 Parameter Store에 저장합니다."""
     from lab_helpers.parameter_store import put_parameter
 
     print("\n" + "=" * 70)
@@ -574,7 +574,7 @@ def store_runtime_configuration(
     print(f"  Prefix: {prefix}")
     print()
 
-    # Store runtime ARN using centralized constants
+    # 중앙 집중식 상수를 사용해 Runtime ARN 저장
     runtime_arn_path = PARAMETER_PATHS["lab_03"]["runtime_arn"]
     print("📝 Storing runtime ARN to Parameter Store:")
     print(f"  Path: {runtime_arn_path}")
@@ -595,7 +595,7 @@ def store_runtime_configuration(
         traceback.print_exc()
         raise
 
-    # Store runtime ID if provided
+    # 제공된 경우 Runtime ID 저장
     if runtime_id:
         runtime_id_path = PARAMETER_PATHS["lab_03"]["runtime_id"]
         print("\n📝 Storing runtime ID to Parameter Store:")

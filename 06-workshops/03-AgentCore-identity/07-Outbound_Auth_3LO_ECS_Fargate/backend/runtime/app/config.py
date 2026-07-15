@@ -1,6 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""Application configuration."""
+"""애플리케이션 설정."""
 
 from functools import lru_cache
 
@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """Application settings."""
+    """애플리케이션 설정."""
 
     log_level: str = "INFO"
     environment: str = "development"
@@ -26,5 +26,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Get cached settings instance."""
+    """캐시된 설정 인스턴스를 가져온다."""
     return Settings()

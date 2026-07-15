@@ -1,25 +1,25 @@
 """
-Sample OAuth2 Callback Server for Authorization Code flow with Amazon Bedrock AgentCore Identity.
+Amazon Bedrock AgentCore Identity와 Authorization Code 흐름을 사용하는 OAuth2 콜백 서버 샘플입니다.
 
-This module implements a local callback server that handles OAuth2 3-legged (3LO) authentication flows
-for AgentCore Identity. It serves as an intermediary between the user's browser, external OAuth providers
-(like Google, Entra, etc...), and the AgentCore Identity service.
+이 모듈은 AgentCore Identity의 OAuth2 3-legged(3LO) 인증 흐름을 처리하는 로컬 콜백 서버를 구현합니다.
+사용자의 브라우저, 외부 OAuth 공급자(예: Google, Entra 등), AgentCore Identity 서비스 사이에서
+중개자 역할을 합니다.
 
-Key Components:
-- FastAPI server running locally
-- Handles OAuth2 callback redirects from external providers
-- Manages user identifier storage and session completion
-- Provides health check endpoint for readiness verification
+주요 구성 요소:
+- 로컬에서 실행되는 FastAPI 서버
+- 외부 공급자의 OAuth2 콜백 리디렉션 처리
+- 사용자 식별자 저장 및 세션 완료 관리
+- 준비 상태 확인을 위한 상태 확인 엔드포인트 제공
 
-Usage Context:
-This server is used in conjunction with agents running on AgentCore Runtime that need to access external resources
-(like Google Calendar, Microsoft Entra) on behalf of authenticated users.
+사용 맥락:
+이 서버는 인증된 사용자를 대신해 외부 리소스(예: Google Calendar, Microsoft Entra)에 액세스해야 하는
+AgentCore Runtime의 에이전트와 함께 사용됩니다.
 
-The typical flow involves:
-  1. Agent requests access to external resource
-  2. User is redirected to OAuth provider for consent
-  3. Provider redirects back to this callback server
-  4. Server completes the authentication flow with AgentCore Identity
+일반적인 흐름:
+  1. 에이전트가 외부 리소스에 대한 액세스를 요청합니다.
+  2. 사용자가 동의를 위해 OAuth 공급자로 리디렉션됩니다.
+  3. 공급자가 이 콜백 서버로 다시 리디렉션합니다.
+  4. 서버가 AgentCore Identity를 통해 인증 흐름을 완료합니다.
 """
 
 import time
@@ -36,53 +36,53 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from bedrock_agentcore.services.identity import IdentityClient, UserIdIdentifier
 
 
-# Configuration constants for the OAuth2 callback server
-OAUTH2_CALLBACK_SERVER_PORT = 9090  # Port where the callback server listens
-PING_ENDPOINT = "/ping"  # Health check endpoint
-OAUTH2_CALLBACK_ENDPOINT = "/oauth2/callback"  # OAuth2 callback endpoint for provider redirects
-USER_IDENTIFIER_ENDPOINT = "/userIdentifier/userId"  # Endpoint to store userId identifiers
+# OAuth2 콜백 서버 구성 상수
+OAUTH2_CALLBACK_SERVER_PORT = 9090  # 콜백 서버가 수신 대기하는 포트
+PING_ENDPOINT = "/ping"  # 상태 확인 엔드포인트
+OAUTH2_CALLBACK_ENDPOINT = "/oauth2/callback"  # 공급자 리디렉션을 위한 OAuth2 콜백 엔드포인트
+USER_IDENTIFIER_ENDPOINT = "/userIdentifier/userId"  # userId 식별자를 저장하는 엔드포인트
 
 logger = logging.getLogger(__name__)
 
 
 class OAuth2CallbackServer:
     """
-    OAuth2 Callback Server for handling 3-legged OAuth flows with AgentCore Identity.
+    AgentCore Identity를 사용하는 3-legged OAuth 흐름의 OAuth2 콜백 서버입니다.
 
-    This server acts as a local callback endpoint that external OAuth providers (like Google, Github)
-    redirect to after user authorization. It manages the completion of the OAuth flow by
-    coordinating with AgentCore Identity service.
+    이 서버는 사용자 인증 후 외부 OAuth 공급자(예: Google, GitHub)가 리디렉션하는
+    로컬 콜백 엔드포인트 역할을 합니다. AgentCore Identity 서비스와 연동하여
+    OAuth 흐름의 완료를 관리합니다.
 
-    The server maintains:
-    - An AgentCore Identity client for API communication
-    - UserId identifier for session binding
-    - FastAPI application with configured routes
+    서버가 유지하는 항목:
+    - API 통신을 위한 AgentCore Identity 클라이언트
+    - 세션 바인딩을 위한 UserId 식별자
+    - 라우트가 구성된 FastAPI 애플리케이션
     """
 
     def __init__(self, region: str):
         """
-        Initialize the OAuth2 callback server.
+        OAuth2 콜백 서버를 초기화합니다.
 
-        Args:
-            region (str): AWS region where AgentCore Identity service is deployed
+        인수:
+            region (str): AgentCore Identity 서비스가 배포된 AWS 리전
         """
-        # Initialize AgentCore Identity client for the specified region
+        # 지정된 리전의 AgentCore Identity 클라이언트 초기화
         self.identity_client = IdentityClient(region=region)
         self.user_id_identifier = None
 
         self.app = FastAPI()
 
-        # Configure all HTTP routes
+        # 모든 HTTP 라우트 구성
         self._setup_routes()
 
     def _setup_routes(self):
         """
-        Configure FastAPI routes for the OAuth2 callback server.
+        OAuth2 콜백 서버의 FastAPI 라우트를 구성합니다.
 
-        Sets up three endpoints:
-        1. POST /userIdentifier/userId - Store userId identifier for session binding
-        2. GET /ping - Health check endpoint
-        3. GET /oauth2/callback - OAuth2 callback handler for provider redirects
+        다음 세 가지 엔드포인트를 설정합니다.
+        1. POST /userIdentifier/userId - 세션 바인딩을 위한 userId 식별자 저장
+        2. GET /ping - 상태 확인 엔드포인트
+        3. GET /oauth2/callback - 공급자 리디렉션을 위한 OAuth2 콜백 핸들러
         """
 
         @self.app.post(USER_IDENTIFIER_ENDPOINT)
@@ -90,14 +90,13 @@ class OAuth2CallbackServer:
             user_id_identifier_value: UserIdIdentifier,
         ) -> JSONResponse:
             """
-            Store userId identifier for OAuth session binding.
+            OAuth 세션 바인딩을 위한 userId 식별자를 저장합니다.
 
-            This endpoint is called before initiating the OAuth flow to associate
-            the upcoming OAuth session with a specific user.
+            시작될 OAuth 세션을 특정 사용자와 연결하기 위해 OAuth 흐름을 시작하기 전에
+            이 엔드포인트를 호출합니다.
 
-            Args:
-                user_id_identifier_value: UserIdIdentifier object containing
-                                           user identification information
+            인수:
+                user_id_identifier_value: 사용자 식별 정보가 포함된 UserIdIdentifier 객체
             """
             if not user_id_identifier_value:
                 raise HTTPException(
@@ -120,10 +119,10 @@ class OAuth2CallbackServer:
         @self.app.get(PING_ENDPOINT)
         async def _handle_ping() -> JSONResponse:
             """
-            Health check endpoint to verify server readiness.
+            서버의 준비 상태를 확인하는 상태 확인 엔드포인트입니다.
 
-            Returns:
-                dict: Simple status response indicating server is operational
+            반환값:
+                dict: 서버가 작동 중임을 나타내는 간단한 상태 응답
             """
             return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "success"})
 
@@ -140,18 +139,18 @@ class OAuth2CallbackServer:
             user_id_identifier: Optional[str] = None,
         ) -> Optional[UserIdIdentifier]:
             """
-            Retrieve user identifier with fallback logic.
+            대체 로직을 적용해 사용자 식별자를 가져옵니다.
 
-            Priority order:
-            1. Browser cookie value (passed as parameter)
-            2. Server memory value (instance attribute)
-            3. Identity SDK config parsing
+            우선순위:
+            1. 브라우저 쿠키 값(매개변수로 전달)
+            2. 서버 메모리 값(인스턴스 속성)
+            3. Identity SDK 구성 파싱
 
-            Args:
-                user_id_identifier: Optional user ID from browser cookie
+            인수:
+                user_id_identifier: 브라우저 쿠키의 선택적 사용자 ID
 
-            Returns:
-                UserIdIdentifier instance or None if no valid identifier found
+            반환값:
+                UserIdIdentifier 인스턴스. 유효한 식별자가 없으면 None
             """
             if user_id_identifier:
                 return UserIdIdentifier(user_id=user_id_identifier)
@@ -170,39 +169,38 @@ class OAuth2CallbackServer:
             session_id: str, user_id_identifier: Annotated[str | None, Cookie()] = None
         ) -> HTMLResponse:
             """
-            Handle OAuth2 callback from external providers.
+            외부 공급자의 OAuth2 콜백을 처리합니다.
 
-            This is the core endpoint that external OAuth providers (like Google, Github) redirect to
-            after user authorization. It receives the session_id parameter and uses it to
-            complete the OAuth flow with AgentCore Identity.
+            사용자 인증 후 외부 OAuth 공급자(예: Google, GitHub)가 리디렉션하는 핵심 엔드포인트입니다.
+            session_id 매개변수를 받아 AgentCore Identity를 통한 OAuth 흐름을 완료하는 데 사용합니다.
 
-            OAuth Flow Context:
-            1. User clicks authorization URL generated by AgentCore Identity
-            2. User authorizes access on external provider (e.g., Google, Github)
-            3. Provider redirects to this callback with session_id
-            4. This handler completes the flow by calling AgentCore Identity
+            OAuth 흐름:
+            1. 사용자가 AgentCore Identity에서 생성한 인증 URL을 클릭합니다.
+            2. 사용자가 외부 공급자(예: Google, GitHub)에서 액세스를 승인합니다.
+            3. 공급자가 session_id와 함께 이 콜백으로 리디렉션합니다.
+            4. 이 핸들러가 AgentCore Identity를 호출하여 흐름을 완료합니다.
 
-            Args:
-                session_id (str): Session identifier from OAuth provider redirect
-                user_id_identifier (str): UserId stored in browser cookies
+            인수:
+                session_id (str): OAuth 공급자 리디렉션의 세션 식별자
+                user_id_identifier (str): 브라우저 쿠키에 저장된 UserId
 
-            Returns:
-                dict: Success message indicating OAuth flow completion
+            반환값:
+                dict: OAuth 흐름 완료를 나타내는 성공 메시지
 
-            Raises:
-                HTTPException: If session_id is missing or user_id_identifier not set
+            예외:
+                HTTPException: session_id가 없거나 user_id_identifier가 설정되지 않은 경우
             """
-            # Validate that session_id parameter is present
+            # session_id 매개변수가 있는지 검증
             if not session_id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Missing session_id url query parameter",
                 )
 
-            # use browser cookie value if available, otherwise, use value stored on the server memory or config
+            # 브라우저 쿠키 값이 있으면 사용하고, 없으면 서버 메모리 또는 구성에 저장된 값 사용
             user_identifier = _get_user_identifier(user_id_identifier)
 
-            # This is required to bind the OAuth session to the correct user.
+            # OAuth 세션을 올바른 사용자에게 바인딩하는 데 필요
             if not user_identifier:
                 logger.error("No configured user identifier")
                 raise HTTPException(
@@ -210,8 +208,8 @@ class OAuth2CallbackServer:
                     detail="No user identifier configured",
                 )
 
-            # Complete the OAuth flow by calling AgentCore Identity service
-            # This associates the OAuth session with the user and retrieves access tokens
+            # AgentCore Identity 서비스를 호출하여 OAuth 흐름 완료
+            # OAuth 세션을 사용자와 연결하고 액세스 토큰을 가져옴
             self.identity_client.complete_resource_token_auth(session_uri=session_id, user_identifier=user_identifier)
 
             html_content = """
@@ -254,30 +252,30 @@ class OAuth2CallbackServer:
 
     def get_app(self) -> FastAPI:
         """
-        Get the configured FastAPI application instance.
+        구성된 FastAPI 애플리케이션 인스턴스를 가져옵니다.
 
-        Returns:
-            FastAPI: The configured application with all routes set up
+        반환값:
+            FastAPI: 모든 라우트가 설정된 애플리케이션
         """
         return self.app
 
 
 def get_oauth2_callback_url() -> str:
     """
-    Generate the full OAuth2 callback URL for external providers.
+    외부 공급자용 전체 OAuth2 콜백 URL을 생성합니다.
 
-    This URL is registered with external OAuth providers (like Google, Github) as the redirect URI.
-    After user authorization, the provider will redirect the user's browser to this URL
-    with the session_id parameter.
+    이 URL은 외부 OAuth 공급자(예: Google, GitHub)에 리디렉션 URI로 등록됩니다.
+    사용자 인증 후 공급자는 session_id 매개변수와 함께 사용자의 브라우저를 이 URL로
+    리디렉션합니다.
 
-    Returns:
-        str: Complete callback URL (e.g., "http://localhost:9090/oauth2/callback")
+    반환값:
+        str: 전체 콜백 URL(예: "http://localhost:9090/oauth2/callback")
 
-    Usage:
-        This URL is typically used when:
-        1. Configuring OAuth2 credential providers in AgentCore Identity
-        2. Registering redirect URIs with external OAuth providers
-        3. Setting up workload identity allowed return URLs
+    사용처:
+        일반적으로 다음 작업에 이 URL을 사용합니다.
+        1. AgentCore Identity에서 OAuth2 자격 증명 공급자 구성
+        2. 외부 OAuth 공급자에 리디렉션 URI 등록
+        3. 워크로드 자격 증명에 허용된 반환 URL 설정
     """
     return f"http://localhost:{OAUTH2_CALLBACK_SERVER_PORT}{OAUTH2_CALLBACK_ENDPOINT}"
 
@@ -298,34 +296,32 @@ def wait_for_oauth2_server_to_be_ready(
     duration: timedelta = timedelta(seconds=40),
 ) -> bool:
     """
-    Wait for the OAuth2 callback server to become ready and responsive.
+    OAuth2 콜백 서버가 준비되고 응답할 때까지 기다립니다.
 
-    This function polls the server's health check endpoint until it responds
-    successfully or the timeout is reached. It's essential to ensure the server
-    is ready before starting OAuth flows.
+    이 함수는 서버가 정상 응답하거나 제한 시간에 도달할 때까지 상태 확인 엔드포인트를
+    폴링합니다. OAuth 흐름을 시작하기 전에 서버가 준비되었는지 확인하는 데 필요합니다.
 
-    Args:
-        duration (timedelta): Maximum time to wait for server readiness
-                             Defaults to 40 seconds
+    인수:
+        duration (timedelta): 서버 준비를 기다리는 최대 시간
+                              기본값은 40초
 
-    Returns:
-        bool: True if server becomes ready within timeout, False otherwise
+    반환값:
+        bool: 제한 시간 내에 서버가 준비되면 True, 그렇지 않으면 False
 
-    Usage Context:
-        Called after starting the OAuth2 callback server process to ensure
-        it's ready to handle OAuth callbacks before proceeding with agent
-        invocations that might trigger OAuth flows.
+    사용 맥락:
+        OAuth2 콜백 서버 프로세스를 시작한 후 호출합니다. OAuth 흐름을 유발할 수 있는
+        에이전트 호출을 진행하기 전에 서버가 OAuth 콜백을 처리할 준비가 되었는지 확인합니다.
 
-    Example:
-        # Start server process
+    예:
+        # 서버 프로세스 시작
         server_process = subprocess.Popen([...])
 
-        # Wait for readiness
+        # 준비될 때까지 대기
         if wait_for_oauth2_server_to_be_ready():
-            # Proceed with OAuth-enabled operations
+            # OAuth 지원 작업 진행
             invoke_agent()
         else:
-            # Handle server startup failure
+            # 서버 시작 실패 처리
             server_process.terminate()
     """
     logger.info("Waiting for OAuth2 callback server to be ready...")
@@ -334,7 +330,7 @@ def wait_for_oauth2_server_to_be_ready(
     start_time = time.time()
     while time.time() - start_time < timeout_in_seconds:
         try:
-            # Ping the server's health check endpoint
+            # 서버의 상태 확인 엔드포인트 호출
             response = requests.get(
                 f"http://localhost:{OAUTH2_CALLBACK_SERVER_PORT}{PING_ENDPOINT}",
                 timeout=2,
@@ -343,13 +339,13 @@ def wait_for_oauth2_server_to_be_ready(
                 logger.info("OAuth2 callback server is ready!")
                 return True
         except requests.exceptions.RequestException:
-            # Server not ready yet, continue waiting
+            # 서버가 아직 준비되지 않았으므로 계속 대기
             pass
 
         time.sleep(2)
         elapsed = int(time.time() - start_time)
 
-        # Log progress every 10 seconds to show we're still waiting
+        # 아직 대기 중임을 알리기 위해 10초마다 진행 상황 기록
         if elapsed % 10 == 0 and elapsed > 0:
             logger.info(f"Still waiting... ({elapsed}/{timeout_in_seconds}s)")
 
@@ -359,17 +355,16 @@ def wait_for_oauth2_server_to_be_ready(
 
 def main():
     """
-    Main entry point for running the OAuth2 callback server as a standalone application.
+    OAuth2 콜백 서버를 독립 실행형 애플리케이션으로 실행하는 기본 진입점입니다.
 
-    Parses command line arguments and starts the FastAPI server using uvicorn.
-    The server runs on localhost:9090 and handles OAuth2 callbacks for the specified
-    AWS region.
+    명령줄 인수를 파싱하고 uvicorn을 사용해 FastAPI 서버를 시작합니다.
+    서버는 localhost:9090에서 실행되며 지정된 AWS 리전의 OAuth2 콜백을 처리합니다.
 
-    Command Line Usage:
+    명령줄 사용법:
         python oauth2_callback_server.py --region us-east-1
 
-    The server will run until manually terminated and will handle OAuth2 callbacks
-    for any AgentCore agents in the specified region.
+    서버는 수동으로 종료할 때까지 실행되며, 지정된 리전의 모든 AgentCore 에이전트에 대한
+    OAuth2 콜백을 처리합니다.
     """
     parser = argparse.ArgumentParser(description="OAuth2 Callback Server")
     parser.add_argument("-r", "--region", type=str, required=True, help="AWS Region (e.g. us-east-1)")
@@ -377,8 +372,8 @@ def main():
     args = parser.parse_args()
     oauth2_callback_server = OAuth2CallbackServer(region=args.region)
 
-    # Start the FastAPI server using uvicorn
-    # Server runs on localhost only for security (not exposed externally)
+    # uvicorn을 사용해 FastAPI 서버 시작
+    # 보안을 위해 서버는 localhost에서만 실행되며 외부에 노출되지 않음
     uvicorn.run(
         oauth2_callback_server.get_app(),
         host="127.0.0.1",

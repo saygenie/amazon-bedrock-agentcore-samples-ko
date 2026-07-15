@@ -1,7 +1,7 @@
 """
-Calculation Tool - Mathematical operations for Gateway
+Calculation Tool - Gateway용 수학 연산 도구입니다.
 
-This tool performs various mathematical calculations.
+이 도구는 다양한 수학 계산을 수행합니다.
 """
 
 import json
@@ -10,26 +10,26 @@ import math
 
 def lambda_handler(event, context):
     """
-    Lambda handler for calculation tool.
+    calculation tool용 Lambda 핸들러입니다.
 
-    Expected input:
+    예상 입력:
     {
         "operation": "add" | "subtract" | "multiply" | "divide" | "power" | "sqrt" | "log",
         "operand1": number,
         "operand2": number (optional for sqrt, log)
     }
 
-    Returns calculation result.
+    계산 결과를 반환합니다.
     """
     print(f"Calculation tool received event: {json.dumps(event)}")
 
-    # Parse input
+        # 입력 파싱
     body = event if isinstance(event, dict) else json.loads(event)
     operation = body.get("operation", "").lower()
     operand1 = body.get("operand1")
     operand2 = body.get("operand2")
 
-    # Validate operation
+        # operation 검증
     valid_operations = [
         "add",
         "subtract",
@@ -54,7 +54,7 @@ def lambda_handler(event, context):
             ),
         }
 
-    # Validate operands
+        # operand 검증
     if operand1 is None:
         return {
             "statusCode": 400,
@@ -68,7 +68,7 @@ def lambda_handler(event, context):
         }
 
     try:
-        # Perform calculation
+        # 계산 수행
         result = None
         expression = ""
 
@@ -167,7 +167,7 @@ def lambda_handler(event, context):
         }
 
 
-# MCP Tool Definition for Gateway registration
+# Gateway 등록용 MCP Tool Definition
 TOOL_DEFINITION = {
     "name": "calculation_tool",
     "description": "Perform mathematical calculations. Supports: add, subtract, multiply, divide, power, sqrt, log, abs, round.",
@@ -193,7 +193,7 @@ TOOL_DEFINITION = {
 
 
 if __name__ == "__main__":
-    # Test the tool locally
+# 로컬에서 도구 테스트
     test_cases = [
         {"operation": "add", "operand1": 10, "operand2": 5},
         {"operation": "multiply", "operand1": 7, "operand2": 8},

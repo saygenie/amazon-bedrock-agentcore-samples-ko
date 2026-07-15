@@ -6,8 +6,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // Forward /start to the Pipecat server so the client
-      // can fetch the WebSocket URL without CORS issues.
+      // 클라이언트가 CORS 문제 없이 WebSocket URL을 가져올 수 있도록
+      // /start를 Pipecat 서버로 전달합니다.
       "/start": {
         target: "http://localhost:8081",
         changeOrigin: true,

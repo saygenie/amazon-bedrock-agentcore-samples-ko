@@ -15,7 +15,7 @@ import { Construct } from "constructs";
 export interface McpEcsStackProps extends cdk.StackProps {
 	vpc: ec2.IVpc;
 	certificateArn: string;
-	/** FQDN covered by the public certificate, e.g. "internal.example.com" */
+	/** Public Certificate가 적용되는 FQDN(예: "internal.example.com") */
 	privateDomain: string;
 }
 
@@ -60,7 +60,7 @@ export class McpEcsStack extends cdk.Stack {
 			"Allow MCP traffic from VPC",
 		);
 
-		// --- Internal ALB with public cert ---
+		// --- Public Certificate가 있는 Internal ALB ---
 		const albSg = new ec2.SecurityGroup(this, "McpAlbSg", {
 			vpc: props.vpc,
 			description: "MCP ALB - HTTPS from VPC",
@@ -73,7 +73,7 @@ export class McpEcsStack extends cdk.Stack {
 			"Allow HTTPS from VPC",
 		);
 
-		// Allow ALB to reach ECS tasks on ports 8000 and 8001
+		// ALB가 8000 및 8001 포트의 ECS Task에 접근하도록 허용
 		serviceSg.addIngressRule(
 			albSg,
 			ec2.Port.tcp(8000),
@@ -102,14 +102,14 @@ export class McpEcsStack extends cdk.Stack {
 
 		alb.logAccessLogs(accessLogBucket, "alb-logs");
 
-		// HTTPS listener with public cert
+		// Public Certificate가 있는 HTTPS Listener
 		const httpsListener = alb.addListener("HttpsListener", {
 			port: 443,
 			protocol: elbv2.ApplicationProtocol.HTTPS,
 			certificates: [certificate],
 		});
 
-		// Fargate target group
+		// Fargate Target Group
 		const fargateTargetGroup = new elbv2.ApplicationTargetGroup(
 			this,
 			"FargateTargetGroup",
@@ -171,8 +171,8 @@ export class McpEcsStack extends cdk.Stack {
 
 		fargateService.attachToApplicationTargetGroup(fargateTargetGroup);
 
-		// --- Stock MCP Server (second MCP server, same ALB, path-based routing) ---
-		// The stock server mounts at /stock-mcp/ so ALB forwards /stock-mcp/* as-is.
+		// --- Stock MCP Server(두 번째 MCP Server, 동일한 ALB, 경로 기반 라우팅) ---
+		// Stock Server가 /stock-mcp/에 마운트되므로 ALB는 /stock-mcp/*를 그대로 전달함
 		const stockImage = ecs.ContainerImage.fromAsset("docker/stock-mcp-mock", {
 			platform: Platform.LINUX_AMD64,
 		});
@@ -243,7 +243,7 @@ export class McpEcsStack extends cdk.Stack {
 
 		stockService.attachToApplicationTargetGroup(stockTargetGroup);
 
-		// --- Bastion for SSM testing ---
+		// --- SSM 테스트용 Bastion ---
 		const bastionSg = new ec2.SecurityGroup(this, "BastionSg", {
 			vpc: props.vpc,
 			description: "Bastion - outbound only for SSM",
@@ -262,7 +262,7 @@ export class McpEcsStack extends cdk.Stack {
 			ssmSessionPermissions: true,
 		});
 
-		// Allow bastion to test ALB and MCP tasks
+		// Bastion에서 ALB 및 MCP Task를 테스트하도록 허용
 		albSg.addIngressRule(
 			bastionSg,
 			ec2.Port.tcp(443),
@@ -280,10 +280,10 @@ export class McpEcsStack extends cdk.Stack {
 		);
 
 		// --- Route 53 Private Hosted Zone ---
-		// Zone name matches the target FQDN. An apex Alias record points at
-		// the ALB so `https://<privateDomain>` resolves to ALB private IPs
-		// inside the VPC. AgentCore's Resource Gateway uses Private DNS to
-		// resolve this domain — no routingDomain workaround needed.
+		// Zone 이름은 대상 FQDN과 일치합니다. apex Alias 레코드가 ALB를
+		// 가리키므로 VPC 내부에서 `https://<privateDomain>`이 ALB Private IP로
+		// 확인됩니다. AgentCore Resource Gateway는 Private DNS로 이 도메인을
+		// 확인하므로 routingDomain 우회 방식이 필요하지 않습니다.
 		const privateZone = new route53.PrivateHostedZone(this, "PrivateZone", {
 			zoneName: props.privateDomain,
 			vpc: props.vpc,
@@ -296,7 +296,7 @@ export class McpEcsStack extends cdk.Stack {
 			),
 		});
 
-		// --- Outputs ---
+		// --- 출력 ---
 		new cdk.CfnOutput(this, "AlbDnsName", {
 			value: alb.loadBalancerDnsName,
 			description: "Internal ALB DNS (private IPs behind this DNS)",

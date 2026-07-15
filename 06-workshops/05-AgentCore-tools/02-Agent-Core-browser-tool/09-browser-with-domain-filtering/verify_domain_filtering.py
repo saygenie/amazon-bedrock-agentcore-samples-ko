@@ -38,7 +38,7 @@ def stop_session(session_id):
 
 
 def get_signed_headers(ws_url):
-    """Get SigV4 signed headers for WebSocket connection."""
+    """WebSocket 연결을 위한 SigV4 서명 헤더를 가져온다."""
     credentials = session.get_credentials()
     https_url = ws_url.replace("wss://", "https://")
     parsed = urlparse(https_url)
@@ -53,8 +53,8 @@ async def main(ws_url, session_id):
 
     headers = get_signed_headers(ws_url)
 
-    # Test cases: (url, category, should_allow)
-    # URLs must match the AllowedDomains/DeniedDomains in the CloudFormation template
+    # 테스트 사례: (url, category, should_allow)
+    # URL은 CloudFormation 템플릿의 AllowedDomains/DeniedDomains와 일치해야 한다
     tests = [
         ("https://example.com", "ALLOWLIST", True),
         ("https://github.com", "ALLOWLIST", True),

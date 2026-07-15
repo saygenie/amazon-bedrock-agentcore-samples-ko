@@ -12,14 +12,14 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-# Environment configuration
+# 환경 설정
 os.environ["STRANDS_OTEL_ENABLE_CONSOLE_EXPORT"] = "true"
 os.environ["OTEL_PYTHON_EXCLUDED_URLS"] = "/ping,/invocations"
 
-# Required OAuth2 scope for Google Calendar API
+# Google Calendar API에 필요한 OAuth2 범위
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
-# Initialize app
+# 애플리케이션 초기화
 app = BedrockAgentCoreApp()
 
 
@@ -66,7 +66,7 @@ async def get_calendar():
     )
     async def get_calendar_events_today(access_token: Optional[str] = "") -> str:
         google_access_token = access_token
-        # Check if we already have a token
+        # 토큰이 이미 있는지 확인
         if not google_access_token:
             app.logger.info("Missing access token")
             return json.dumps(
@@ -77,14 +77,14 @@ async def get_calendar():
                 }
             )
 
-        # Create credentials from the provided access token
+        # 제공된 액세스 토큰으로 자격 증명 생성
         creds = Credentials(token=google_access_token, scopes=SCOPES)
         try:
             service = build("calendar", "v3", credentials=creds)
-            # Call the Calendar API
+            # Calendar API 호출
             today_start = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            # We use a fixed Time Zone. In a real application this would be
-            # derived from the user interacting with the agent
+            # 고정된 시간대를 사용함. 실제 애플리케이션에서는 에이전트와 상호 작용하는
+            # 사용자를 기준으로 시간대를 결정
             tz = "00:00"
             today_end = today_start.replace(hour=23, minute=59, second=59)
             time_min = today_start.strftime(f"%Y-%m-%dT00:00:00-{tz}")
@@ -104,9 +104,9 @@ async def get_calendar():
             events = events_result.get("items", [])
 
             if not events:
-                return json.dumps({"events": []})  # Return empty events array as JSON
+                return json.dumps({"events": []})  # 빈 이벤트 배열을 JSON으로 반환
 
-            return json.dumps({"events": events})  # Return events wrapped in an object
+            return json.dumps({"events": events})  # 이벤트를 객체로 감싸서 반환
         except HttpError as error:
             error_message = str(error)
             return json.dumps({"error": error_message, "events": []})
@@ -121,7 +121,7 @@ async def get_calendar():
         app.logger.info(e)
 
 
-# Initialize the agent with tools and your preferred model choice
+# 도구와 원하는 모델을 사용하여 에이전트 초기화
 agent = Agent(
     model="global.anthropic.claude-haiku-4-5-20251001-v1:0",
     tools=[get_calendar],
@@ -132,7 +132,7 @@ async def agent_task(user_message: str):
     try:
         await queue.put("Begin agent execution")
 
-        # Call the agent first to see if it needs authentication
+        # 먼저 에이전트를 호출하여 인증이 필요한지 확인
         response = await agent.invoke_async(user_message)
 
         await queue.put(response.message)
@@ -150,17 +150,17 @@ async def agent_invocation(payload):
         "No prompt found in input, please guide customer to create a json payload with prompt key",
     )
 
-    # Create and start the agent task
+    # 에이전트 태스크를 생성하고 시작
     task = asyncio.create_task(agent_task(user_message))
     app.logger.info(os.environ["CALLBACK_URL"])
 
-    # Return the stream, but ensure the task runs concurrently
+    # 태스크가 동시에 실행되도록 보장하면서 스트림 반환
     async def stream_with_task():
-        # Stream results as they come
+        # 결과가 도착하는 대로 스트리밍
         async for item in queue.stream():
             yield item
 
-        # Ensure the task completes
+        # 태스크 완료 보장
         await task
 
     return stream_with_task()

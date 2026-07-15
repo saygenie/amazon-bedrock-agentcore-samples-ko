@@ -9,20 +9,20 @@ import string
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
-# Import from utils folder websocket_helpers
+# utils 폴더에서 websocket_helpers 가져오기
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../utils"))
 from websocket_helpers import create_presigned_url
 
 
 class StrandsClientHandler(BaseHTTPRequestHandler):
-    """HTTP request handler that serves the Strands client"""
+    """Strands Client를 제공하는 HTTP 요청 핸들러입니다."""
 
-    # Class variables to store connection details
+    # 연결 세부 정보를 저장하는 클래스 변수
     websocket_url = None
     session_id = None
     is_presigned = False
 
-    # Store config for regenerating URLs
+    # URL 재생성용 구성 저장
     runtime_arn = None
     region = None
     service = None
@@ -30,11 +30,11 @@ class StrandsClientHandler(BaseHTTPRequestHandler):
     qualifier = None
 
     def log_message(self, format, *args):
-        """Override to provide cleaner logging"""
+        """더 깔끔한 로깅을 위해 재정의합니다."""
         sys.stderr.write(f"[{self.log_date_time_string()}] {format % args}\n")
 
     def do_GET(self):
-        """Handle GET requests"""
+        """GET 요청을 처리합니다."""
         parsed_path = urlparse(self.path)
 
         if parsed_path.path == "/" or parsed_path.path == "/index.html":
@@ -47,7 +47,7 @@ class StrandsClientHandler(BaseHTTPRequestHandler):
             self.send_error(404, "File not found")
 
     def do_POST(self):
-        """Handle POST requests"""
+        """POST 요청을 처리합니다."""
         parsed_path = urlparse(self.path)
 
         if parsed_path.path == "/api/regenerate":
@@ -56,14 +56,14 @@ class StrandsClientHandler(BaseHTTPRequestHandler):
             self.send_error(404, "Endpoint not found")
 
     def serve_client_page(self):
-        """Serve the HTML client with pre-configured connection"""
+        """연결이 미리 구성된 HTML Client를 제공합니다."""
         try:
-            # Read the HTML template
+            # HTML 템플릿 읽기
             html_path = os.path.join(os.path.dirname(__file__), "strands-client.html")
             with open(html_path, "r", encoding="utf-8") as f:
                 html_content = f.read()
 
-            # Inject the WebSocket URL if provided
+            # 제공된 경우 WebSocket URL 주입
             if self.websocket_url:
                 html_content = html_content.replace(
                     'id="presignedUrl" placeholder="wss://endpoint/runtimes/arn/ws?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...&X-Amz-Signature=..."',
@@ -82,7 +82,7 @@ class StrandsClientHandler(BaseHTTPRequestHandler):
             self.send_error(500, f"Internal server error: {str(e)}")
 
     def serve_connection_info(self):
-        """Serve the connection information as JSON"""
+        """연결 정보를 JSON으로 제공합니다."""
         response = {
             "websocket_url": self.websocket_url or "",
             "session_id": self.session_id,
@@ -100,7 +100,7 @@ class StrandsClientHandler(BaseHTTPRequestHandler):
         self.wfile.write(response_json.encode())
 
     def serve_profiles(self):
-        """Serve the profiles.json file"""
+        """profiles.json 파일을 제공합니다."""
         try:
             profiles_path = os.path.join(os.path.dirname(__file__), "profiles.json")
             with open(profiles_path, "r", encoding="utf-8") as f:
@@ -123,7 +123,7 @@ class StrandsClientHandler(BaseHTTPRequestHandler):
             self.send_error(500, f"Internal server error: {str(e)}")
 
     def regenerate_url(self):
-        """Regenerate the presigned URL"""
+        """Presigned URL을 다시 생성합니다."""
         try:
             if not self.runtime_arn:
                 error_response = {
@@ -138,12 +138,12 @@ class StrandsClientHandler(BaseHTTPRequestHandler):
                 self.wfile.write(response_json.encode())
                 return
 
-            # Generate new presigned URL
+            # 새 Presigned URL 생성
             base_url = f"wss://bedrock-agentcore.{self.region}.amazonaws.com/runtimes/{self.runtime_arn}/ws?qualifier={self.qualifier}"
 
             new_url = create_presigned_url(base_url, region=self.region, service=self.service, expires=self.expires)
 
-            # Update the class variable
+            # 클래스 변수 업데이트
             StrandsClientHandler.websocket_url = new_url
 
             response = {
@@ -231,14 +231,14 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate arguments
+    # 인자 검증
     if not args.runtime_arn and not args.ws_url:
         parser.error("Either --runtime-arn or --ws-url must be specified")
 
     if args.runtime_arn and args.ws_url:
         parser.error("Cannot specify both --runtime-arn and --ws-url")
 
-    # Extract region from runtime ARN if provided
+    # 제공된 경우 Runtime ARN에서 리전 추출
     if args.runtime_arn:
         arn_parts = args.runtime_arn.split(":")
         if len(arn_parts) >= 4:
@@ -255,7 +255,7 @@ Examples:
     is_presigned = False
 
     try:
-        # Generate presigned URL for AWS Bedrock
+        # Amazon Bedrock용 Presigned URL 생성
         if args.runtime_arn:
             base_url = f"wss://bedrock-agentcore.{args.region}.amazonaws.com/runtimes/{args.runtime_arn}/ws?qualifier={args.qualifier}"
 
@@ -273,7 +273,7 @@ Examples:
             is_presigned = True
             print("✅ Pre-signed URL generated successfully!")
 
-        # Use provided WebSocket URL for local connections
+        # 로컬 연결에 제공된 WebSocket URL 사용
         else:
             websocket_url = args.ws_url
             print(f"🔗 WebSocket URL: {websocket_url}")
@@ -282,12 +282,12 @@ Examples:
         print(f"🌐 Web Server Port: {args.port}")
         print()
 
-        # Set connection details in the handler class
+        # 핸들러 클래스에 연결 세부 정보 설정
         StrandsClientHandler.websocket_url = websocket_url
         StrandsClientHandler.session_id = session_id
         StrandsClientHandler.is_presigned = is_presigned
 
-        # Store config for regenerating URLs
+        # URL 재생성용 구성 저장
         if args.runtime_arn:
             StrandsClientHandler.runtime_arn = args.runtime_arn
             StrandsClientHandler.region = args.region
@@ -295,7 +295,7 @@ Examples:
             StrandsClientHandler.expires = args.expires
             StrandsClientHandler.qualifier = args.qualifier
 
-        # Start web server
+        # Web Server 시작
         server_address = ("", args.port)
         httpd = HTTPServer(server_address, StrandsClientHandler)
 
@@ -316,13 +316,13 @@ Examples:
         print("=" * 70)
         print()
 
-        # Open browser automatically
+        # 브라우저 자동 열기
         if not args.no_browser:
             print("🌐 Opening browser...")
             webbrowser.open(server_url)
             print()
 
-        # Start serving
+        # 서비스 시작
         httpd.serve_forever()
 
     except KeyboardInterrupt:

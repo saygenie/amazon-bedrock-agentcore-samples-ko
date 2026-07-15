@@ -1,13 +1,13 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-"""WAF construct for Application Load Balancer protection."""
+"""Application Load Balancer 보호용 WAF construct."""
 
 from aws_cdk import aws_wafv2 as wafv2
 from constructs import Construct
 
 
 class Waf(Construct):
-    """WAF WebACL with AWS managed rule groups."""
+    """AWS 관리형 규칙 그룹이 포함된 WAF WebACL."""
 
     def __init__(
         self,
@@ -15,7 +15,7 @@ class Waf(Construct):
         id: str,
         alb_arn: str,
     ):
-        """Initialize WAF with common managed rules."""
+        """일반 관리형 규칙이 포함된 WAF를 초기화한다."""
         super().__init__(scope, id)
 
         self.web_acl = wafv2.CfnWebACL(
@@ -29,7 +29,7 @@ class Waf(Construct):
                 sampled_requests_enabled=True,
             ),
             rules=[
-                # AWS Managed Rules - Core Rule Set (CRS)
+        # AWS Managed Rules - Core Rule Set(CRS)
                 wafv2.CfnWebACL.RuleProperty(
                     name="AWSManagedRulesCommonRuleSet",
                     priority=1,
@@ -46,7 +46,7 @@ class Waf(Construct):
                         sampled_requests_enabled=True,
                     ),
                 ),
-                # AWS Managed Rules - Known Bad Inputs
+        # AWS Managed Rules - Known Bad Inputs
                 wafv2.CfnWebACL.RuleProperty(
                     name="AWSManagedRulesKnownBadInputsRuleSet",
                     priority=2,
@@ -66,7 +66,7 @@ class Waf(Construct):
             ],
         )
 
-        # Associate WebACL with ALB
+        # WebACL을 ALB와 연결
         wafv2.CfnWebACLAssociation(
             self,
             "WebACLAssociation",

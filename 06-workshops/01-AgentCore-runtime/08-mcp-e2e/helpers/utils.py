@@ -16,7 +16,7 @@ POLICY_NAME = "AWSMCPtBedrockAgentCorePolicy"
 
 
 def get_customer_support_secret():
-    """Get a secret value from AWS Secrets Manager."""
+    """AWS Secrets Manager에서 secret 값을 가져옵니다."""
     boto_session = Session()
     region = boto_session.region_name
     secrets_client = boto3.client("secretsmanager", region_name=region)
@@ -34,7 +34,7 @@ def get_aws_account_id() -> str:
 
 
 def get_cognito_secret() -> Optional[str]:
-    """Get a secret value from AWS Secrets Manager."""
+    """AWS Secrets Manager에서 secret 값을 가져옵니다."""
     boto_session = Session()
     region = boto_session.region_name
     secrets_client = boto3.client("secretsmanager", region_name=region)
@@ -47,7 +47,7 @@ def get_cognito_secret() -> Optional[str]:
 
 
 def save_customer_support_secret(secret_value):
-    """Save a secret in AWS Secrets Manager."""
+    """AWS Secrets Manager에 secret을 저장합니다."""
     boto_session = Session()
     region = boto_session.region_name
     secrets_client = boto3.client("secretsmanager", region_name=region)
@@ -71,10 +71,10 @@ def save_customer_support_secret(secret_value):
 def get_or_create_cognito_pool(refresh_token=False):
     boto_session = Session()
     region = boto_session.region_name
-    # Initialize Cognito client
+    # Cognito client 초기화
     cognito_client = boto3.client("cognito-idp", region_name=region)
     try:
-        # check for existing cognito pool
+        # 기존 Cognito pool 확인
         cognito_config_str = get_customer_support_secret()
         cognito_config = json.loads(cognito_config_str)
         if refresh_token:
@@ -86,12 +86,12 @@ def get_or_create_cognito_pool(refresh_token=False):
         print("No existing cognito config found. Creating a new one..")
 
     try:
-        # Create User Pool
+        # User Pool 생성
         user_pool_response = cognito_client.create_user_pool(
             PoolName="MCPServerPool", Policies={"PasswordPolicy": {"MinimumLength": 8}}
         )
         pool_id = user_pool_response["UserPool"]["Id"]
-        # Create App Client
+        # App Client 생성
         app_client_response = cognito_client.create_user_pool_client(
             UserPoolId=pool_id,
             ClientName="MCPServerPoolClient",
@@ -106,7 +106,7 @@ def get_or_create_cognito_pool(refresh_token=False):
         client_id = app_client_response["UserPoolClient"]["ClientId"]
         client_secret = app_client_response["UserPoolClient"]["ClientSecret"]
 
-        # Create User
+        # 사용자 생성
         cognito_client.admin_create_user(
             UserPoolId=pool_id,
             Username=username,
@@ -114,7 +114,7 @@ def get_or_create_cognito_pool(refresh_token=False):
             MessageAction="SUPPRESS",
         )
 
-        # Set Permanent Password
+        # 영구 password 설정
         cognito_client.admin_set_user_password(
             UserPoolId=pool_id,
             Username=username,
@@ -126,7 +126,7 @@ def get_or_create_cognito_pool(refresh_token=False):
         key = bytes(client_secret, "utf-8")
         secret_hash = base64.b64encode(hmac.new(key, message, digestmod=hashlib.sha256).digest()).decode()
 
-        # Authenticate User and get Access Token
+        # 사용자 인증 후 Access Token 가져오기
         auth_response = cognito_client.initiate_auth(
             ClientId=client_id,
             AuthFlow="USER_PASSWORD_AUTH",
@@ -138,12 +138,12 @@ def get_or_create_cognito_pool(refresh_token=False):
         )
         bearer_token = auth_response["AuthenticationResult"]["AccessToken"]
         discovery_url = f"https://cognito-idp.{region}.amazonaws.com/{pool_id}/.well-known/openid-configuration"
-        # Output the required values
+        # 필요한 값 출력
         print(f"Pool id: {pool_id}")
         print(f"Discovery URL: {discovery_url}")
         print(f"Client ID: {client_id}")
         print(f"Bearer Token: {bearer_token}")
-        # Return values if needed for further processing
+        # 후속 처리에 필요한 경우 값 반환
         cognito_config = {
             "pool_id": pool_id,
             "client_id": client_id,
@@ -163,9 +163,9 @@ def get_or_create_cognito_pool(refresh_token=False):
 def reauthenticate_user(client_id, client_secret):
     boto_session = Session()
     region = boto_session.region_name
-    # Initialize Cognito client
+    # Cognito client 초기화
     cognito_client = boto3.client("cognito-idp", region_name=region)
-    # Authenticate User and get Access Token
+    # 사용자 인증 후 Access Token 가져오기
 
     message = bytes(username + client_id, "utf-8")
     key = bytes(client_secret, "utf-8")
@@ -184,15 +184,15 @@ def reauthenticate_user(client_id, client_secret):
     return bearer_token
 
 
-# AgentCore Resources
+# AgentCore 리소스
 def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
-    """Create IAM role for AgentCore runtime execution."""
+    """AgentCore Runtime 실행을 위한 IAM 역할을 생성합니다."""
     iam = boto3.client("iam")
     boto_session = Session()
     region = boto_session.region_name
     account_id = get_aws_account_id()
 
-    # Trust relationship policy
+    # 신뢰 관계 정책
     trust_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -209,7 +209,7 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
         ],
     }
 
-    # IAM policy document
+    # IAM 정책 문서
     policy_document = {
         "Version": "2012-10-17",
         "Statement": [
@@ -324,7 +324,7 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
     }
 
     try:
-        # Check if role already exists
+        # 역할이 이미 있는지 확인
         try:
             existing_role = iam.get_role(RoleName=role_name)
             print(f"ℹ️ Role {role_name} already exists")
@@ -333,7 +333,7 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
         except iam.exceptions.NoSuchEntityException:
             pass
 
-        # Create IAM role
+        # IAM 역할 생성
         role_response = iam.create_role(
             RoleName=role_name,
             AssumeRolePolicyDocument=json.dumps(trust_policy),
@@ -343,14 +343,14 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
         print(f"✅ Created IAM role: {role_name}")
         print(f"Role ARN: {role_response['Role']['Arn']}")
 
-        # Check if policy already exists
+        # 정책이 이미 있는지 확인
         policy_arn = f"arn:aws:iam::{account_id}:policy/{POLICY_NAME}"
 
         try:
             iam.get_policy(PolicyArn=policy_arn)
             print(f"ℹ️ Policy {POLICY_NAME} already exists")
         except iam.exceptions.NoSuchEntityException:
-            # Create policy
+            # 정책 생성
             policy_response = iam.create_policy(
                 PolicyName=POLICY_NAME,
                 PolicyDocument=json.dumps(policy_document),
@@ -359,7 +359,7 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
             print(f"✅ Created policy: {POLICY_NAME}")
             policy_arn = policy_response["Policy"]["Arn"]
 
-        # Attach policy to role
+        # 역할에 정책 연결
         try:
             iam.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
             print("✅ Attached policy to role")
@@ -378,28 +378,28 @@ def create_agentcore_runtime_execution_role(role_name: str) -> Optional[str]:
 
 
 def delete_agentcore_runtime_execution_role(role_name: str) -> None:
-    """Delete AgentCore runtime execution role and associated policy."""
+    """AgentCore Runtime 실행 역할 및 연결된 정책을 삭제합니다."""
     iam = boto3.client("iam")
 
     try:
         account_id = get_aws_account_id()
         policy_arn = f"arn:aws:iam::{account_id}:policy/{POLICY_NAME}"
 
-        # Detach policy from role
+        # 역할에서 정책 분리
         try:
             iam.detach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
             print("✅ Detached policy from role")
         except iam.exceptions.ClientError:
             pass
 
-        # Delete role
+        # 역할 삭제
         try:
             iam.delete_role(RoleName=role_name)
             print(f"✅ Deleted role: {role_name}")
         except iam.exceptions.ClientError:
             pass
 
-        # Delete policy
+        # 정책 삭제
         try:
             iam.delete_policy(PolicyArn=policy_arn)
             print(f"✅ Deleted policy: {POLICY_NAME}")
@@ -411,30 +411,30 @@ def delete_agentcore_runtime_execution_role(role_name: str) -> None:
 
 
 def cleanup_cognito_resources(pool_id: str) -> bool:
-    """Delete Cognito resources including users, app clients, and user pool."""
+    """사용자, app client 및 user pool을 포함한 Cognito 리소스를 삭제합니다."""
     try:
-        # Initialize Cognito client using the same session configuration
+        # 동일한 session 구성으로 Cognito client 초기화
         boto_session = Session()
         region = boto_session.region_name
         cognito_client = boto3.client("cognito-idp", region_name=region)
 
         if pool_id:
             try:
-                # List and delete all app clients
+                # 모든 app client를 나열하고 삭제
                 clients_response = cognito_client.list_user_pool_clients(UserPoolId=pool_id, MaxResults=60)
 
                 for client in clients_response["UserPoolClients"]:
                     print(f"Deleting app client: {client['ClientName']}")
                     cognito_client.delete_user_pool_client(UserPoolId=pool_id, ClientId=client["ClientId"])
 
-                # List and delete all users
+                # 모든 사용자를 나열하고 삭제
                 users_response = cognito_client.list_users(UserPoolId=pool_id, AttributesToGet=["email"])
 
                 for user in users_response.get("Users", []):
                     print(f"Deleting user: {user['Username']}")
                     cognito_client.admin_delete_user(UserPoolId=pool_id, Username=user["Username"])
 
-                # Delete the user pool
+                # User pool 삭제
                 print(f"Deleting user pool: {pool_id}")
                 cognito_client.delete_user_pool(UserPoolId=pool_id)
 
@@ -458,7 +458,7 @@ def cleanup_cognito_resources(pool_id: str) -> bool:
 
 
 def delete_cognito_secret() -> bool:
-    """Delete a secret from AWS Secrets Manager."""
+    """AWS Secrets Manager에서 secret을 삭제합니다."""
     boto_session = Session()
     region = boto_session.region_name
     secrets_client = boto3.client("secretsmanager", region_name=region)
@@ -472,8 +472,8 @@ def delete_cognito_secret() -> bool:
 
 
 def local_file_cleanup() -> None:
-    """Clean up local files created during the tutorial."""
-    # List of files to clean up
+    """튜토리얼에서 생성된 로컬 파일을 정리합니다."""
+    # 정리할 파일 목록
     files_to_delete = [
         "Dockerfile",
         ".dockerignore",

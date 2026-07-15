@@ -1,14 +1,14 @@
 """
-Test script: Invokes the deployed AgentCore Runtime with a Cognito JWT bearer token.
+테스트 스크립트: Cognito JWT bearer token으로 배포된 AgentCore Runtime을 호출합니다.
 
-Demonstrates:
-  1. Invoke WITHOUT bearer token -> AccessDeniedException (expected)
-  2. Invoke WITH valid Cognito bearer token -> success
+확인할 내용:
+  1. bearer token 없이 호출 -> AccessDeniedException(예상 결과)
+  2. 유효한 Cognito bearer token으로 호출 -> 성공
 
-Usage:
+사용법:
     python invoke.py [prompt]
 
-    prompt defaults to "What is the weather in Seattle?"
+    prompt 기본값은 "What is the weather in Seattle?"입니다.
 """
 
 import warnings
@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore", message="urllib3")
 
 
 def get_bearer_token(config: dict) -> str:
-    """Get a fresh Cognito access token."""
+    """새 Cognito 액세스 토큰을 가져옵니다."""
     cognito = boto3.client("cognito-idp", region_name=config["region"])
     auth = cognito.initiate_auth(
         ClientId=config["client_id"],
@@ -37,7 +37,7 @@ def get_bearer_token(config: dict) -> str:
 
 
 def _find_project_dir() -> str:
-    """Find the agentcore project directory (subdirectory containing agentcore/)."""
+    """agentcore/를 포함하는 하위 디렉터리에서 agentcore 프로젝트를 찾습니다."""
     base = os.path.dirname(os.path.abspath(__file__))
     for entry in os.listdir(base):
         candidate = os.path.join(base, entry)
@@ -47,10 +47,10 @@ def _find_project_dir() -> str:
 
 
 def get_agent_arn(region: str) -> str:
-    """Read the deployed agent ARN from deployed-state.json.
+    """deployed-state.json에서 배포된 에이전트 ARN을 읽습니다.
 
-    Searches for runtimeArn recursively to work across CLI versions
-    (0.3.x uses 'agents', 0.4.x may use 'runtimes').
+    CLI 버전에 관계없이 동작하도록 runtimeArn을 재귀적으로 검색합니다.
+    0.3.x는 'agents'를 사용하고 0.4.x는 'runtimes'를 사용할 수 있습니다.
     """
     project_dir = _find_project_dir()
     state_file = os.path.join(project_dir, "agentcore", ".cli", "deployed-state.json")
@@ -59,7 +59,7 @@ def get_agent_arn(region: str) -> str:
     with open(state_file) as f:
         state = json.load(f)
 
-    # Recursively search for runtimeArn in the state JSON
+    # 상태 JSON에서 runtimeArn을 재귀적으로 검색
     def _find_arn(obj):
         if isinstance(obj, dict):
             if "runtimeArn" in obj:
@@ -82,7 +82,7 @@ def get_agent_arn(region: str) -> str:
 
 
 def parse_event_stream(response: dict) -> str:
-    """Extract text from the boto3 EventStream response."""
+    """boto3 EventStream 응답에서 텍스트를 추출합니다."""
     parts = []
     for event in response.get("response", []):
         raw = event if isinstance(event, bytes) else event.get("chunk", {}).get("bytes", b"")
@@ -112,7 +112,7 @@ def parse_event_stream(response: dict) -> str:
 def main():
     prompt = sys.argv[1] if len(sys.argv) > 1 else "What is the weather in Seattle?"
 
-    # Load Cognito config
+    # Cognito 구성 불러오기
     try:
         with open("cognito_config.json") as f:
             config = json.load(f)
@@ -130,7 +130,7 @@ def main():
 
     print(f"\nPrompt: '{prompt}'")
 
-    # --- Test 1: No bearer token (should be rejected) ---
+    # --- 테스트 1: bearer token 없음(거부되어야 함) ---
     print("\n[Test 1] Invoking WITHOUT bearer token (expect AccessDeniedException)...")
     try:
         resp = client.invoke_agent_runtime(
@@ -145,13 +145,13 @@ def main():
     except Exception as exc:
         print(f"  Error: {type(exc).__name__}: {exc}")
 
-    # --- Test 2: Valid Cognito bearer token ---
+    # --- 테스트 2: 유효한 Cognito bearer token ---
     print("\n[Test 2] Invoking WITH valid Cognito bearer token...")
     bearer_token = get_bearer_token(config)
     print(f"  Token obtained (first 20 chars): {bearer_token[:20]}...")
 
     try:
-        # boto3 does not have a bearerToken parameter — inject via request header
+        # boto3에는 bearerToken 매개변수가 없으므로 요청 헤더를 통해 주입
         def _inject_bearer(request, **kwargs):
             request.headers["Authorization"] = f"Bearer {bearer_token}"
 

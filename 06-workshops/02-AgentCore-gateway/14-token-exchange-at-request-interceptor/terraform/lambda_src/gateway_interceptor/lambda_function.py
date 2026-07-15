@@ -18,10 +18,9 @@ def lambda_handler(event, context):
 
     auth_header = headers.get("authorization", "") or headers.get("Authorization", "")
 
-    # Exchange the inbound token for a downstream-scoped token.
-    # The inbound token was issued to the gateway client; the exchanged token
-    # is issued to the downstream client and is the only one accepted by the
-    # API Gateway Cognito authorizer.
+    # 인바운드 토큰을 downstream 범위 토큰으로 교환
+    # 인바운드 토큰은 Gateway 클라이언트에 발급되고, 교환된 토큰은 downstream
+    # 클라이언트에 발급되며 API Gateway Cognito authorizer는 이 토큰만 허용
     downstream_token = ""
     if auth_header:
         try:
